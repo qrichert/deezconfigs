@@ -15,7 +15,7 @@ neuron activation to use.
 
 ## Roadmap
 
-- [ ] CLI arguments parsing.
+- [x] CLI arguments parsing.
 - [ ] Basic `sync`.
 - [ ] Basic `link`.
 - [ ] Basic `rsync`.
