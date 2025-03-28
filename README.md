@@ -16,7 +16,7 @@ neuron activation to use.
 ## Roadmap
 
 - [x] CLI arguments parsing.
-- [ ] Basic `sync`.
+- [x] Basic `sync`.
 - [ ] Basic `link`.
 - [ ] Basic `rsync`.
 - [ ] Think about templating.
@@ -73,12 +73,8 @@ $ deez sync somedir
 Will treat `somedir` as the root instead of using `cwd`.
 ```
 
-- Respects `.gitignore`.
-- Warns (asks confirmation) in `link` mode if a target file exists and
-  it's not a symlink (meaning we'd override a file with a symlink).
-  `One or more existing config files would be replaced by a symlink, continue?`.
-- Warns (asks confirmation) in `sync` mode if a target symlink exists
-  where we'd put a file.
+- Respects `.gitignore` (thanks to the `ignore` crate) (TODO: test
+  this).
 
 ### Templating
 

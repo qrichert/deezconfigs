@@ -47,7 +47,7 @@ lint: ## Run various linting tools
 
 .PHONY: check
 check: ## Most stringent checks (includes checks still in development)
-	@rustup update
+	@rustup update || :
 	@cargo fmt
 	@cargo doc --no-deps --all-features
 	@cargo check
@@ -59,7 +59,7 @@ check: ## Most stringent checks (includes checks still in development)
 t: test
 .PHONY: test
 test: ## Run unit tests
-	@cargo test
+	@cargo test --all-features -- --test-threads 1
 
 .PHONY: doc
 doc: ## Build documentation

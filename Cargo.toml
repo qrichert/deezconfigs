@@ -21,3 +21,5 @@ strip = true
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [dependencies]
+# Traverse directories recursively.
+ignore = "0.4.23"

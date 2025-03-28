@@ -15,7 +15,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::env;
+use std::fs;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 use std::process;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use deezconfigs::walk;
 
 fn main() {
     let mut args = env::args().skip(1);
@@ -55,30 +61,139 @@ fn help() {
 usage: {bin} [<options>] <command> [<args>]
 
 Commands:
-  sync [<root>]        ...
-  rsync [<root>]       ...
-  link [<root>]        ...
+  sync [<root>]    Update system with configs
+  rsync [<root>]   Update configs with system
+  link [<root>]    Symlink configs to system
 
 Options:
-  -h, --help           Show this message and exit.
-  -v, --version        Show the version and exit.
+  -h, --help       Show this message and exit.
+  -v, --version    Show the version and exit.
 ",
         bin = env!("CARGO_BIN_NAME"),
     );
 }
 
 fn version() {
-    println!("{} {}", env!("CARGO_BIN_NAME"), env!("CARGO_PKG_VERSION"));
+    println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 }
 
 fn sync(root: Option<String>) {
-    todo!("copy files _to_ destination")
+    // TODO: If we want to do Git cloning it's here:
+    //  1. Detect git URL.
+    //  2. `git clone` to `/tmp` (remove if it exists, no `git pull`, we
+    //     don't know the user's config).
+    //  3. Normalize `root` to `Some("/tmp/cloned-repo")`.
+    //  4. Proceed as usual.
+
+    let root = get_root_or_default(root);
+    let home = get_home_directory();
+
+    let nb_files_written = AtomicUsize::new(0);
+    let nb_errors = AtomicUsize::new(0);
+
+    walk::find_files_recursively(&root, |p| {
+        debug_assert!(!p.is_dir());
+
+        let source = root.join(p);
+        let destination = home.join(p);
+
+        if let Err(err) = fs::create_dir_all(
+            destination
+                .parent()
+                .expect("at the bare minimum, `parent` is `$HOME`"),
+        ) {
+            eprintln!("error: Could not copy '{}' to Home: {err}", p.display());
+            nb_errors.fetch_add(1, Ordering::Relaxed);
+            return;
+        }
+
+        // Note: `fs::copy()` _follows_ symlinks. It will create files
+        // with the contents of the symlink's target; it will _not_
+        // create a symlink.
+        if let Err(err) = fs::copy(source, destination) {
+            eprintln!("error: Could not copy '{}' to Home: {err}", p.display());
+            nb_errors.fetch_add(1, Ordering::Relaxed);
+            return;
+        }
+
+        // TODO: if verbose { println!("wrote: {}", p.display()) }
+        //  (With locked stdout, but looks like it's going to be
+        //  a pain... Also check that lock is released _before_
+        //  `print_summary()`).
+        nb_files_written.fetch_add(1, Ordering::Relaxed);
+    });
+
+    print_summary(&root, nb_files_written.into_inner(), nb_errors.into_inner());
 }
 
-fn rsync(root: Option<String>) {
+fn print_summary(root: &Path, nb_files_written: usize, nb_errors: usize) {
+    let mut stdout = io::stdout().lock();
+
+    if nb_files_written + nb_errors == 0 {
+        _ = writeln!(stdout, "No config files found in '{}'.", root.display());
+        return;
+    }
+
+    _ = write!(
+        stdout,
+        "Wrote {nb_files_written} file{}",
+        if nb_files_written == 1 { "" } else { "s" }
+    );
+    if nb_errors > 0 {
+        _ = write!(
+            stdout,
+            ", {nb_errors} error{}",
+            if nb_errors == 1 { "" } else { "s" }
+        );
+    }
+    _ = writeln!(stdout, ".");
+}
+
+fn rsync(_root: Option<String>) {
     todo!("update files _from_ destination")
+
+    // TODO:
+    //  1. Collect all files in `configs`
+    //  2. Find matching files in `/home`
+    //  3. Replace files in `configs` with files in `/home`.
 }
 
-fn link(root: Option<String>) {
-    todo!("symink files _to_ destination")
+fn link(_root: Option<String>) {
+    todo!("symlink files _to_ destination")
+
+    // TODO:
+    //  1. For each config file
+    //  2. Symlink it to destination
+    //     a. ensuring that already existing files are
+    //        _replaced_ by symlinks.
+}
+
+fn get_root_or_default(root: Option<String>) -> PathBuf {
+    if let Some(root) = root {
+        let root = PathBuf::from(root);
+        if !root.is_dir() {
+            eprintln!("fatal: Root must be a valid directory.");
+            process::exit(1);
+        }
+        root
+    } else {
+        env::current_dir().unwrap_or_else(|_| {
+            eprintln!(
+                "\
+fatal: Could not determine current working directory.
+Please provide a Root directory as argument.
+"
+            );
+            process::exit(1);
+        })
+    }
+}
+
+fn get_home_directory() -> PathBuf {
+    // TODO: Use `std::env::home_dir()` once it gets un-deprecated.
+    let Ok(home_directory) = env::var("HOME") else {
+        eprintln!("fatal: Could not read Home directory from environment.");
+        process::exit(1);
+    };
+    PathBuf::from(home_directory)
 }
