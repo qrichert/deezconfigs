@@ -17,10 +17,12 @@ neuron activation to use.
 
 - [x] CLI arguments parsing.
 - [x] Basic `sync`.
+- [x] Protect `$HOME` with a `.deez` file.
+- [ ] Add `--verbose` mode (use `-V` for version).
+- [ ] Use Git remote as `sync` root.
 - [ ] Basic `link`.
 - [ ] Basic `rsync`.
 - [ ] Think about templating.
-- [ ] Use Git remote as root.
 
 ## Usage
 

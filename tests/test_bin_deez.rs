@@ -124,6 +124,8 @@ fn sync_ignores_special_files() {
     // NOT OK.
     conf::create_file_in_configs(".gitignore", None);
     conf::create_file_in_configs(".git/config", None);
+    // NOT OK, even in subdirectories.
+    conf::create_file_in_configs("subdir/.deez", None);
 
     let output = run(&["sync", &conf::root()]);
 
@@ -134,10 +136,11 @@ fn sync_ignores_special_files() {
     // OK in sub-directories.
     assert!(file_exists_in_home("subdir/.git/config"));
     assert!(file_exists_in_home("subdir/.gitignore"));
-
     // NOT OK in root.
     assert!(!file_exists_in_home(".gitignore"));
     assert!(!file_exists_in_home(".git/config"));
+    // NOT OK, even in subdirectories.
+    assert!(!file_exists_in_home("subdir/.deez"));
 }
 
 /// If a file in configs should override a symlink in home, ensure `sync`

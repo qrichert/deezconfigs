@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::ffi::OsStr;
 use std::path::Path;
 
 use ignore::{self, DirEntry, WalkBuilder, WalkState};
@@ -52,10 +53,10 @@ pub fn find_files_recursively(root: impl AsRef<Path>, f: impl Fn(&Path) + Sync) 
         }
 
         // Anywhere.
-        // let file_name = path.file_name().expect("we don't have `..` here");
-        // if [""].map(OsStr::new).contains(&file_name) {
-        //     return false;
-        // }
+        let file_name = path.file_name().expect("we don't have `..` here");
+        if [".deez"].map(OsStr::new).contains(&file_name) {
+            return false;
+        }
 
         true
     };

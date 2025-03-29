@@ -39,12 +39,14 @@ pub fn init() {
     }
 
     // Clean new config dir.
-    let dir = PathBuf::from(TMP_DIR).join("configs");
+    let dir = PathBuf::from(CONFIGS);
     println!("init: '{}'.", dir.display());
     if dir.exists() {
         fs::remove_dir_all(&dir).unwrap();
     }
     fs::create_dir(&dir).unwrap();
+
+    create_file_in_configs(".deez", None);
 }
 
 pub fn create_file_in_configs(file_path: &str, content: Option<&str>) -> PathBuf {

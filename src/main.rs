@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use deezconfigs::walk;
+use deezconfigs::{utils, walk};
 
 fn main() {
     let mut args = env::args().skip(1);
@@ -181,7 +181,7 @@ fn link(_root: Option<String>) {
 }
 
 fn get_root_or_default(root: Option<String>) -> PathBuf {
-    if let Some(root) = root {
+    let root = if let Some(root) = root {
         let root = PathBuf::from(root);
         if !root.is_dir() {
             eprintln!("fatal: Root must be a valid directory.");
@@ -198,7 +198,11 @@ Please provide a Root directory as argument.
             );
             process::exit(1);
         })
-    }
+    };
+
+    ensure_root_is_a_config_root(&root);
+
+    root
 }
 
 fn get_home_directory() -> PathBuf {
@@ -208,4 +212,37 @@ fn get_home_directory() -> PathBuf {
         process::exit(1);
     };
     PathBuf::from(home_directory)
+}
+
+/// Ensure `root` holds config and is not a random directory.
+///
+/// To be a config root, the directory must contain a `.deez` file, or
+/// the user must give confirmation.
+fn ensure_root_is_a_config_root(root: &Path) {
+    if root.join(".deez").is_file() {
+        return;
+    }
+
+    eprint!(
+        "\
+warning: `root` is not a configuration root.
+
+To make it a configuration root, create a `.deez` file inside of it.
+This is a security feature. `{bin}` doesn't want to mess up your Home
+directory if you run it at the wrong root.
+
+Selected root: '{}'.
+
+",
+        root.display(),
+        bin = env!("CARGO_BIN_NAME"),
+    );
+
+    if utils::ask_confirmation_with_prompt("Proceed?") {
+        println!();
+        return;
+    }
+
+    eprintln!("Aborting.");
+    process::exit(2);
 }

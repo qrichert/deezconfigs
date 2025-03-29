@@ -1,3 +1,5 @@
+use std::io;
+
 // deezconfigs — Manage deez config files.
 // Copyright (C) 2025  Quentin Richert
 //
@@ -14,5 +16,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod utils;
-pub mod walk;
+use std::io::Write;
+
+/// Prompt the user to confirm an action (custom prompt).
+pub fn ask_confirmation_with_prompt(prompt: &str) -> bool {
+    print!("{prompt} (y/N) ");
+    _ = io::stdout().flush();
+
+    let mut answer = String::new();
+    if io::stdin().read_line(&mut answer).is_err() {
+        eprintln!("Error reading user input.");
+        return false;
+    }
+
+    matches!(answer.to_ascii_lowercase().trim(), "y" | "yes")
+}
