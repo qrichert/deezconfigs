@@ -107,9 +107,21 @@ fn sync(root: Option<String>) {
             return;
         }
 
-        // Note: `fs::copy()` _follows_ symlinks. It will create files
-        // with the contents of the symlink's target; it will _not_
-        // create a symlink.
+        // If destination exists and is a symlink, we must _delete_ it
+        // before the copy, or else it would override the link's target.
+        if destination.is_symlink() {
+            if let Err(err) = fs::remove_file(&destination) {
+                eprintln!(
+                    "error: Could not remove exising symlink '{}': {err}",
+                    destination.display()
+                );
+                nb_errors.fetch_add(1, Ordering::Relaxed);
+                return;
+            };
+        }
+
+        // `fs::copy()` _follows_ symlinks. It will create files with the
+        // contents of the symlink's target; it will _not_ create a link.
         if let Err(err) = fs::copy(source, destination) {
             eprintln!("error: Could not copy '{}' to Home: {err}", p.display());
             nb_errors.fetch_add(1, Ordering::Relaxed);

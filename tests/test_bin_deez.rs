@@ -17,6 +17,7 @@
 mod conf;
 
 use std::env;
+use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -63,6 +64,9 @@ fn help() {
     assert_eq!(output.exit_code, 0);
     assert!(output.stdout.contains("-h, --help"));
     assert!(output.stdout.contains("-v, --version"));
+    assert!(output.stdout.contains("sync [<root>]"));
+    assert!(output.stdout.contains("rsync [<root>]"));
+    assert!(output.stdout.contains("link [<root>]"));
 }
 
 #[test]
@@ -93,10 +97,10 @@ fn bad_argument() {
 fn sync_regular() {
     conf::init();
 
-    conf::create_file(".gitconfig");
-    conf::create_file(".config/nvim/init.lua");
-    conf::create_file(".config/fish/config.fish");
-    conf::create_symlink(".config/ghostty/config");
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_configs(".config/nvim/init.lua", None);
+    conf::create_file_in_configs(".config/fish/config.fish", None);
+    conf::create_symlink_in_configs(".config/ghostty/config", None);
 
     let output = run(&["sync", &conf::root()]);
 
@@ -115,11 +119,11 @@ fn sync_ignores_special_files() {
     conf::init();
 
     // OK.
-    conf::create_file("subdir/.git/config");
-    conf::create_file("subdir/.gitignore");
+    conf::create_file_in_configs("subdir/.git/config", None);
+    conf::create_file_in_configs("subdir/.gitignore", None);
     // NOT OK.
-    conf::create_file(".gitignore");
-    conf::create_file(".git/config");
+    conf::create_file_in_configs(".gitignore", None);
+    conf::create_file_in_configs(".git/config", None);
 
     let output = run(&["sync", &conf::root()]);
 
@@ -134,4 +138,43 @@ fn sync_ignores_special_files() {
     // NOT OK in root.
     assert!(!file_exists_in_home(".gitignore"));
     assert!(!file_exists_in_home(".git/config"));
+}
+
+/// If a file in configs should override a symlink in home, ensure `sync`
+/// replaces the symlink with a file, and does _not_ replace the content
+/// of the target of the symlink.
+#[test]
+fn sync_replace_symlink_with_file() {
+    conf::init();
+
+    // Real file in configs.
+    conf::create_file_in_configs("config_file.txt", Some("new content"));
+
+    // Target file that should _not_ be overridden.
+    let symlink_target_in_home =
+        conf::create_file_in_home("symlink_target.txt", Some("should not be replaced"));
+
+    // Symlink in home.
+    let (symlink_in_home, _) =
+        conf::create_symlink_in_home("config_file.txt", Some("symlink_target.txt"));
+
+    // Ensure the symlink in home links to target file.
+    let content_before = fs::read_to_string(&symlink_in_home).unwrap();
+    assert!(symlink_in_home.is_symlink());
+    assert_eq!(content_before, "should not be replaced");
+
+    let output = run(&["sync", &conf::root()]);
+
+    assert_eq!(output.exit_code, 0);
+    dbg!(output.stdout);
+    dbg!(output.stderr);
+
+    // Ensure the symlink in home is a file now, with updated content.
+    let content_after = fs::read_to_string(&symlink_in_home).unwrap();
+    assert!(!symlink_in_home.is_symlink()); // `is_file()` traverses.
+    assert_eq!(content_after, "new content");
+
+    // Ensure the removed symlink's target has not been altered.
+    let symlink_target_content = fs::read_to_string(&symlink_target_in_home).unwrap();
+    assert_eq!(symlink_target_content, "should not be replaced");
 }

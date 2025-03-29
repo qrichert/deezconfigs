@@ -47,8 +47,16 @@ pub fn init() {
     fs::create_dir(&dir).unwrap();
 }
 
-pub fn create_file(file_path: &str) {
-    let file = PathBuf::from(CONFIGS).join(file_path);
+pub fn create_file_in_configs(file_path: &str, content: Option<&str>) -> PathBuf {
+    create_file(CONFIGS, file_path, content)
+}
+
+pub fn create_file_in_home(file_path: &str, content: Option<&str>) -> PathBuf {
+    create_file(HOME, file_path, content)
+}
+
+fn create_file(root: &str, file_path: &str, content: Option<&str>) -> PathBuf {
+    let file = PathBuf::from(root).join(file_path);
     println!("create file: '{}'.", file.display());
 
     // Create parent directories (if any).
@@ -56,11 +64,25 @@ pub fn create_file(file_path: &str) {
         fs::create_dir_all(parent).unwrap();
     }
 
-    fs::File::create(file).unwrap();
+    if let Some(content) = content {
+        _ = fs::write(&file, content);
+    } else {
+        fs::File::create(&file).unwrap();
+    }
+
+    file
 }
 
-pub fn create_symlink(symlink_path: &str) {
-    let symlink = PathBuf::from(CONFIGS).join(symlink_path);
+pub fn create_symlink_in_configs(symlink_path: &str, target: Option<&str>) -> (PathBuf, PathBuf) {
+    create_symlink(CONFIGS, symlink_path, target)
+}
+
+pub fn create_symlink_in_home(symlink_path: &str, target: Option<&str>) -> (PathBuf, PathBuf) {
+    create_symlink(HOME, symlink_path, target)
+}
+
+fn create_symlink(root: &str, symlink_path: &str, target: Option<&str>) -> (PathBuf, PathBuf) {
+    let symlink = PathBuf::from(root).join(symlink_path);
     println!("create symlink: '{}'.", symlink.display());
 
     // Create parent directories (if any).
@@ -69,11 +91,20 @@ pub fn create_symlink(symlink_path: &str) {
     }
 
     // Create target file.
-    let target = PathBuf::from(TMP_DIR).join("symlink_target");
-    fs::File::create(&target).unwrap();
+    let target = if let Some(target) = target {
+        let target = PathBuf::from(root).join(target);
+        assert!(target.exists(), "target must exist before creating symlink");
+        target
+    } else {
+        let target = PathBuf::from(TMP_DIR).join("symlink_target");
+        fs::File::create(&target).unwrap();
+        target
+    };
 
     #[cfg(unix)]
-    std::os::unix::fs::symlink(&target, symlink).unwrap();
+    std::os::unix::fs::symlink(&target, &symlink).unwrap();
     #[cfg(windows)]
     std::os::windows::fs::symlink_file(&target, symlink).unwrap();
+
+    (symlink, target)
 }
