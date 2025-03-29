@@ -69,14 +69,14 @@ fn help() {
 usage: {bin} [<options>] <command> [<args>]
 
 Commands:
-  sync [<root>]    Update system with configs
-  rsync [<root>]   Update configs with system
-  link [<root>]    Symlink configs to system
+  sync [<root>|<git>]  Update system with configs
+  rsync [<root>]       Update configs with system
+  link [<root>]        Symlink configs to system
 
 Options:
-  -h, --help       Show this message and exit.
-  -V, --version    Show the version and exit.
-  -v, --verbose    Show files being copied.
+  -h, --help           Show this message and exit.
+  -V, --version        Show the version and exit.
+  -v, --verbose        Show files being copied.
 ",
         bin = env!("CARGO_BIN_NAME"),
     );
@@ -94,8 +94,15 @@ fn sync(root: Option<String>, verbose: bool) {
     //  3. Normalize `root` to `Some("/tmp/cloned-repo")`.
     //  4. Proceed as usual.
 
-    let root = get_root_or_default(root);
-    let home = get_home_directory();
+    let root = if root.as_ref().is_some_and(|r| r.starts_with("git://")) {
+        get_config_root_from_git_or_exit(
+            &root.expect("contains as least `git://` scheme."),
+            verbose,
+        )
+    } else {
+        get_config_root_or_default_or_exit(root)
+    };
+    let home = get_home_directory_or_exit();
 
     let nb_files_written = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
@@ -194,7 +201,71 @@ fn link(_root: Option<String>, _verbose: bool) {
     //        _replaced_ by symlinks.
 }
 
-fn get_root_or_default(root: Option<String>) -> PathBuf {
+fn get_config_root_from_git_or_exit(uri: &str, verbose: bool) -> PathBuf {
+    let uri = uri.trim_start_matches("git://").to_string();
+
+    // Yes, I know. Not a solid UUID, I should use a crate, etc.
+    let uuid = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("current time > Unix epoch")
+        .as_millis()
+        .to_string();
+    let clone_path = env::temp_dir().join(format!("deez-{uuid}"));
+
+    if clone_path.is_dir() && fs::remove_dir_all(&clone_path).is_err() {
+        eprint!(
+            "\
+fatal: Could not clone the configuration repository.
+The target directory already exists and could not be deleted.
+"
+        );
+        process::exit(1);
+    }
+
+    println!("Fetching config files remotely...");
+
+    let mut command = process::Command::new("git");
+    command
+        .env("LANG", "en_US.UTF-8")
+        .arg("clone")
+        .arg("--single-branch")
+        .arg("--depth=1")
+        .arg("--no-tags")
+        .arg(&uri)
+        .arg(&clone_path);
+
+    let status = if verbose {
+        command.status().ok()
+    } else {
+        command.arg("--quiet");
+        command.output().ok().map(|out| out.status)
+    };
+
+    if let Some(status) = status {
+        if !status.success() {
+            eprintln!("fatal: Could not clone the configuration repository.");
+            if !verbose {
+                eprintln!("Retry with `--verbose` for additional detail.");
+            }
+            process::exit(1);
+        }
+    } else {
+        eprint!(
+            "\
+fatal: Could not clone the configuration repository.
+Did not find the 'git' executable. Please ensure Git is properly
+installed on your machine.
+"
+        );
+        process::exit(1);
+    }
+
+    println!("Done.");
+
+    clone_path
+}
+
+fn get_config_root_or_default_or_exit(root: Option<String>) -> PathBuf {
     let root = if let Some(root) = root {
         let root = PathBuf::from(root);
         if !root.is_dir() {
@@ -209,7 +280,7 @@ fn get_root_or_default(root: Option<String>) -> PathBuf {
         root
     } else {
         env::current_dir().unwrap_or_else(|_| {
-            eprintln!(
+            eprint!(
                 "\
 fatal: Could not determine current working directory.
 Please provide a Root directory as argument.
@@ -219,25 +290,16 @@ Please provide a Root directory as argument.
         })
     };
 
-    ensure_root_is_a_config_root(&root);
+    ensure_root_is_a_config_root_or_exit(&root);
 
     root
-}
-
-fn get_home_directory() -> PathBuf {
-    // TODO: Use `std::env::home_dir()` once it gets un-deprecated.
-    let Ok(home_directory) = env::var("HOME") else {
-        eprintln!("fatal: Could not read Home directory from environment.");
-        process::exit(1);
-    };
-    PathBuf::from(home_directory)
 }
 
 /// Ensure `root` holds config and is not a random directory.
 ///
 /// To be a config root, the directory must contain a `.deez` file, or
 /// the user must give confirmation.
-fn ensure_root_is_a_config_root(root: &Path) {
+fn ensure_root_is_a_config_root_or_exit(root: &Path) {
     if root.join(".deez").is_file() {
         return;
     }
@@ -264,4 +326,13 @@ Selected root: '{}'.
 
     eprintln!("Aborting.");
     process::exit(2);
+}
+
+fn get_home_directory_or_exit() -> PathBuf {
+    // TODO: Use `std::env::home_dir()` once it gets un-deprecated.
+    let Ok(home_directory) = env::var("HOME") else {
+        eprintln!("fatal: Could not read Home directory from environment.");
+        process::exit(1);
+    };
+    PathBuf::from(home_directory)
 }

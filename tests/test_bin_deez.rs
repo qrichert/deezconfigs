@@ -60,12 +60,14 @@ fn file_exists_in_home(file_path: &str) -> bool {
 #[test]
 fn help() {
     let output = run(&["--help"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
     assert!(output.stdout.contains("-h, --help"));
     assert!(output.stdout.contains("-V, --version"));
     assert!(output.stdout.contains("-v, --verbose"));
-    assert!(output.stdout.contains("sync [<root>]"));
+    assert!(output.stdout.contains("sync [<root>|<git>]"));
     assert!(output.stdout.contains("rsync [<root>]"));
     assert!(output.stdout.contains("link [<root>]"));
 }
@@ -73,6 +75,8 @@ fn help() {
 #[test]
 fn no_args_shows_help() {
     let output = run(&[]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
     assert!(output.stdout.contains("-h, --help"));
@@ -86,6 +90,8 @@ fn version() {
     assert!(output.stdout.contains(env!("CARGO_PKG_VERSION")));
 
     let output = run(&["-V"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
     assert!(output.stdout.contains(env!("CARGO_PKG_VERSION")));
@@ -94,6 +100,8 @@ fn version() {
 #[test]
 fn bad_argument() {
     let output = run(&["--bad-argument"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 2);
     assert!(output.stderr.contains("'--bad-argument'"));
@@ -109,10 +117,10 @@ fn sync_regular() {
     conf::create_symlink_in_configs(".config/ghostty/config", None);
 
     let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
-    dbg!(output.stdout);
-    dbg!(output.stderr);
 
     assert!(file_exists_in_home(".gitconfig"));
     assert!(file_exists_in_home(".config/nvim/init.lua"));
@@ -134,10 +142,10 @@ fn sync_ignores_special_files() {
     conf::create_file_in_configs("subdir/.deez", None);
 
     let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
-    dbg!(output.stdout);
-    dbg!(output.stderr);
 
     // OK in sub-directories.
     assert!(file_exists_in_home("subdir/.git/config"));
@@ -173,10 +181,10 @@ fn sync_replace_symlink_with_file() {
     assert_eq!(content_before, "should not be replaced");
 
     let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
-    dbg!(output.stdout);
-    dbg!(output.stderr);
 
     // Ensure the symlink in home is a file now, with updated content.
     let content_after = fs::read_to_string(&symlink_in_home).unwrap();

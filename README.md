@@ -19,7 +19,7 @@ neuron activation to use.
 - [x] Basic `sync`.
 - [x] Protect `$HOME` with a `.deez` file.
 - [x] Add `--verbose` mode (use `-V` for version).
-- [ ] Use Git remote as `sync` root.
+- [x] Use Git remote as `sync` root.
 - [ ] Basic `link`.
 - [ ] Basic `rsync`.
 - [ ] Think about templating.
@@ -46,8 +46,6 @@ Maybe also allow specifying a git remote as `<root>`
 $ tree
 .
 ├── .config
-│   ├── alacritty
-│   │   └── alacritty.toml
 │   ├── fish
 │   │   └── config.fish
 │   ├── ghostty
@@ -55,17 +53,21 @@ $ tree
 │   │   └── ssh.txt
 │   └── nvim
 │       └── init.vim
+├── .deez
 ├── .gitconfig
 └── .tmux.conf
 ```
 
 ```console
 $ deez --help
-deez sync|link [<root>]
+deez sync|rsync|link [<root>]
 
 $ deez sync
 Copies the files to the $HOME directory.
 Also creates any missing directories.
+
+$ deez sync git://git@github.com:qrichert/configs.git
+Sync directly from Git remote.
 
 $ deez link
 Creates symlinks to the files in $HOME.
