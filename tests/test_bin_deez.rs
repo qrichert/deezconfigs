@@ -63,7 +63,8 @@ fn help() {
 
     assert_eq!(output.exit_code, 0);
     assert!(output.stdout.contains("-h, --help"));
-    assert!(output.stdout.contains("-v, --version"));
+    assert!(output.stdout.contains("-V, --version"));
+    assert!(output.stdout.contains("-v, --verbose"));
     assert!(output.stdout.contains("sync [<root>]"));
     assert!(output.stdout.contains("rsync [<root>]"));
     assert!(output.stdout.contains("link [<root>]"));
@@ -80,6 +81,11 @@ fn no_args_shows_help() {
 #[test]
 fn version() {
     let output = run(&["--version"]);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(output.stdout.contains(env!("CARGO_PKG_VERSION")));
+
+    let output = run(&["-V"]);
 
     assert_eq!(output.exit_code, 0);
     assert!(output.stdout.contains(env!("CARGO_PKG_VERSION")));

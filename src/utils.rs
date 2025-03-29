@@ -19,6 +19,7 @@ use std::io;
 use std::io::Write;
 
 /// Prompt the user to confirm an action (custom prompt).
+#[must_use]
 pub fn ask_confirmation_with_prompt(prompt: &str) -> bool {
     print!("{prompt} (y/N) ");
     _ = io::stdout().flush();

@@ -24,23 +24,29 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use deezconfigs::{utils, walk};
 
 fn main() {
+    let mut verbose = false;
+
     let mut args = env::args().skip(1);
-    if let Some(arg) = args.next() {
-        return match arg.as_str() {
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
             "-h" | "--help" => {
                 help();
             }
-            "-v" | "--version" => {
+            "-V" | "--version" => {
                 version();
             }
             "sync" => {
-                sync(args.next());
+                sync(args.next(), verbose);
             }
             "rsync" => {
-                rsync(args.next());
+                rsync(args.next(), verbose);
             }
             "link" => {
-                link(args.next());
+                link(args.next(), verbose);
+            }
+            "-v" | "--verbose" => {
+                verbose = true;
+                continue;
             }
             arg => {
                 eprintln!("Unknown argument: '{arg}'.\n");
@@ -48,6 +54,8 @@ fn main() {
                 process::exit(2);
             }
         };
+        // `return`, unless `continue`.
+        return;
     }
 
     // No arguments.
@@ -67,7 +75,8 @@ Commands:
 
 Options:
   -h, --help       Show this message and exit.
-  -v, --version    Show the version and exit.
+  -V, --version    Show the version and exit.
+  -v, --verbose    Show files being copied.
 ",
         bin = env!("CARGO_BIN_NAME"),
     );
@@ -77,7 +86,7 @@ fn version() {
     println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 }
 
-fn sync(root: Option<String>) {
+fn sync(root: Option<String>, verbose: bool) {
     // TODO: If we want to do Git cloning it's here:
     //  1. Detect git URL.
     //  2. `git clone` to `/tmp` (remove if it exists, no `git pull`, we
@@ -128,10 +137,15 @@ fn sync(root: Option<String>) {
             return;
         }
 
-        // TODO: if verbose { println!("wrote: {}", p.display()) }
-        //  (With locked stdout, but looks like it's going to be
-        //  a pain... Also check that lock is released _before_
-        //  `print_summary()`).
+        if verbose {
+            // Since this is threaded, it's quite a pain to optimise the
+            // repeated prints. We can't properly share a stdout lock or
+            // a mutable string buffer without jumping through too many
+            // hoops. And quite frankly it would be overkill in regard
+            // to the limited number of config files we can expect.
+            println!("{}", p.display());
+        }
+
         nb_files_written.fetch_add(1, Ordering::Relaxed);
     });
 
@@ -161,7 +175,7 @@ fn print_summary(root: &Path, nb_files_written: usize, nb_errors: usize) {
     _ = writeln!(stdout, ".");
 }
 
-fn rsync(_root: Option<String>) {
+fn rsync(_root: Option<String>, _verbose: bool) {
     todo!("update files _from_ destination")
 
     // TODO:
@@ -170,7 +184,7 @@ fn rsync(_root: Option<String>) {
     //  3. Replace files in `configs` with files in `/home`.
 }
 
-fn link(_root: Option<String>) {
+fn link(_root: Option<String>, _verbose: bool) {
     todo!("symlink files _to_ destination")
 
     // TODO:
@@ -185,6 +199,11 @@ fn get_root_or_default(root: Option<String>) -> PathBuf {
         let root = PathBuf::from(root);
         if !root.is_dir() {
             eprintln!("fatal: Root must be a valid directory.");
+            if root.is_file() {
+                eprintln!("'{}' is a file.", root.display());
+            } else if !root.exists() {
+                eprintln!("'{}' does not exist.", root.display());
+            }
             process::exit(1);
         }
         root
