@@ -33,7 +33,7 @@ commands are burnt into my muscle memory.
 - [x] Protect `$HOME` with a `.deez` file.
 - [x] Add `--verbose` mode (use `-V` for version).
 - [x] Use Git remote as `sync` root.
-- [ ] Smart root finder (looks in parents)
+- [x] Smart root finder (looks in parents)
 - [ ] Basic `rsync`.
 - [ ] Basic `link`.
 - [ ] Likely `list` (with up-to-date status for each file).

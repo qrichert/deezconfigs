@@ -246,18 +246,13 @@ fn determine_config_root(root: Option<&String>) -> Result<PathBuf, i32> {
     let root = if let Some(root) = root {
         get_config_root_from_args(root)?
     } else {
-        get_default_config_root()?
-        // TODO
-        //  if let Err(err) = get_default_config_root(&root) {
-        //      // find_config_root_in_parents();
-        //      let base = root;
-        //      while dir = root.parent() {
-        //          if is_a_config_root(&dir) {
-        //              return Ok(dir);
-        //          }
-        //      }
-        //      return Err(err);
-        //  }
+        let mut default = get_default_config_root()?;
+        if !is_a_config_root(&default) {
+            if let Some(parent) = find_config_root_in_parents(&default) {
+                default = parent.to_path_buf();
+            }
+        }
+        default
     };
     ensure_root_is_a_config_root(&root)?;
     Ok(root)
@@ -290,8 +285,22 @@ Please provide a Root directory as argument.
     Ok(root)
 }
 
-fn is_a_config_root(root: &Path) -> bool {
-    root.join(".deez").is_file()
+fn find_config_root_in_parents(mut base: &Path) -> Option<&Path> {
+    const DEPTH_LIMIT: u8 = 20;
+    let mut i = 0;
+
+    while let Some(root) = base.parent() {
+        base = root;
+        if is_a_config_root(root) {
+            return Some(root);
+        }
+
+        i += 1;
+        if i == DEPTH_LIMIT {
+            break;
+        }
+    }
+    None
 }
 
 /// Ensure `root` holds config and is not a random directory.
@@ -326,6 +335,10 @@ Selected root: '{}'.
     eprintln!("Aborting.");
 
     Err(2)
+}
+
+fn is_a_config_root(root: &Path) -> bool {
+    root.join(".deez").is_file()
 }
 
 fn get_home_directory() -> Result<PathBuf, i32> {

@@ -18,7 +18,7 @@ mod conf;
 
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use conf::HOME;
@@ -32,7 +32,12 @@ struct Output {
 }
 
 fn run(args: &[&str]) -> Output {
+    run_in_dir(args, env::current_dir().unwrap())
+}
+
+fn run_in_dir(args: &[&str], dir: impl AsRef<Path>) -> Output {
     let mut command = Command::new(DEEZ);
+    command.current_dir(dir.as_ref());
 
     for arg in args {
         command.arg(arg);
@@ -219,4 +224,19 @@ fn sync_respect_ignore_patters() {
 
     assert!(!file_exists_in_home(".ignore"));
     assert!(!file_exists_in_home(".gitignore"));
+}
+
+#[test]
+fn sync_look_for_root_in_parents() {
+    conf::init();
+
+    let file = conf::create_file_in_configs("foo/bar/baz.txt", None);
+
+    let output = run_in_dir(&["sync"], file.parent().unwrap());
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(file_exists_in_home("foo/bar/baz.txt"));
 }
