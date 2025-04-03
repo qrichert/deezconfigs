@@ -70,17 +70,17 @@ fn main() {
 fn help() {
     println!(
         "\
-usage: {bin} [<options>] <command> [<args>]
+Usage: {bin} [<options>] <command> [<args>]
 
 Commands:
-  sync [<root>|<git>]  Update system with configs
-  rsync [<root>]       Update configs with system
-  link [<root>]        Symlink configs to system
+  sync [<root>|<git>]   Update Home with configs
+  rsync [<root>]        Update configs from Home
+  link [<root>]         Symlink configs to Home
 
 Options:
-  -h, --help           Show this message and exit.
-  -V, --version        Show the version and exit.
-  -v, --verbose        Show files being copied.
+  -h, --help            Show this message and exit
+  -V, --version         Show the version and exit
+  -v, --verbose         Show files being copied
 ",
         bin = env!("CARGO_BIN_NAME"),
     );
