@@ -195,3 +195,28 @@ fn sync_replace_symlink_with_file() {
     let symlink_target_content = fs::read_to_string(&symlink_target_in_home).unwrap();
     assert_eq!(symlink_target_content, "should not be replaced");
 }
+
+#[test]
+fn sync_respect_ignore_patters() {
+    conf::init();
+
+    conf::create_file_in_configs("foo/a.txt", None);
+    conf::create_file_in_configs("bar/b.txt", None);
+    conf::create_file_in_configs("baz/c.txt", None);
+
+    conf::create_file_in_configs(".ignore", Some("foo/*"));
+    conf::create_file_in_configs(".gitignore", Some("bar/b.txt"));
+
+    let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(!file_exists_in_home("foo/a.txt"));
+    assert!(!file_exists_in_home("bar/b.txt"));
+    assert!(file_exists_in_home("baz/c.txt"));
+
+    assert!(!file_exists_in_home(".ignore"));
+    assert!(!file_exists_in_home(".gitignore"));
+}

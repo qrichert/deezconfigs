@@ -48,7 +48,7 @@ pub fn find_files_recursively(root: impl AsRef<Path>, f: impl Fn(&Path) + Sync) 
 
     let does_file_entry_match = move |path: &Path| {
         // At the root.
-        if [".gitignore"].map(Path::new).contains(&path) {
+        if [".ignore", ".gitignore"].map(Path::new).contains(&path) {
             return false;
         }
 

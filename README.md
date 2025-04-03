@@ -98,8 +98,7 @@ $ deez sync somedir
 Will treat `somedir` as the root instead of using `cwd`.
 ```
 
-- Respects `.gitignore` (thanks to the `ignore` crate) (TODO: test this,
-  and check for `.ignore`).
+- Respects `.ignore` and `.gitignore` files.
 
 - `list` starts file paths with `./`, And colors out-of-date files in
   red (respecting `NO_COLOR`).
@@ -120,8 +119,9 @@ Git is absolutely not a requirement.
 #### Ignore some files
 
 By default, `deezconfigs` ignores the `.git` directory at the root, the
-`.gitignore` file at the root (but not elsewhere), and all `.deez`
-files, wherever they are (enabling multi-root repos).
+`.ignore` and/or `.gitignore` file at the root (but not elsewhere,
+although it respects them everywhere), and all `.deez` files, wherever
+they are (enabling multi-root repos).
 
 If you want to ignore more files than this, add them to your root
 `.gitignore`. Git will let you version the files regardless, just
