@@ -89,7 +89,7 @@ pub fn find_files_recursively(root: impl AsRef<Path>, f: impl Fn(&Path) + Sync) 
                         f(path);
                         return WalkState::Continue;
                     }
-                };
+                }
                 WalkState::Skip
             })
         });

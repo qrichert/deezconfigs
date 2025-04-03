@@ -33,13 +33,15 @@ commands are burnt into my muscle memory.
 - [x] Protect `$HOME` with a `.deez` file.
 - [x] Add `--verbose` mode (use `-V` for version).
 - [x] Use Git remote as `sync` root.
+- [ ] Smart root finder (looks in parents)
 - [ ] Basic `rsync`.
 - [ ] Basic `link`.
 - [ ] Likely `list` (with up-to-date status for each file).
 - [ ] Maybe `diff` (difference between source and target).
 - [ ] Proper verbose `--help` section.
-- [ ] Think about templating.
+- [ ] Make argument parsing more flexible (not very nice right now).
 - [ ] Think about commands.
+- [ ] Think about templating.
 
 ## Usage
 
@@ -96,8 +98,17 @@ $ deez sync somedir
 Will treat `somedir` as the root instead of using `cwd`.
 ```
 
-- Respects `.gitignore` (thanks to the `ignore` crate) (TODO: test
-  this).
+- Respects `.gitignore` (thanks to the `ignore` crate) (TODO: test this,
+  and check for `.ignore`).
+
+- `list` starts file paths with `./`, And colors out-of-date files in
+  red (respecting `NO_COLOR`).
+
+- Smart root finding will be used when 1) no root was explicitly
+  supplied, and 2) the current working directory (default roor) is not a
+  config root (no `.deez` file). In this case, deezconfigs will look
+  into parent dirs for a `.deez` file. If one is found, use it as root
+  instead of warning "this is not a deez root".
 
 ### Tips
 
@@ -147,23 +158,20 @@ This section will be overridden/updated by the `deez` config file.
 Outside of the template won't be touched.
 ```
 
-### Commands, aka Hooks (idea/TODO)
+### Hooks (idea/TODO)
 
 Enable some sort of pre-sync and post-sync hooks. Those would be defined
-in the `.deez` file. The hooks would be passed to `$SHELL` as:
+in the `.deez` file. The hooks would be passed to `sh` as:
 
 ```sh
-$SHELL -c "<the hook content>"
+cd <root>; /bin/sh -c "<the hook content>"
 ```
-
-This would work with script files (e.g., do-something.bash), and with
-commands (e.g., `sed -i s/foo/bar/g`).
 
 The exact format has to be determined. Probably Yaml, like:
 
 ```yaml
-commands:
+hooks:
   post-sync:
-    - do-something.bash
+    - ./do-something.bash
     - sed -i s/foo/bar/g config
 ```

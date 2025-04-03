@@ -28,7 +28,7 @@ fn main() {
 
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
-        match arg.as_str() {
+        return match arg.as_str() {
             "-h" | "--help" => {
                 help();
             }
@@ -36,13 +36,19 @@ fn main() {
                 version();
             }
             "sync" => {
-                sync(args.next(), verbose);
+                if let Err(code) = sync(args.next(), verbose) {
+                    process::exit(code);
+                }
             }
             "rsync" => {
-                rsync(args.next(), verbose);
+                if let Err(code) = rsync(args.next(), verbose) {
+                    process::exit(code);
+                }
             }
             "link" => {
-                link(args.next(), verbose);
+                if let Err(code) = link(args.next(), verbose) {
+                    process::exit(code);
+                }
             }
             "-v" | "--verbose" => {
                 verbose = true;
@@ -54,8 +60,6 @@ fn main() {
                 process::exit(2);
             }
         };
-        // `return`, unless `continue`.
-        return;
     }
 
     // No arguments.
@@ -86,23 +90,13 @@ fn version() {
     println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 }
 
-fn sync(root: Option<String>, verbose: bool) {
-    // TODO: If we want to do Git cloning it's here:
-    //  1. Detect git URL.
-    //  2. `git clone` to `/tmp` (remove if it exists, no `git pull`, we
-    //     don't know the user's config).
-    //  3. Normalize `root` to `Some("/tmp/cloned-repo")`.
-    //  4. Proceed as usual.
-
-    let root = if root.as_ref().is_some_and(|r| r.starts_with("git://")) {
-        get_config_root_from_git_or_exit(
-            &root.expect("contains as least `git://` scheme."),
-            verbose,
-        )
+fn sync(root: Option<String>, verbose: bool) -> Result<(), i32> {
+    let root = if is_git_remote_uri(root.as_ref()) {
+        get_config_root_from_git(&root.expect("contains as least `git://` scheme."), verbose)?
     } else {
-        get_config_root_or_default_or_exit(root)
+        determine_config_root(root.as_ref())?
     };
-    let home = get_home_directory_or_exit();
+    let home = get_home_directory()?;
 
     let nb_files_written = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
@@ -133,7 +127,7 @@ fn sync(root: Option<String>, verbose: bool) {
                 );
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 return;
-            };
+            }
         }
 
         // `fs::copy()` _follows_ symlinks. It will create files with the
@@ -157,32 +151,15 @@ fn sync(root: Option<String>, verbose: bool) {
     });
 
     print_summary(&root, nb_files_written.into_inner(), nb_errors.into_inner());
+
+    Ok(())
 }
 
-fn print_summary(root: &Path, nb_files_written: usize, nb_errors: usize) {
-    let mut stdout = io::stdout().lock();
-
-    if nb_files_written + nb_errors == 0 {
-        _ = writeln!(stdout, "No config files found in '{}'.", root.display());
-        return;
-    }
-
-    _ = write!(
-        stdout,
-        "Wrote {nb_files_written} file{}",
-        if nb_files_written == 1 { "" } else { "s" }
-    );
-    if nb_errors > 0 {
-        _ = write!(
-            stdout,
-            ", {nb_errors} error{}",
-            if nb_errors == 1 { "" } else { "s" }
-        );
-    }
-    _ = writeln!(stdout, ".");
+fn is_git_remote_uri(root: Option<&String>) -> bool {
+    root.as_ref().is_some_and(|r| r.starts_with("git://"))
 }
 
-fn rsync(_root: Option<String>, _verbose: bool) {
+fn rsync(_root: Option<String>, _verbose: bool) -> Result<(), i32> {
     todo!("update files _from_ destination")
 
     // TODO:
@@ -191,7 +168,7 @@ fn rsync(_root: Option<String>, _verbose: bool) {
     //  3. Replace files in `configs` with files in `/home`.
 }
 
-fn link(_root: Option<String>, _verbose: bool) {
+fn link(_root: Option<String>, _verbose: bool) -> Result<(), i32> {
     todo!("symlink files _to_ destination")
 
     // TODO:
@@ -201,7 +178,7 @@ fn link(_root: Option<String>, _verbose: bool) {
     //        _replaced_ by symlinks.
 }
 
-fn get_config_root_from_git_or_exit(uri: &str, verbose: bool) -> PathBuf {
+fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<PathBuf, i32> {
     let uri = uri.trim_start_matches("git://").to_string();
 
     // Yes, I know. Not a solid UUID, I should use a crate, etc.
@@ -219,7 +196,7 @@ fatal: Could not clone the configuration repository.
 The target directory already exists and could not be deleted.
 "
         );
-        process::exit(1);
+        return Err(1);
     }
 
     println!("Fetching config files remotely...");
@@ -247,7 +224,7 @@ The target directory already exists and could not be deleted.
             if !verbose {
                 eprintln!("Retry with `--verbose` for additional detail.");
             }
-            process::exit(1);
+            return Err(1);
         }
     } else {
         eprint!(
@@ -257,51 +234,73 @@ Did not find the 'git' executable. Please ensure Git is properly
 installed on your machine.
 "
         );
-        process::exit(1);
+        return Err(1);
     }
 
     println!("Done.");
 
-    clone_path
+    Ok(clone_path)
 }
 
-fn get_config_root_or_default_or_exit(root: Option<String>) -> PathBuf {
+fn determine_config_root(root: Option<&String>) -> Result<PathBuf, i32> {
     let root = if let Some(root) = root {
-        let root = PathBuf::from(root);
-        if !root.is_dir() {
-            eprintln!("fatal: Root must be a valid directory.");
-            if root.is_file() {
-                eprintln!("'{}' is a file.", root.display());
-            } else if !root.exists() {
-                eprintln!("'{}' does not exist.", root.display());
-            }
-            process::exit(1);
-        }
-        root
+        get_config_root_from_args(root)?
     } else {
-        env::current_dir().unwrap_or_else(|_| {
-            eprint!(
-                "\
+        get_default_config_root()?
+        // TODO
+        //  if let Err(err) = get_default_config_root(&root) {
+        //      // find_config_root_in_parents();
+        //      let base = root;
+        //      while dir = root.parent() {
+        //          if is_a_config_root(&dir) {
+        //              return Ok(dir);
+        //          }
+        //      }
+        //      return Err(err);
+        //  }
+    };
+    ensure_root_is_a_config_root(&root)?;
+    Ok(root)
+}
+
+fn get_config_root_from_args(root: &str) -> Result<PathBuf, i32> {
+    let root = PathBuf::from(root);
+    if !root.is_dir() {
+        eprintln!("fatal: Root must be a valid directory.");
+        if root.is_file() {
+            eprintln!("'{}' is a file.", root.display());
+        } else if !root.exists() {
+            eprintln!("'{}' does not exist.", root.display());
+        }
+        return Err(1);
+    }
+    Ok(root)
+}
+
+fn get_default_config_root() -> Result<PathBuf, i32> {
+    let Ok(root) = env::current_dir() else {
+        eprint!(
+            "\
 fatal: Could not determine current working directory.
 Please provide a Root directory as argument.
 "
-            );
-            process::exit(1);
-        })
+        );
+        return Err(1);
     };
+    Ok(root)
+}
 
-    ensure_root_is_a_config_root_or_exit(&root);
-
-    root
+fn is_a_config_root(root: &Path) -> bool {
+    root.join(".deez").is_file()
 }
 
 /// Ensure `root` holds config and is not a random directory.
 ///
 /// To be a config root, the directory must contain a `.deez` file, or
 /// the user must give confirmation.
-fn ensure_root_is_a_config_root_or_exit(root: &Path) {
-    if root.join(".deez").is_file() {
-        return;
+fn ensure_root_is_a_config_root(root: &Path) -> Result<(), i32> {
+    if is_a_config_root(root) {
+        return Ok(());
     }
 
     eprint!(
@@ -321,18 +320,43 @@ Selected root: '{}'.
 
     if utils::ask_confirmation_with_prompt("Proceed?") {
         println!();
-        return;
+        return Ok(());
     }
 
     eprintln!("Aborting.");
-    process::exit(2);
+
+    Err(2)
 }
 
-fn get_home_directory_or_exit() -> PathBuf {
+fn get_home_directory() -> Result<PathBuf, i32> {
     // TODO: Use `std::env::home_dir()` once it gets un-deprecated.
-    let Ok(home_directory) = env::var("HOME") else {
+    if let Ok(home_directory) = env::var("HOME") {
+        Ok(PathBuf::from(home_directory))
+    } else {
         eprintln!("fatal: Could not read Home directory from environment.");
-        process::exit(1);
-    };
-    PathBuf::from(home_directory)
+        Err(1)
+    }
+}
+
+fn print_summary(root: &Path, nb_files_written: usize, nb_errors: usize) {
+    let mut stdout = io::stdout().lock();
+
+    if nb_files_written + nb_errors == 0 {
+        _ = writeln!(stdout, "No config files found in '{}'.", root.display());
+        return;
+    }
+
+    _ = write!(
+        stdout,
+        "Wrote {nb_files_written} file{}",
+        if nb_files_written == 1 { "" } else { "s" }
+    );
+    if nb_errors > 0 {
+        _ = write!(
+            stdout,
+            ", {nb_errors} error{}",
+            if nb_errors == 1 { "" } else { "s" }
+        );
+    }
+    _ = writeln!(stdout, ".");
 }
