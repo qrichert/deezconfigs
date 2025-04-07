@@ -30,8 +30,8 @@ use crate::hooks::HOOKS;
 /// passing `/root` will in turn call `f(&Path::from("foo"))` (the
 /// `/root/` prefix got stripped).
 ///
-/// This is useful for us, because it makes it easy to join the same path
-/// back to `root`, or, back to `$HOME`, without additional logic.
+/// This is useful for us, because it makes it easy to join the same
+/// path back to `root`, or, back to `$HOME`, without additional logic.
 ///
 /// # Panics
 ///

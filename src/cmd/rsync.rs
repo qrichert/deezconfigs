@@ -1,5 +1,3 @@
-use std::io;
-
 // deezconfigs — Manage deez config files.
 // Copyright (C) 2025  Quentin Richert
 //
@@ -16,19 +14,11 @@ use std::io;
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::io::Write;
+pub fn rsync(_root: Option<String>, _verbose: bool) -> Result<(), i32> {
+    todo!("update files _from_ destination")
 
-/// Prompt the user to confirm an action (custom prompt).
-#[must_use]
-pub fn ask_confirmation_with_prompt(prompt: &str) -> bool {
-    print!("{prompt} (y/N) ");
-    _ = io::stdout().flush();
-
-    let mut answer = String::new();
-    if io::stdin().read_line(&mut answer).is_err() {
-        eprintln!("Error reading user input.");
-        return false;
-    }
-
-    matches!(answer.to_ascii_lowercase().trim(), "y" | "yes")
+    // TODO:
+    //  1. Collect all files in `configs`
+    //  2. Find matching files in `/home`
+    //  3. Replace files in `configs` with files in `/home`.
 }

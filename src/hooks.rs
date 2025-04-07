@@ -26,6 +26,7 @@ pub(crate) const HOOKS: [&str; 6] = [
     "post-link",
 ];
 
+/// Context for hooks for a given root.
 #[derive(Debug)]
 pub struct Hooks<'a> {
     root: &'a Path,

@@ -14,6 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod hooks;
-pub mod ui;
-pub mod walk;
+pub mod common;
+pub mod link;
+pub mod rsync;
+pub mod sync;
+
+pub use link::link;
+pub use rsync::rsync;
+pub use sync::sync;
