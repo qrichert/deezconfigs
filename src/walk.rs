@@ -19,6 +19,8 @@ use std::path::Path;
 
 use ignore::{self, DirEntry, WalkBuilder, WalkState};
 
+use crate::hooks::HOOKS;
+
 /// Find files recursively, starting from `root` directory.
 ///
 /// For each file found, call `f(path)`, where `path` is the path of the
@@ -48,8 +50,17 @@ pub fn find_files_recursively(root: impl AsRef<Path>, f: impl Fn(&Path) + Sync) 
 
     let does_file_entry_match = move |path: &Path| {
         // At the root.
-        if [".ignore", ".gitignore"].map(Path::new).contains(&path) {
-            return false;
+        let is_at_root = path.components().count() == 1;
+        if is_at_root {
+            if [".ignore", ".gitignore"].map(Path::new).contains(&path) {
+                return false;
+            }
+            // TODO: Use `PathBuf::file_prefix()` once it lands in stable.
+            if let Some(file_name) = path.file_stem() {
+                if HOOKS.map(OsStr::new).contains(&file_name) {
+                    return false;
+                }
+            }
         }
 
         // Anywhere.

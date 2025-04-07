@@ -19,8 +19,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const TMP_DIR: &str = env!("CARGO_TARGET_TMPDIR");
+pub const CONFIGS: &str = concat!(env!("CARGO_TARGET_TMPDIR"), "/configs");
 pub const HOME: &str = concat!(env!("CARGO_TARGET_TMPDIR"), "/home");
-const CONFIGS: &str = concat!(env!("CARGO_TARGET_TMPDIR"), "/configs");
 
 pub fn root() -> String {
     PathBuf::from(CONFIGS).display().to_string()
@@ -51,6 +51,19 @@ pub fn init() {
 
 pub fn create_file_in_configs(file_path: &str, content: Option<&str>) -> PathBuf {
     create_file(CONFIGS, file_path, content)
+}
+
+pub fn create_executable_file_in_configs(file_path: &str, content: Option<&str>) -> PathBuf {
+    let f = create_file(CONFIGS, file_path, content);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let file = fs::File::open(&f).unwrap();
+        let mut perms = file.metadata().unwrap().permissions();
+        perms.set_mode(perms.mode() | 0o100); // u+x
+        file.set_permissions(perms).unwrap();
+    }
+    f
 }
 
 pub fn create_file_in_home(file_path: &str, content: Option<&str>) -> PathBuf {

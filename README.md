@@ -34,14 +34,16 @@ commands are burnt into my muscle memory.
 - [x] Add `--verbose` mode (use `-V` for version).
 - [x] Use Git remote as `sync` root.
 - [x] Smart root finder (looks in parents)
+- [x] Hooks (pre, post actions)
 - [ ] Basic `rsync`.
 - [ ] Basic `link`.
 - [ ] Likely `list` (with up-to-date status for each file).
 - [ ] Maybe `diff` (difference between source and target).
 - [ ] Proper verbose `--help` section.
 - [ ] Make argument parsing more flexible (not very nice right now).
-- [ ] Think about commands.
 - [ ] Think about templating.
+- [ ] Increase test coverage (features are mostly covered, what's
+      missing are tests for the error cases).
 
 ## Usage
 
@@ -120,8 +122,8 @@ Git is absolutely not a requirement.
 
 By default, `deezconfigs` ignores the `.git` directory at the root, the
 `.ignore` and/or `.gitignore` file at the root (but not elsewhere,
-although it respects them everywhere), and all `.deez` files, wherever
-they are (enabling multi-root repos).
+although it respects them everywhere), all `.deez` files, wherever they
+are (enabling multi-root repos), and the hooks (at the root).
 
 If you want to ignore more files than this, add them to your root
 `.gitignore`. Git will let you version the files regardless, just
@@ -136,8 +138,19 @@ heuristics into `deezconfigs`. It's a Git thing, nothing new to learn.
 Use mutliple roots. You can have multiple roots (subdirectories) in one
 repo. Use `sync` in one, and `link` in the other.
 
-I you need anything more advanced than that, `deezconfigs` is likely not
-the right tool for you.
+If you need anything more advanced than that, `deezconfigs` is likely
+not the right tool for you.
+
+### Hooks
+
+- You can have hooks: `pre-sync`, `post-sync`, `pre-rsync`,
+  `post-rsync`, `pre-link`, `post-link`.
+- The extension can be any type of script (it's the file name that
+  counts).
+- The script must be executable and must contain a shebang (`#!`) if not
+  interpretable by `sh` directly (e.g., `bash` or `python` scripts).
+- This script will be run through `sh`: `sh -c <root>/<thescript>`
+  inside the config root directory.
 
 ### Templating (idea/TODO)
 
@@ -156,22 +169,4 @@ This section will be overridden/updated by the `deez` config file.
 # </%deez-template%>
 
 Outside of the template won't be touched.
-```
-
-### Hooks (idea/TODO)
-
-Enable some sort of pre-sync and post-sync hooks. Those would be defined
-in the `.deez` file. The hooks would be passed to `sh` as:
-
-```sh
-cd <root>; /bin/sh -c "<the hook content>"
-```
-
-The exact format has to be determined. Probably Yaml, like:
-
-```yaml
-hooks:
-  post-sync:
-    - ./do-something.bash
-    - sed -i s/foo/bar/g config
 ```

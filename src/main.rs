@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use deezconfigs::hooks::Hooks;
 use deezconfigs::{utils, walk};
 
 fn main() {
@@ -70,17 +71,17 @@ fn main() {
 fn help() {
     println!(
         "\
-usage: {bin} [<options>] <command> [<args>]
+Usage: {bin} [<options>] <command> [<args>]
 
 Commands:
-  sync [<root>|<git>]  Update system with configs
-  rsync [<root>]       Update configs with system
-  link [<root>]        Symlink configs to system
+  sync [<root>|<git>]   Update Home from configs
+  rsync [<root>]        Update configs from Home
+  link [<root>]         Symlink configs to Home
 
 Options:
-  -h, --help           Show this message and exit.
-  -V, --version        Show the version and exit.
-  -v, --verbose        Show files being copied.
+  -h, --help            Show this message and exit
+  -V, --version         Show the version and exit
+  -v, --verbose         Show files being copied
 ",
         bin = env!("CARGO_BIN_NAME"),
     );
@@ -97,6 +98,11 @@ fn sync(root: Option<String>, verbose: bool) -> Result<(), i32> {
         determine_config_root(root.as_ref())?
     };
     let home = get_home_directory()?;
+    let hooks = get_hooks_for_root(&root)?;
+
+    let mut nb_hooks_ran = 0;
+
+    nb_hooks_ran += run_hooks(|| hooks.pre_sync(verbose))?;
 
     let nb_files_written = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
@@ -150,7 +156,14 @@ fn sync(root: Option<String>, verbose: bool) -> Result<(), i32> {
         nb_files_written.fetch_add(1, Ordering::Relaxed);
     });
 
-    print_summary(&root, nb_files_written.into_inner(), nb_errors.into_inner());
+    nb_hooks_ran += run_hooks(|| hooks.post_sync(verbose))?;
+
+    print_summary(
+        &root,
+        nb_files_written.into_inner(),
+        nb_errors.into_inner(),
+        nb_hooks_ran,
+    );
 
     Ok(())
 }
@@ -265,7 +278,11 @@ fn get_config_root_from_args(root: &str) -> Result<PathBuf, i32> {
         if root.is_file() {
             eprintln!("'{}' is a file.", root.display());
         } else if !root.exists() {
-            eprintln!("'{}' does not exist.", root.display());
+            if root.to_str().is_some_and(str::is_empty) {
+                eprintln!("No path provided.");
+            } else {
+                eprintln!("'{}' does not exist.", root.display());
+            }
         }
         return Err(1);
     }
@@ -289,6 +306,7 @@ fn find_config_root_in_parents(mut base: &Path) -> Option<&Path> {
     const DEPTH_LIMIT: u8 = 20;
     let mut i = 0;
 
+    // TODO: Use `PathBuf::ancestors()` instead.
     while let Some(root) = base.parent() {
         base = root;
         if is_a_config_root(root) {
@@ -351,25 +369,54 @@ fn get_home_directory() -> Result<PathBuf, i32> {
     }
 }
 
-fn print_summary(root: &Path, nb_files_written: usize, nb_errors: usize) {
+fn get_hooks_for_root(root: &Path) -> Result<Hooks, i32> {
+    match Hooks::for_root(root) {
+        Ok(hooks) => Ok(hooks),
+        Err(err) => {
+            eprintln!("fatal: {err}");
+            Err(1)
+        }
+    }
+}
+
+fn run_hooks(hooks: impl Fn() -> Result<usize, &'static str>) -> Result<usize, i32> {
+    match hooks() {
+        Ok(nb_hooks) => Ok(nb_hooks),
+        Err(err) => {
+            eprintln!("fatal: {err}");
+            Err(1)
+        }
+    }
+}
+
+fn print_summary(root: &Path, nb_files_written: usize, nb_errors: usize, nb_hooks_ran: usize) {
     let mut stdout = io::stdout().lock();
 
-    if nb_files_written + nb_errors == 0 {
-        _ = writeln!(stdout, "No config files found in '{}'.", root.display());
-        return;
-    }
-
-    _ = write!(
-        stdout,
-        "Wrote {nb_files_written} file{}",
-        if nb_files_written == 1 { "" } else { "s" }
-    );
-    if nb_errors > 0 {
+    // Config files.
+    if nb_files_written + nb_errors > 0 {
         _ = write!(
             stdout,
-            ", {nb_errors} error{}",
-            if nb_errors == 1 { "" } else { "s" }
+            "Wrote {nb_files_written} file{}",
+            if nb_files_written == 1 { "" } else { "s" }
+        );
+        if nb_errors > 0 {
+            _ = write!(
+                stdout,
+                ", {nb_errors} error{}",
+                if nb_errors == 1 { "" } else { "s" }
+            );
+        }
+        _ = writeln!(stdout, ".");
+    } else {
+        _ = writeln!(stdout, "No config files found in '{}'.", root.display());
+    }
+
+    // Hooks.
+    if nb_hooks_ran > 0 {
+        _ = writeln!(
+            stdout,
+            "Ran {nb_hooks_ran} hook{}.",
+            if nb_hooks_ran == 1 { "" } else { "s" }
         );
     }
-    _ = writeln!(stdout, ".");
 }

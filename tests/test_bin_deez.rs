@@ -21,7 +21,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use conf::HOME;
+use conf::{CONFIGS, HOME};
 
 const DEEZ: &str = env!("CARGO_BIN_EXE_deez");
 
@@ -239,4 +239,68 @@ fn sync_look_for_root_in_parents() {
     assert_eq!(output.exit_code, 0);
 
     assert!(file_exists_in_home("foo/bar/baz.txt"));
+}
+
+#[test]
+fn sync_hooks_are_executed() {
+    conf::init();
+
+    // (Add 'OK's to differentiate from verbose output).
+    conf::create_executable_file_in_configs("pre-sync", Some("echo 'pre-sync OK'"));
+    conf::create_executable_file_in_configs("pre-sync.sh", Some("echo 'pre-sync.sh OK'"));
+    conf::create_executable_file_in_configs("post-sync.sh", Some("echo 'post-sync.sh OK'"));
+
+    let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains("pre-sync OK\n"));
+    assert!(output.stdout.contains("pre-sync.sh OK\n"));
+    assert!(output.stdout.contains("post-sync.sh OK\n"));
+
+    assert!(output.stdout.contains("Ran 3 hooks."));
+}
+
+#[test]
+fn sync_hooks_are_executed_in_configs_dir() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("post-sync.sh", Some(r#"echo "post-sync.sh:$(pwd)""#));
+
+    let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains(&format!("post-sync.sh:{CONFIGS}\n")));
+}
+
+#[test]
+fn sync_hooks_are_not_copied_to_home() {
+    conf::init();
+
+    // Regular files.
+    conf::create_file_in_configs("foo/pre-sync.sh", None);
+    conf::create_file_in_configs("foo/post-sync.sh", None);
+
+    // Hooks.
+    conf::create_file_in_configs("pre-sync.sh", None);
+    conf::create_file_in_configs("post-sync.sh", None);
+
+    let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    // Non-root "hooks" are not hooks, but regular files.
+    assert!(file_exists_in_home("foo/pre-sync.sh"));
+    assert!(file_exists_in_home("foo/post-sync.sh"));
+
+    // Hooks are not copied.
+    assert!(!file_exists_in_home("pre-sync.sh"));
+    assert!(!file_exists_in_home("post-sync.sh"));
 }
