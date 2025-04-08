@@ -89,7 +89,7 @@ $ deez sync
 Copies the files to the $HOME directory.
 Also creates any missing directories.
 
-$ deez sync git://git@github.com:qrichert/configs.git
+$ deez sync git:git@github.com:qrichert/configs.git
 Sync directly from Git remote.
 
 $ deez link

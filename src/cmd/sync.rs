@@ -26,7 +26,7 @@ use super::common::{determine_config_root, get_home_directory, get_hooks_for_roo
 
 pub fn sync(root: Option<String>, verbose: bool) -> Result<(), i32> {
     let root = if is_git_remote_uri(root.as_ref()) {
-        get_config_root_from_git(&root.expect("contains as least `git://` scheme."), verbose)?
+        get_config_root_from_git(&root.expect("not empty, contains a `git:` prefix"), verbose)?
     } else {
         determine_config_root(root.as_ref())?
     };
@@ -102,11 +102,11 @@ pub fn sync(root: Option<String>, verbose: bool) -> Result<(), i32> {
 }
 
 fn is_git_remote_uri(root: Option<&String>) -> bool {
-    root.as_ref().is_some_and(|r| r.starts_with("git://"))
+    root.as_ref().is_some_and(|r| r.starts_with("git:"))
 }
 
 fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<PathBuf, i32> {
-    let uri = uri.trim_start_matches("git://").to_string();
+    let uri = uri.trim_start_matches("git:").to_string();
 
     // Yes, I know. Not a solid UUID, I should use a crate, etc.
     let uuid = std::time::SystemTime::now()
