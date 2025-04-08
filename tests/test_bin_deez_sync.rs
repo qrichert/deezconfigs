@@ -218,6 +218,34 @@ fn sync_hooks_are_executed_in_configs_dir() {
 }
 
 #[test]
+fn sync_hooks_expose_verbose_mode() {
+    conf::init();
+
+    conf::create_executable_file_in_configs(
+        "pre-sync.sh",
+        Some(r#"[ -n "$DEEZ_VERBOSE" ] && echo verbose=true || echo verbose=false"#),
+    );
+
+    // Normal run.
+    let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains("verbose=false"));
+
+    // Verbose run.
+    let output = run(&["--verbose", "sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains("verbose=true"));
+}
+
+#[test]
 fn sync_hooks_are_not_copied_to_home() {
     conf::init();
 

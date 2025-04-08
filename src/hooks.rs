@@ -170,17 +170,23 @@ impl<'a> Hooks<'a> {
         // `root` cannot be an empty `Path`.
         debug_assert!(!self.root.to_str().is_some_and(str::is_empty));
 
+        let mut envs = Vec::new();
+
         if verbose {
             println!("hook: {}", hook.display());
+            envs.push(("DEEZ_VERBOSE", "true"));
         }
+
         let status = process::Command::new("sh")
             .arg("-c")
             .arg(self.root.join(hook)) // Always a path (`root` non-empty).
+            .envs(envs)
             .current_dir(self.root)
             .status();
         if status.is_err() {
             return Err("Could not find the 'sh' executable.");
         }
+
         Ok(())
     }
 }
