@@ -55,6 +55,62 @@ fn sync_regular() {
 }
 
 #[test]
+fn sync_output() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_configs(".config/nvim/init.lua", None);
+    conf::create_file_in_configs(".config/fish/config.fish", None);
+    conf::create_symlink_in_configs(".config/ghostty/config", None);
+    conf::create_executable_file_in_configs("pre-sync.sh", None);
+    conf::create_executable_file_in_configs("post-sync.sh", None);
+
+    let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    // File order is non-deterministic.
+    assert!(!output.stdout.contains("hook: pre-sync.sh"));
+    assert!(!output.stdout.contains(".gitconfig"));
+    assert!(!output.stdout.contains(".config/nvim/init.lua"));
+    assert!(!output.stdout.contains(".config/fish/config.fish"));
+    assert!(!output.stdout.contains(".config/ghostty/config"));
+    assert!(output.stdout.contains("Wrote 4 files."));
+    assert!(!output.stdout.contains("hook: post-sync.sh"));
+    assert!(output.stdout.contains("Ran 2 hooks"));
+}
+
+#[test]
+fn sync_output_verbose() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_configs(".config/nvim/init.lua", None);
+    conf::create_file_in_configs(".config/fish/config.fish", None);
+    conf::create_symlink_in_configs(".config/ghostty/config", None);
+    conf::create_executable_file_in_configs("pre-sync.sh", None);
+    conf::create_executable_file_in_configs("post-sync.sh", None);
+
+    let output = run(&["--verbose", "sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    // File order is non-deterministic.
+    assert!(output.stdout.contains("hook: pre-sync.sh"));
+    assert!(output.stdout.contains(".gitconfig"));
+    assert!(output.stdout.contains(".config/nvim/init.lua"));
+    assert!(output.stdout.contains(".config/fish/config.fish"));
+    assert!(output.stdout.contains(".config/ghostty/config"));
+    assert!(output.stdout.contains("Wrote 4 files."));
+    assert!(output.stdout.contains("hook: post-sync.sh"));
+    assert!(output.stdout.contains("Ran 2 hooks"));
+}
+
+#[test]
 fn sync_ignores_special_files() {
     conf::init();
 
