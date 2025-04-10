@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub fn link(_root: Option<String>, _verbose: bool) -> Result<(), i32> {
+pub fn link(_root: Option<&String>, _verbose: bool) -> Result<(), i32> {
     todo!("symlink files _to_ destination")
 
     // TODO:

@@ -33,17 +33,17 @@ fn main() {
                 version();
             }
             "sync" => {
-                if let Err(code) = cmd::sync(args.next(), verbose) {
+                if let Err(code) = cmd::sync(args.next().as_ref(), verbose) {
                     process::exit(code);
                 }
             }
             "rsync" => {
-                if let Err(code) = cmd::rsync(args.next(), verbose) {
+                if let Err(code) = cmd::rsync(args.next().as_ref(), verbose) {
                     process::exit(code);
                 }
             }
             "link" => {
-                if let Err(code) = cmd::link(args.next(), verbose) {
+                if let Err(code) = cmd::link(args.next().as_ref(), verbose) {
                     process::exit(code);
                 }
             }

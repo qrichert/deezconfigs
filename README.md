@@ -53,7 +53,7 @@ For more.
 - [x] Use Git remote as `sync` root.
 - [x] Smart root finder (looks in parents)
 - [x] Hooks (pre, post actions)
-- [ ] Basic `rsync`.
+- [x] Basic `rsync`.
 - [ ] Basic `link`.
 - [ ] Likely `list` (with up-to-date status for each file).
 - [ ] Likely `clean`
@@ -131,3 +131,10 @@ ran on the wrong root.
   interpretable by `sh` directly (e.g., `bash` or `python` scripts).
 - This script will be run through `sh`: `sh -c <root>/<thescript>`
   inside the config root directory.
+
+_deezconfigs_ provides some basic information to hooks through
+environment variables:
+
+- `DEEZ_VERBOSE` Will be `true` if run in verbose mode, otherwise it
+  will be unset (hint: use `[ -n $DEEZ_VERBOSE ]` to test for
+  existance).

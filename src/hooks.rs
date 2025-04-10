@@ -172,6 +172,11 @@ impl<'a> Hooks<'a> {
 
         let mut envs = Vec::new();
 
+        // TODO: This could be refactored by setting the env somewhere
+        // else (`&self.env` / `hooks.set_env()`). This would make it
+        // easier to pass other values without passing too many
+        // parameters here (and to each call to `run_hooks()`). It could
+        // come in handy to also pass `DEEZ_ROOT` and `DEEZ_HOME`.
         if verbose {
             println!("hook: {}", hook.display());
             envs.push(("DEEZ_VERBOSE", "true"));

@@ -24,11 +24,15 @@ use deezconfigs::{ui, walk};
 
 use super::common::{determine_config_root, get_home_directory, get_hooks_for_root, run_hooks};
 
-pub fn sync(root: Option<String>, verbose: bool) -> Result<(), i32> {
-    let root = if is_git_remote_uri(root.as_ref()) {
-        get_config_root_from_git(&root.expect("not empty, contains a `git:` prefix"), verbose)?
+/// Sync config from root into Home.
+///
+/// 1. Collect all files in `configs`.
+/// 2. Create or replace matching files in `$HOME`.
+pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
+    let root = if is_git_remote_uri(root) {
+        get_config_root_from_git(root.expect("not empty, contains a `git:` prefix"), verbose)?
     } else {
-        determine_config_root(root.as_ref())?
+        determine_config_root(root)?
     };
     let home = get_home_directory()?;
     let hooks = get_hooks_for_root(&root)?;
@@ -69,8 +73,8 @@ pub fn sync(root: Option<String>, verbose: bool) -> Result<(), i32> {
             }
         }
 
-        // `fs::copy()` _follows_ symlinks. It will create files with the
-        // contents of the symlink's target; it will _not_ create a link.
+        // `fs::copy()` follows symlinks. It will create files with the
+        // contents of the symlink's target; it will not create a link.
         if let Err(err) = fs::copy(source, destination) {
             eprintln!("error: Could not copy '{}' to Home: {err}", p.display());
             nb_errors.fetch_add(1, Ordering::Relaxed);

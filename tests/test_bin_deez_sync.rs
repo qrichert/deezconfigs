@@ -18,7 +18,7 @@ mod conf;
 mod run;
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use conf::{CONFIGS, HOME};
 use run::{run, run_in_dir};
@@ -33,6 +33,10 @@ fn file_exists_in_home(file_path: &str) -> bool {
 //     symlink.is_symlink()
 // }
 
+fn read(file_path: &Path) -> String {
+    fs::read_to_string(file_path).unwrap()
+}
+
 #[test]
 fn sync_regular() {
     conf::init();
@@ -42,7 +46,7 @@ fn sync_regular() {
     conf::create_file_in_configs(".config/fish/config.fish", None);
     conf::create_symlink_in_configs(".config/ghostty/config", None);
 
-    let output = run(&["sync", &conf::root()]);
+    let output = run(&["--verbose", "sync", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
@@ -123,7 +127,7 @@ fn sync_ignores_special_files() {
     // NOT OK, even in subdirectories.
     conf::create_file_in_configs("subdir/.deez", None);
 
-    let output = run(&["sync", &conf::root()]);
+    let output = run(&["--verbose", "sync", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
@@ -139,11 +143,11 @@ fn sync_ignores_special_files() {
     assert!(!file_exists_in_home("subdir/.deez"));
 }
 
-/// If a file in configs should override a symlink in home, ensure `sync`
-/// replaces the symlink with a file, and does _not_ replace the content
-/// of the target of the symlink.
+/// If a file in configs should override a symlink in home, ensure
+/// `sync` replaces the symlink with a file, and does _not_ replace the
+/// content of the target of the symlink.
 #[test]
-fn sync_replace_symlink_with_file() {
+fn sync_replaces_symlink_with_file() {
     conf::init();
 
     // Real file in configs.
@@ -158,28 +162,25 @@ fn sync_replace_symlink_with_file() {
         conf::create_symlink_in_home("config_file.txt", Some("symlink_target.txt"));
 
     // Ensure the symlink in home links to target file.
-    let content_before = fs::read_to_string(&symlink_in_home).unwrap();
     assert!(symlink_in_home.is_symlink());
-    assert_eq!(content_before, "should not be replaced");
+    assert_eq!(read(&symlink_in_home), "should not be replaced");
 
-    let output = run(&["sync", &conf::root()]);
+    let output = run(&["--verbose", "sync", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
     // Ensure the symlink in home is a file now, with updated content.
-    let content_after = fs::read_to_string(&symlink_in_home).unwrap();
     assert!(!symlink_in_home.is_symlink()); // `is_file()` traverses.
-    assert_eq!(content_after, "new content");
+    assert_eq!(read(&symlink_in_home), "new content");
 
     // Ensure the removed symlink's target has not been altered.
-    let symlink_target_content = fs::read_to_string(&symlink_target_in_home).unwrap();
-    assert_eq!(symlink_target_content, "should not be replaced");
+    assert_eq!(read(&symlink_target_in_home), "should not be replaced");
 }
 
 #[test]
-fn sync_respect_ignore_patters() {
+fn sync_respects_ignore_patters() {
     conf::init();
 
     conf::create_file_in_configs("foo/a.txt", None);
@@ -189,7 +190,7 @@ fn sync_respect_ignore_patters() {
     conf::create_file_in_configs(".ignore", Some("foo/*"));
     conf::create_file_in_configs(".gitignore", Some("bar/b.txt"));
 
-    let output = run(&["sync", &conf::root()]);
+    let output = run(&["--verbose", "sync", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
@@ -204,12 +205,12 @@ fn sync_respect_ignore_patters() {
 }
 
 #[test]
-fn sync_look_for_root_in_parents() {
+fn sync_looks_for_root_in_parents() {
     conf::init();
 
     let file = conf::create_file_in_configs("foo/bar/baz.txt", None);
 
-    let output = run_in_dir(&["sync"], file.parent().unwrap());
+    let output = run_in_dir(&["--verbose", "sync"], file.parent().unwrap());
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
@@ -222,12 +223,12 @@ fn sync_look_for_root_in_parents() {
 /// current dir (if we're looking in parents, _we know_ the current dir
 /// isn't a root). This test ensures we're not skipping too far.
 #[test]
-fn sync_look_for_root_in_direct_parent() {
+fn sync_looks_for_root_in_direct_parent() {
     conf::init();
 
     let file = conf::create_file_in_configs("foo/bar.txt", None);
 
-    let output = run_in_dir(&["sync"], file.parent().unwrap());
+    let output = run_in_dir(&["--verbose", "sync"], file.parent().unwrap());
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
@@ -245,7 +246,7 @@ fn sync_hooks_are_executed() {
     conf::create_executable_file_in_configs("pre-sync.sh", Some("echo 'pre-sync.sh OK'"));
     conf::create_executable_file_in_configs("post-sync.sh", Some("echo 'post-sync.sh OK'"));
 
-    let output = run(&["sync", &conf::root()]);
+    let output = run(&["--verbose", "sync", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
@@ -264,7 +265,7 @@ fn sync_hooks_are_executed_in_configs_dir() {
 
     conf::create_executable_file_in_configs("post-sync.sh", Some(r#"echo "post-sync.sh:$(pwd)""#));
 
-    let output = run(&["sync", &conf::root()]);
+    let output = run(&["--verbose", "sync", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
@@ -313,7 +314,7 @@ fn sync_hooks_are_not_copied_to_home() {
     conf::create_file_in_configs("pre-sync.sh", None);
     conf::create_file_in_configs("post-sync.sh", None);
 
-    let output = run(&["sync", &conf::root()]);
+    let output = run(&["--verbose", "sync", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
