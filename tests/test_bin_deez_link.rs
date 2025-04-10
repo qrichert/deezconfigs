@@ -28,12 +28,22 @@ fn file_exists_in_home(file_path: &str) -> bool {
     file.is_file()
 }
 
+fn symlink_exists_in_home(symlink_path: &str) -> bool {
+    let symlink = PathBuf::from(HOME).join(symlink_path);
+    symlink.is_symlink()
+}
+
 fn read(file_path: &Path) -> String {
     fs::read_to_string(file_path).unwrap()
 }
 
+fn read_in_home(file_path: &str) -> String {
+    let file = PathBuf::from(HOME).join(file_path);
+    fs::read_to_string(file).unwrap()
+}
+
 #[test]
-fn sync_regular() {
+fn link_regular() {
     conf::init();
 
     conf::create_file_in_configs(".gitconfig", None);
@@ -41,76 +51,93 @@ fn sync_regular() {
     conf::create_file_in_configs(".config/fish/config.fish", None);
     conf::create_symlink_in_configs(".config/ghostty/config", None);
 
-    let output = run(&["--verbose", "sync", &conf::root()]);
+    let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(file_exists_in_home(".gitconfig"));
-    assert!(file_exists_in_home(".config/nvim/init.lua"));
-    assert!(file_exists_in_home(".config/fish/config.fish"));
-    assert!(file_exists_in_home(".config/ghostty/config"));
+    assert!(symlink_exists_in_home(".gitconfig"));
+    assert!(symlink_exists_in_home(".config/nvim/init.lua"));
+    assert!(symlink_exists_in_home(".config/fish/config.fish"));
+    assert!(symlink_exists_in_home(".config/ghostty/config"));
 }
 
 #[test]
-fn sync_output() {
+fn link_points_to_correct_file() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("this is foo"));
+    conf::create_file_in_configs("bar/baz.txt", Some("this is bar/baz"));
+
+    let output = run(&["--verbose", "link", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert_eq!(read_in_home("foo.txt"), "this is foo");
+    assert_eq!(read_in_home("bar/baz.txt"), "this is bar/baz");
+}
+
+#[test]
+fn link_output() {
     conf::init();
 
     conf::create_file_in_configs(".gitconfig", None);
     conf::create_file_in_configs(".config/nvim/init.lua", None);
     conf::create_file_in_configs(".config/fish/config.fish", None);
     conf::create_symlink_in_configs(".config/ghostty/config", None);
-    conf::create_executable_file_in_configs("pre-sync.sh", None);
-    conf::create_executable_file_in_configs("post-sync.sh", None);
+    conf::create_executable_file_in_configs("pre-link.sh", None);
+    conf::create_executable_file_in_configs("post-link.sh", None);
 
-    let output = run(&["sync", &conf::root()]);
+    let output = run(&["link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
     // File order is non-deterministic.
-    assert!(!output.stdout.contains("hook: pre-sync.sh"));
+    assert!(!output.stdout.contains("hook: pre-link.sh"));
     assert!(!output.stdout.contains(".gitconfig"));
     assert!(!output.stdout.contains(".config/nvim/init.lua"));
     assert!(!output.stdout.contains(".config/fish/config.fish"));
     assert!(!output.stdout.contains(".config/ghostty/config"));
     assert!(output.stdout.contains("Wrote 4 files."));
-    assert!(!output.stdout.contains("hook: post-sync.sh"));
+    assert!(!output.stdout.contains("hook: post-link.sh"));
     assert!(output.stdout.contains("Ran 2 hooks"));
 }
 
 #[test]
-fn sync_output_verbose() {
+fn link_output_verbose() {
     conf::init();
 
     conf::create_file_in_configs(".gitconfig", None);
     conf::create_file_in_configs(".config/nvim/init.lua", None);
     conf::create_file_in_configs(".config/fish/config.fish", None);
     conf::create_symlink_in_configs(".config/ghostty/config", None);
-    conf::create_executable_file_in_configs("pre-sync.sh", None);
-    conf::create_executable_file_in_configs("post-sync.sh", None);
+    conf::create_executable_file_in_configs("pre-link.sh", None);
+    conf::create_executable_file_in_configs("post-link.sh", None);
 
-    let output = run(&["--verbose", "sync", &conf::root()]);
+    let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
     // File order is non-deterministic.
-    assert!(output.stdout.contains("hook: pre-sync.sh"));
+    assert!(output.stdout.contains("hook: pre-link.sh"));
     assert!(output.stdout.contains(".gitconfig"));
     assert!(output.stdout.contains(".config/nvim/init.lua"));
     assert!(output.stdout.contains(".config/fish/config.fish"));
     assert!(output.stdout.contains(".config/ghostty/config"));
     assert!(output.stdout.contains("Wrote 4 files."));
-    assert!(output.stdout.contains("hook: post-sync.sh"));
+    assert!(output.stdout.contains("hook: post-link.sh"));
     assert!(output.stdout.contains("Ran 2 hooks"));
 }
 
 #[test]
-fn sync_ignores_special_files() {
+fn link_ignores_special_files() {
     conf::init();
 
     // OK.
@@ -122,60 +149,52 @@ fn sync_ignores_special_files() {
     // NOT OK, even in subdirectories.
     conf::create_file_in_configs("subdir/.deez", None);
 
-    let output = run(&["--verbose", "sync", &conf::root()]);
+    let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
     // OK in sub-directories.
-    assert!(file_exists_in_home("subdir/.git/config"));
-    assert!(file_exists_in_home("subdir/.gitignore"));
+    assert!(symlink_exists_in_home("subdir/.git/config"));
+    assert!(symlink_exists_in_home("subdir/.gitignore"));
     // NOT OK in root.
-    assert!(!file_exists_in_home(".gitignore"));
-    assert!(!file_exists_in_home(".git/config"));
+    assert!(!symlink_exists_in_home(".gitignore"));
+    assert!(!symlink_exists_in_home(".git/config"));
     // NOT OK, even in subdirectories.
-    assert!(!file_exists_in_home("subdir/.deez"));
+    assert!(!symlink_exists_in_home("subdir/.deez"));
 }
 
-/// If a file in configs should override a symlink in home, ensure
-/// `sync` replaces the symlink with a file, and does _not_ replace the
-/// content of the target of the symlink.
 #[test]
-fn sync_replaces_symlink_with_file() {
+fn link_replaces_file_with_symlink() {
     conf::init();
 
-    // Real file in configs.
-    conf::create_file_in_configs("config_file.txt", Some("new content"));
+    let file_in_configs = conf::create_file_in_configs("config_file.txt", Some("new"));
+    conf::create_symlink_in_configs(
+        "config_symlink.txt",
+        Some(&file_in_configs.to_string_lossy()),
+    );
 
-    // Target file that should _not_ be overridden.
-    let symlink_target_in_home =
-        conf::create_file_in_home("symlink_target.txt", Some("should not be replaced"));
+    let file_in_home = conf::create_file_in_home("config_file.txt", Some("old"));
+    let (symlink_in_home, _) = conf::create_symlink_in_home("config_symlink.txt", None);
 
-    // Symlink in home.
-    let (symlink_in_home, _) =
-        conf::create_symlink_in_home("config_file.txt", Some("symlink_target.txt"));
-
-    // Ensure the symlink in home links to target file.
-    assert!(symlink_in_home.is_symlink());
-    assert_eq!(read(&symlink_in_home), "should not be replaced");
-
-    let output = run(&["--verbose", "sync", &conf::root()]);
+    let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
-    // Ensure the symlink in home is a file now, with updated content.
-    assert!(!symlink_in_home.is_symlink()); // `is_file()` traverses.
-    assert_eq!(read(&symlink_in_home), "new content");
+    // Ensure the file in home is a symlink now.
+    assert!(file_in_home.is_symlink());
+    assert_eq!(read(&file_in_home), "new");
 
-    // Ensure the removed symlink's target has not been altered.
-    assert_eq!(read(&symlink_target_in_home), "should not be replaced");
+    // Ensure the symlink in home points to the updated target.
+    assert!(symlink_in_home.is_symlink());
+    assert_eq!(read(&symlink_in_home), "new");
 }
 
 #[test]
-fn sync_respects_ignore_patters() {
+fn link_respects_ignore_patters() {
     conf::init();
 
     conf::create_file_in_configs("foo/a.txt", None);
@@ -185,101 +204,101 @@ fn sync_respects_ignore_patters() {
     conf::create_file_in_configs(".ignore", Some("foo/*"));
     conf::create_file_in_configs(".gitignore", Some("bar/b.txt"));
 
-    let output = run(&["--verbose", "sync", &conf::root()]);
+    let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(!file_exists_in_home("foo/a.txt"));
-    assert!(!file_exists_in_home("bar/b.txt"));
-    assert!(file_exists_in_home("baz/c.txt"));
+    assert!(!symlink_exists_in_home("foo/a.txt"));
+    assert!(!symlink_exists_in_home("bar/b.txt"));
+    assert!(symlink_exists_in_home("baz/c.txt"));
 
-    assert!(!file_exists_in_home(".ignore"));
-    assert!(!file_exists_in_home(".gitignore"));
+    assert!(!symlink_exists_in_home(".ignore"));
+    assert!(!symlink_exists_in_home(".gitignore"));
 }
 
 #[test]
-fn sync_looks_for_root_in_parents() {
+fn link_looks_for_root_in_parents() {
     conf::init();
 
     let file = conf::create_file_in_configs("foo/bar/baz.txt", None);
 
-    let output = run_in_dir(&["--verbose", "sync"], file.parent().unwrap());
+    let output = run_in_dir(&["--verbose", "link"], file.parent().unwrap());
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(file_exists_in_home("foo/bar/baz.txt"));
+    assert!(symlink_exists_in_home("foo/bar/baz.txt"));
 }
 
 /// This test is important because the implementation `skip()`s the
 /// current dir (if we're looking in parents, _we know_ the current dir
 /// isn't a root). This test ensures we're not skipping too far.
 #[test]
-fn sync_looks_for_root_in_direct_parent() {
+fn link_looks_for_root_in_direct_parent() {
     conf::init();
 
     let file = conf::create_file_in_configs("foo/bar.txt", None);
 
-    let output = run_in_dir(&["--verbose", "sync"], file.parent().unwrap());
+    let output = run_in_dir(&["--verbose", "link"], file.parent().unwrap());
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(file_exists_in_home("foo/bar.txt"));
+    assert!(symlink_exists_in_home("foo/bar.txt"));
 }
 
 #[test]
-fn sync_hooks_are_executed() {
+fn link_hooks_are_executed() {
     conf::init();
 
     // (Add 'OK's to differentiate from verbose output).
-    conf::create_executable_file_in_configs("pre-sync", Some("echo 'pre-sync OK'"));
-    conf::create_executable_file_in_configs("pre-sync.sh", Some("echo 'pre-sync.sh OK'"));
-    conf::create_executable_file_in_configs("post-sync.sh", Some("echo 'post-sync.sh OK'"));
+    conf::create_executable_file_in_configs("pre-link", Some("echo 'pre-link OK'"));
+    conf::create_executable_file_in_configs("pre-link.sh", Some("echo 'pre-link.sh OK'"));
+    conf::create_executable_file_in_configs("post-link.sh", Some("echo 'post-link.sh OK'"));
 
-    let output = run(&["--verbose", "sync", &conf::root()]);
+    let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(output.stdout.contains("pre-sync OK\n"));
-    assert!(output.stdout.contains("pre-sync.sh OK\n"));
-    assert!(output.stdout.contains("post-sync.sh OK\n"));
+    assert!(output.stdout.contains("pre-link OK\n"));
+    assert!(output.stdout.contains("pre-link.sh OK\n"));
+    assert!(output.stdout.contains("post-link.sh OK\n"));
 
     assert!(output.stdout.contains("Ran 3 hooks."));
 }
 
 #[test]
-fn sync_hooks_are_executed_in_configs_dir() {
+fn link_hooks_are_executed_in_configs_dir() {
     conf::init();
 
-    conf::create_executable_file_in_configs("post-sync.sh", Some(r#"echo "post-sync.sh:$(pwd)""#));
+    conf::create_executable_file_in_configs("post-link.sh", Some(r#"echo "post-link.sh:$(pwd)""#));
 
-    let output = run(&["--verbose", "sync", &conf::root()]);
+    let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(output.stdout.contains(&format!("post-sync.sh:{CONFIGS}\n")));
+    assert!(output.stdout.contains(&format!("post-link.sh:{CONFIGS}\n")));
 }
 
 #[test]
-fn sync_hooks_expose_verbose_mode() {
+fn link_hooks_expose_verbose_mode() {
     conf::init();
 
     conf::create_executable_file_in_configs(
-        "pre-sync.sh",
+        "pre-link.sh",
         Some(r#"[ -n "$DEEZ_VERBOSE" ] && echo verbose=true || echo verbose=false"#),
     );
 
     // Normal run.
-    let output = run(&["sync", &conf::root()]);
+    let output = run(&["link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
@@ -288,7 +307,7 @@ fn sync_hooks_expose_verbose_mode() {
     assert!(output.stdout.contains("verbose=false"));
 
     // Verbose run.
-    let output = run(&["--verbose", "sync", &conf::root()]);
+    let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
@@ -298,28 +317,28 @@ fn sync_hooks_expose_verbose_mode() {
 }
 
 #[test]
-fn sync_hooks_are_not_copied_to_home() {
+fn link_hooks_are_not_copied_to_home() {
     conf::init();
 
     // Regular files.
-    conf::create_file_in_configs("foo/pre-sync.sh", None);
-    conf::create_file_in_configs("foo/post-sync.sh", None);
+    conf::create_file_in_configs("foo/pre-link.sh", None);
+    conf::create_file_in_configs("foo/post-link.sh", None);
 
     // Hooks.
-    conf::create_file_in_configs("pre-sync.sh", None);
-    conf::create_file_in_configs("post-sync.sh", None);
+    conf::create_file_in_configs("pre-link.sh", None);
+    conf::create_file_in_configs("post-link.sh", None);
 
-    let output = run(&["--verbose", "sync", &conf::root()]);
+    let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
 
     // Non-root "hooks" are not hooks, but regular files.
-    assert!(file_exists_in_home("foo/pre-sync.sh"));
-    assert!(file_exists_in_home("foo/post-sync.sh"));
+    assert!(file_exists_in_home("foo/pre-link.sh"));
+    assert!(file_exists_in_home("foo/post-link.sh"));
 
     // Hooks are not copied.
-    assert!(!file_exists_in_home("pre-sync.sh"));
-    assert!(!file_exists_in_home("post-sync.sh"));
+    assert!(!file_exists_in_home("pre-link.sh"));
+    assert!(!file_exists_in_home("post-link.sh"));
 }

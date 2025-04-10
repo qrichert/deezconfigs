@@ -46,6 +46,8 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         let source = root.join(p);
         let destination = home.join(p);
 
+        // TODO: Handle case when a directory exists.
+
         // If source exists and is a symlink, we must _delete_ it before
         // the copy, or else it would override the link's target.
         if source.is_symlink() {

@@ -54,9 +54,9 @@ For more.
 - [x] Smart root finder (looks in parents)
 - [x] Hooks (pre, post actions)
 - [x] Basic `rsync`.
-- [ ] Basic `link`.
+- [x] Basic `link`.
 - [ ] Likely `list` (with up-to-date status for each file).
-- [ ] Likely `clean`
+- [ ] Likely `clean`.
 - [ ] Refactor argument parsing.
 - [ ] Proper verbose `--help` section.
 - [ ] ~~Maybe `diff` (difference between source and target).~~
@@ -106,6 +106,15 @@ repo. Use `sync` in one, and `link` in the other.
 
 If you need anything more advanced than that, `deezconfigs` is likely
 not the right tool for you.
+
+### No templating?
+
+No. It was an idea at first, but hooks are powerful enough to let you do
+your own templating. It's the same idea as "let Git do its thing".
+Instead of supporting sub-par templating, _deezconfigs_ defers to hooks.
+Nothing's stopping you from using a Python script as a hook with some
+Jinja2 template, or any other language/template engine combination you
+like.
 
 ## Unstructured info dump that needs editing
 

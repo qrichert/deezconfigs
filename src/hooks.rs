@@ -75,6 +75,9 @@ impl<'a> Hooks<'a> {
             };
 
             // TODO: Use `PathBuf::file_prefix()` once it lands in stable.
+            // TODO: For now, we should implement our own, to allow things
+            //  like `pre-sync.nvim.sh`
+            // TODO: Refactor this to a `hooks::is_hook(path)` method.
             let Some(file_name) = entry.file_stem().and_then(|name| name.to_str()) else {
                 continue;
             };

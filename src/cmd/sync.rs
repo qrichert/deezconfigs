@@ -60,6 +60,8 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             return;
         }
 
+        // TODO: Handle case when a directory exists.
+
         // If destination exists and is a symlink, we must _delete_ it
         // before the copy, or else it would override the link's target.
         if destination.is_symlink() {
