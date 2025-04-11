@@ -47,6 +47,11 @@ fn main() {
                     process::exit(code);
                 }
             }
+            "status" => {
+                if let Err(code) = cmd::status(args.next().as_ref()) {
+                    process::exit(code);
+                }
+            }
             "-v" | "--verbose" => {
                 verbose = true;
                 continue;
@@ -73,6 +78,8 @@ Commands:
   sync [<root>|<git>]   Update Home from configs
   rsync [<root>]        Update configs from Home
   link [<root>]         Symlink configs to Home
+
+  status                List files and their status
 
 Options:
   -h, --help            Show this message and exit
