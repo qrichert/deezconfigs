@@ -62,25 +62,66 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
         // TODO: Handle case when a directory exists.
 
-        // If destination exists and is a symlink, we must _delete_ it
-        // before the copy, or else it would override the link's target.
-        if destination.is_symlink() {
-            if let Err(err) = fs::remove_file(&destination) {
-                eprintln!(
-                    "error: Could not remove exising symlink '{}': {err}",
-                    destination.display()
-                );
+        // If _source_ is a symlink, copy the link, _not_ the contents.
+        // We want to _mirror_ what the user has, not interpret what he
+        // might have wanted to do.
+        //
+        // `fs::copy()` follows symlinks. It will create files with the
+        // contents of the symlink's target; it will not create a link.
+        if source.is_symlink() {
+            // If destination exists we must _delete_ it before the
+            // copy, because symlinks don't override existing files.
+            if destination.is_file() {
+                // Matches both files and symlinks.
+                if let Err(err) = fs::remove_file(&destination) {
+                    eprintln!(
+                        "error: Could not remove exising file '{}': {err}",
+                        destination.display()
+                    );
+                    nb_errors.fetch_add(1, Ordering::Relaxed);
+                    return;
+                }
+            }
+
+            let target: PathBuf = match fs::read_link(&source) {
+                Ok(target) => target,
+                Err(err) => {
+                    eprintln!("error: Could not read symlink '{}': {err}", p.display());
+                    nb_errors.fetch_add(1, Ordering::Relaxed);
+                    return;
+                }
+            };
+
+            #[cfg(unix)]
+            let res = std::os::unix::fs::symlink(&target, &destination);
+            #[cfg(windows)]
+            let res = std::os::windows::fs::symlink_file(&target, &destination);
+
+            if let Err(err) = res {
+                eprintln!("error: Could not create symlink '{}': {err}", p.display());
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 return;
             }
-        }
+        } else {
+            // If destination exists and is a symlink, we must _delete_
+            // it before the copy, or else it would override the link's
+            // target.
+            if destination.is_symlink() {
+                if let Err(err) = fs::remove_file(&destination) {
+                    eprintln!(
+                        "error: Could not remove exising symlink '{}': {err}",
+                        destination.display()
+                    );
+                    nb_errors.fetch_add(1, Ordering::Relaxed);
+                    return;
+                }
+            }
 
-        // `fs::copy()` follows symlinks. It will create files with the
-        // contents of the symlink's target; it will not create a link.
-        if let Err(err) = fs::copy(source, destination) {
-            eprintln!("error: Could not copy '{}' to Home: {err}", p.display());
-            nb_errors.fetch_add(1, Ordering::Relaxed);
-            return;
+            if let Err(err) = fs::copy(source, destination) {
+                eprintln!("error: Could not copy '{}' to Home: {err}", p.display());
+                nb_errors.fetch_add(1, Ordering::Relaxed);
+                return;
+            }
         }
 
         if verbose {

@@ -28,8 +28,23 @@ fn file_exists_in_home(file_path: &str) -> bool {
     file.is_file()
 }
 
+fn symlink_exists_in_home(symlink_path: &str) -> bool {
+    let symlink = PathBuf::from(HOME).join(symlink_path);
+    symlink.is_symlink()
+}
+
 fn read(file_path: &Path) -> String {
     fs::read_to_string(file_path).unwrap()
+}
+
+fn read_in_home(file_path: &str) -> String {
+    let file = PathBuf::from(HOME).join(file_path);
+    fs::read_to_string(file).unwrap()
+}
+
+fn read_symlink_in_home(symlink_path: &str) -> PathBuf {
+    let file = PathBuf::from(HOME).join(symlink_path);
+    fs::read_link(file).unwrap()
 }
 
 #[test]
@@ -172,6 +187,63 @@ fn sync_replaces_symlink_with_file() {
 
     // Ensure the removed symlink's target has not been altered.
     assert_eq!(read(&symlink_target_in_home), "should not be replaced");
+}
+
+/// Symlinks in configs should override files in home, and match the
+/// original symlink exactly (not adapt the path, nor make it a file).
+#[test]
+fn sync_replaces_file_with_symlink() {
+    conf::init();
+
+    conf::create_file_in_configs("foo/symlink_target.txt", Some("hello, world"));
+
+    // `create_symlink_in_configs()` will make the symlink's target
+    // absolute, but this is not what we want here, because we want to
+    // test that _relative_ path stay _relative_.
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(
+        "foo/symlink_target.txt",
+        PathBuf::from(CONFIGS).join("config.conf"),
+    )
+    .unwrap();
+    #[cfg(windows)]
+    std::os::windows::fs::symlink_file(
+        "foo/symlink_target.txt",
+        PathBuf::from(CONFIGS).join("config.conf"),
+    )
+    .unwrap();
+
+    let output = run(&["--verbose", "sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(symlink_exists_in_home("config.conf"));
+    assert_eq!(read_in_home("config.conf"), "hello, world");
+    // Same relative path as the original.
+    assert_eq!(
+        read_symlink_in_home("config.conf").to_string_lossy(),
+        "foo/symlink_target.txt"
+    );
+}
+
+/// By default, symlinks fail to replace anything, unless you explicitly
+/// delete the target beforehand.
+#[test]
+fn sync_replaces_existing_file_with_symlink() {
+    conf::init();
+
+    conf::create_symlink_in_configs("config.conf", None);
+    conf::create_file_in_home("config.conf", Some("ola"));
+
+    let output = run(&["--verbose", "sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(symlink_exists_in_home("config.conf"));
 }
 
 #[test]

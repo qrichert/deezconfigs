@@ -119,7 +119,7 @@ fn create_symlink(root: &str, symlink_path: &str, target: Option<&str>) -> (Path
     #[cfg(unix)]
     std::os::unix::fs::symlink(&target, &symlink).unwrap();
     #[cfg(windows)]
-    std::os::windows::fs::symlink_file(&target, symlink).unwrap();
+    std::os::windows::fs::symlink_file(&target, &symlink).unwrap();
 
     (symlink, target)
 }

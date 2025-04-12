@@ -73,7 +73,7 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         #[cfg(unix)]
         let res = std::os::unix::fs::symlink(&source, &destination);
         #[cfg(windows)]
-        let res = std::os::windows::fs::symlink_file(&source, destination);
+        let res = std::os::windows::fs::symlink_file(&source, &destination);
 
         if let Err(err) = res {
             eprintln!(
