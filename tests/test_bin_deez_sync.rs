@@ -270,6 +270,81 @@ fn sync_hooks_are_executed_in_configs_dir() {
 }
 
 #[test]
+fn sync_hooks_are_executed_in_order_of_file_name() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("post-sync.sh", None);
+    conf::create_executable_file_in_configs("post-sync.py", None);
+    conf::create_executable_file_in_configs("post-sync.001.py", None);
+    conf::create_executable_file_in_configs("post-sync.002.sh", None);
+
+    let output = run(&["--verbose", "sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains(
+        "\
+hook: post-sync.001.py
+hook: post-sync.002.sh
+hook: post-sync.py
+hook: post-sync.sh
+"
+    ));
+}
+
+#[test]
+fn sync_hooks_ignore_other_commands_hooks() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-sync.sh", None);
+    conf::create_executable_file_in_configs("post-sync.sh", None);
+    conf::create_executable_file_in_configs("pre-rsync.sh", None);
+    conf::create_executable_file_in_configs("post-rsync.sh", None);
+    conf::create_executable_file_in_configs("pre-link.sh", None);
+    conf::create_executable_file_in_configs("post-link.sh", None);
+
+    let output = run(&["--verbose", "sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains("hook: pre-sync.sh"));
+    assert!(output.stdout.contains("hook: post-sync.sh"));
+    assert!(!output.stdout.contains("hook: pre-rsync.sh"));
+    assert!(!output.stdout.contains("hook: post-rsync.sh"));
+    assert!(!output.stdout.contains("hook: pre-link.sh"));
+    assert!(!output.stdout.contains("hook: post-link.sh"));
+}
+
+#[test]
+fn sync_hooks_are_not_treated_as_config_files() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-sync.sh", None);
+    conf::create_executable_file_in_configs("post-sync.py", None);
+    conf::create_executable_file_in_configs("pre-rsync.sh", None);
+    conf::create_executable_file_in_configs("post-rsync.py", None);
+    conf::create_executable_file_in_configs("pre-link.sh", None);
+    conf::create_executable_file_in_configs("post-link.py", None);
+
+    let output = run(&["--verbose", "sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(!file_exists_in_home("pre-sync.sh"));
+    assert!(!file_exists_in_home("post-sync.py"));
+    assert!(!file_exists_in_home("pre-rsync.sh"));
+    assert!(!file_exists_in_home("post-rsync.py"));
+    assert!(!file_exists_in_home("pre-link.sh"));
+    assert!(!file_exists_in_home("post-link.py"));
+}
+
+#[test]
 fn sync_hooks_expose_verbose_mode() {
     conf::init();
 

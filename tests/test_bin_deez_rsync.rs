@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#![allow(clippy::many_single_char_names)]
+
 mod conf;
 mod run;
 
@@ -309,6 +311,88 @@ fn rsync_hooks_are_executed_in_configs_dir() {
             .stdout
             .contains(&format!("post-rsync.sh:{CONFIGS}\n"))
     );
+}
+
+#[test]
+fn rsync_hooks_are_executed_in_order_of_file_name() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("post-rsync.sh", None);
+    conf::create_executable_file_in_configs("post-rsync.py", None);
+    conf::create_executable_file_in_configs("post-rsync.001.py", None);
+    conf::create_executable_file_in_configs("post-rsync.002.sh", None);
+
+    let output = run(&["--verbose", "rsync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains(
+        "\
+hook: post-rsync.001.py
+hook: post-rsync.002.sh
+hook: post-rsync.py
+hook: post-rsync.sh
+"
+    ));
+}
+
+#[test]
+fn rsync_hooks_ignore_other_commands_hooks() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-sync.sh", None);
+    conf::create_executable_file_in_configs("post-sync.sh", None);
+    conf::create_executable_file_in_configs("pre-rsync.sh", None);
+    conf::create_executable_file_in_configs("post-rsync.sh", None);
+    conf::create_executable_file_in_configs("pre-link.sh", None);
+    conf::create_executable_file_in_configs("post-link.sh", None);
+
+    let output = run(&["--verbose", "rsync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(!output.stdout.contains("hook: pre-sync.sh"));
+    assert!(!output.stdout.contains("hook: post-sync.sh"));
+    assert!(output.stdout.contains("hook: pre-rsync.sh"));
+    assert!(output.stdout.contains("hook: post-rsync.sh"));
+    assert!(!output.stdout.contains("hook: pre-link.sh"));
+    assert!(!output.stdout.contains("hook: post-link.sh"));
+}
+
+#[test]
+fn rsync_hooks_are_not_treated_as_config_files() {
+    conf::init();
+
+    let a = conf::create_executable_file_in_configs("pre-sync.sh", Some("# old"));
+    let b = conf::create_executable_file_in_configs("post-sync.py", Some("# old"));
+    let c = conf::create_executable_file_in_configs("pre-rsync.sh", Some("# old"));
+    let d = conf::create_executable_file_in_configs("post-rsync.sh", Some("# old"));
+    let e = conf::create_executable_file_in_configs("pre-link.sh", Some("# old"));
+    let f = conf::create_executable_file_in_configs("post-link.py", Some("# old"));
+
+    conf::create_file_in_home("pre-sync.sh", Some("new"));
+    conf::create_file_in_home("post-sync.py", Some("new"));
+    conf::create_file_in_home("pre-rsync.sh", Some("new"));
+    conf::create_file_in_home("post-rsync.py", Some("new"));
+    conf::create_file_in_home("pre-link.sh", Some("new"));
+    conf::create_file_in_home("post-link.py", Some("new"));
+
+    let output = run(&["--verbose", "rsync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert_eq!(read(&a), "# old");
+    assert_eq!(read(&b), "# old");
+    assert_eq!(read(&c), "# old");
+    assert_eq!(read(&d), "# old");
+    assert_eq!(read(&e), "# old");
+    assert_eq!(read(&f), "# old");
 }
 
 #[test]

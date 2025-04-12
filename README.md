@@ -137,7 +137,7 @@ ran on the wrong root.
 - The extension can be any type of script (it's the file name that
   counts).
 - The script must be executable and must contain a shebang (`#!`) if not
-  interpretable by `sh` directly (e.g., `bash` or `python` scripts).
+  interpretable by `sh` directly (e.g., `python` scripts).
 - This script will be run through `sh`: `sh -c <root>/<thescript>`
   inside the config root directory.
 

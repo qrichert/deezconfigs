@@ -19,7 +19,7 @@ use std::path::Path;
 
 use ignore::{self, DirEntry, WalkBuilder, WalkState};
 
-use crate::hooks::HOOKS;
+use crate::hooks;
 
 /// Find files recursively, starting from `root` directory.
 ///
@@ -58,14 +58,8 @@ pub fn find_files_recursively(root: impl AsRef<Path>, f: impl Fn(&Path) + Sync) 
             if [".ignore", ".gitignore"].map(Path::new).contains(&path) {
                 return false;
             }
-            // TODO: Use `PathBuf::file_prefix()` once it lands in stable.
-            // TODO: For now, we should implement our own, to allow things
-            //  like `pre-sync.nvim.sh`
-            // TODO: Refactor this to a `hooks::is_hook(path)` method.
-            if let Some(file_name) = path.file_stem() {
-                if HOOKS.map(OsStr::new).contains(&file_name) {
-                    return false;
-                }
+            if hooks::is_hook(path) {
+                return false;
             }
         }
 

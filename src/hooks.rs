@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process;
 
-pub(crate) const HOOKS: [&str; 6] = [
+const HOOKS: [&str; 6] = [
     "pre-sync",
     "post-sync",
     "pre-rsync",
@@ -25,6 +26,13 @@ pub(crate) const HOOKS: [&str; 6] = [
     "pre-link",
     "post-link",
 ];
+
+pub fn is_hook(path: &Path) -> bool {
+    if let Some(file_prefix) = crate::utils::file_prefix(path) {
+        return HOOKS.map(OsStr::new).contains(&file_prefix);
+    }
+    false
+}
 
 /// Context for hooks for a given root.
 #[derive(Debug)]
@@ -74,26 +82,38 @@ impl<'a> Hooks<'a> {
                 unreachable!("we are inside `root`");
             };
 
-            // TODO: Use `PathBuf::file_prefix()` once it lands in stable.
-            // TODO: For now, we should implement our own, to allow things
-            //  like `pre-sync.nvim.sh`
-            // TODO: Refactor this to a `hooks::is_hook(path)` method.
-            let Some(file_name) = entry.file_stem().and_then(|name| name.to_str()) else {
+            let Some(file_prefix) = crate::utils::file_prefix(entry) else {
                 continue;
             };
 
-            match file_name {
-                "pre-sync" => hooks.pre_sync.push(entry.to_path_buf()),
-                "post-sync" => hooks.post_sync.push(entry.to_path_buf()),
-                "pre-rsync" => hooks.pre_rsync.push(entry.to_path_buf()),
-                "post-rsync" => hooks.post_rsync.push(entry.to_path_buf()),
-                "pre-link" => hooks.pre_link.push(entry.to_path_buf()),
-                "post-link" => hooks.post_link.push(entry.to_path_buf()),
+            match file_prefix.to_str() {
+                Some("pre-sync") => hooks.pre_sync.push(entry.to_path_buf()),
+                Some("post-sync") => hooks.post_sync.push(entry.to_path_buf()),
+                Some("pre-rsync") => hooks.pre_rsync.push(entry.to_path_buf()),
+                Some("post-rsync") => hooks.post_rsync.push(entry.to_path_buf()),
+                Some("pre-link") => hooks.pre_link.push(entry.to_path_buf()),
+                Some("post-link") => hooks.post_link.push(entry.to_path_buf()),
                 _ => {}
             }
         }
 
+        Self::sort_hooks_by_file_name(&mut hooks);
+
         Ok(hooks)
+    }
+
+    fn sort_hooks_by_file_name(hooks: &mut Hooks) {
+        // Do not use `sort_unstable()` because the files are likely
+        // _partially_ sorted, in which case stable sort is faster,
+        // as per the docs.
+
+        // TODO: Test this behaviour.
+        hooks.pre_sync.sort();
+        hooks.post_sync.sort();
+        hooks.pre_rsync.sort();
+        hooks.post_rsync.sort();
+        hooks.pre_link.sort();
+        hooks.post_link.sort();
     }
 
     /// Run "pre-sync" hooks.
