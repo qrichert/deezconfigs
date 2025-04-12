@@ -48,19 +48,6 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
         // TODO: Handle case when a directory exists.
 
-        // If source exists and is a symlink, we must _delete_ it before
-        // the copy, or else it would override the link's target.
-        if source.is_symlink() {
-            if let Err(err) = fs::remove_file(&source) {
-                eprintln!(
-                    "error: Could not remove exising symlink '{}': {err}",
-                    source.display()
-                );
-                nb_errors.fetch_add(1, Ordering::Relaxed);
-                return;
-            }
-        }
-
         // `fs::copy()` follows symlinks. It will create files with the
         // contents of the symlink's target; it will not create a link.
         if let Err(err) = fs::copy(destination, source) {

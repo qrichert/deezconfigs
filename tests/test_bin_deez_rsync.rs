@@ -163,19 +163,19 @@ fn rsync_ignores_special_files() {
     assert_eq!(read(&sub_deez), "old");
 }
 
-/// If a file in home should override a symlink in configs, ensure
-/// `rsync` replaces the symlink with a file, and does _not_ replace the
-/// content of the target of the symlink.
+/// If we have a `.vimrc` symlink pointing at the `vimrc.vim` in
+/// `.config`, we don't want it to be replaced with a file, but to
+/// update the target content.
 #[test]
-fn rsync_replaces_symlink_with_file() {
+fn rsync_does_not_replace_symlink_with_file() {
     conf::init();
 
     // Real file in home.
     conf::create_file_in_home("config_file.txt", Some("new content"));
 
-    // Target file that should _not_ be overridden.
+    // Target file that should be overridden.
     let symlink_target_in_configs =
-        conf::create_file_in_configs("symlink_target.txt", Some("should not be replaced"));
+        conf::create_file_in_configs("symlink_target.txt", Some("should be replaced"));
     conf::create_file_in_configs(".ignore", Some("symlink_target.txt"));
 
     // Symlink in configs.
@@ -184,7 +184,7 @@ fn rsync_replaces_symlink_with_file() {
 
     // Ensure the symlink in configs links to target file.
     assert!(symlink_in_configs.is_symlink());
-    assert_eq!(read(&symlink_in_configs), "should not be replaced");
+    assert_eq!(read(&symlink_in_configs), "should be replaced");
 
     let output = run(&["--verbose", "rsync", &conf::root()]);
     dbg!(&output.stdout);
@@ -192,12 +192,12 @@ fn rsync_replaces_symlink_with_file() {
 
     assert_eq!(output.exit_code, 0);
 
-    // Ensure the symlink in configs is a file now, with updated content.
-    assert!(!symlink_in_configs.is_symlink()); // `is_file()` traverses.
+    // Ensure the symlink in configs still is a symlink.
+    assert!(symlink_in_configs.is_symlink());
     assert_eq!(read(&symlink_in_configs), "new content");
 
-    // Ensure the removed symlink's target has not been altered.
-    assert_eq!(read(&symlink_target_in_configs), "should not be replaced");
+    // Ensure the symlink's target has been updated.
+    assert_eq!(read(&symlink_target_in_configs), "new content");
 }
 
 #[test]
