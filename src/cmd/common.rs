@@ -15,7 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
+use std::process;
 
 use deezconfigs::hooks::Hooks;
 use deezconfigs::ui;
@@ -35,7 +37,13 @@ use deezconfigs::ui;
 ///
 /// This check is essential to make, because otherwise the user may
 /// inadvertently mess up his Home directory by syncing the wrong root.
-pub fn determine_config_root(root: Option<&String>) -> Result<PathBuf, i32> {
+///
+/// # Note
+///
+/// The check can be disabled by setting `do_check` to `false`. This is
+/// _not_ a user-facing option. It is used internally by non-fs-altering
+/// commands that don't need it, such as `status` for instance.
+pub fn determine_config_root(root: Option<&String>, do_check: bool) -> Result<PathBuf, i32> {
     let root = if let Some(root) = root {
         get_config_root_from_args(root)?
     } else {
@@ -47,7 +55,9 @@ pub fn determine_config_root(root: Option<&String>) -> Result<PathBuf, i32> {
         }
         default
     };
-    ensure_root_is_a_config_root(&root)?;
+    if do_check {
+        ensure_root_is_a_config_root(&root)?;
+    }
     Ok(root)
 }
 
@@ -132,6 +142,88 @@ Selected root: '{}'.
 
 fn is_a_config_root(root: &Path) -> bool {
     root.join(".deez").is_file()
+}
+
+/// Detect if provided root is a Git remote.
+pub fn is_git_remote_uri(root: Option<&String>) -> bool {
+    root.as_ref().is_some_and(|r| r.starts_with("git:"))
+}
+
+/// Clone Git repository and return its path.
+///
+/// The repository is cloned to the system's temporary directory (e.g.,
+/// `/tmp` on Unix) under the name `deez-<uuid>`.
+///
+/// # Errors
+///
+/// Errors if the temporary directory cannot be written to, or if
+/// `git clone` fails.
+///
+/// `git clone` can fail either because the Git binary cannot be found,
+/// or because the command itself fails (e.g., due to network issues,
+/// access rights, etc.).
+pub fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<PathBuf, i32> {
+    let uri = uri.trim_start_matches("git:").to_string();
+
+    // Yes, I know. Not a solid UUID, I should use a crate, etc.
+    let uuid = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("current time > Unix epoch")
+        .as_millis()
+        .to_string();
+    let clone_path = env::temp_dir().join(format!("deez-{uuid}"));
+
+    if clone_path.is_dir() && fs::remove_dir_all(&clone_path).is_err() {
+        eprint!(
+            "\
+fatal: Could not clone the configuration repository.
+The target directory already exists and could not be deleted.
+"
+        );
+        return Err(1);
+    }
+
+    println!("Fetching config files remotely...");
+
+    let mut command = process::Command::new("git");
+    command
+        .env("LANG", "en_US.UTF-8")
+        .arg("clone")
+        .arg("--single-branch")
+        .arg("--depth=1")
+        .arg("--no-tags")
+        .arg(&uri)
+        .arg(&clone_path);
+
+    let status = if verbose {
+        command.status().ok()
+    } else {
+        command.arg("--quiet");
+        command.output().ok().map(|out| out.status)
+    };
+
+    if let Some(status) = status {
+        if !status.success() {
+            eprintln!("fatal: Could not clone the configuration repository.");
+            if !verbose {
+                eprintln!("Retry with `--verbose` for additional detail.");
+            }
+            return Err(1);
+        }
+    } else {
+        eprint!(
+            "\
+fatal: Could not clone the configuration repository.
+Did not find the 'git' executable. Please ensure Git is properly
+installed on your machine.
+"
+        );
+        return Err(1);
+    }
+
+    println!("Done.");
+
+    Ok(clone_path)
 }
 
 /// Get the user's Home directory.

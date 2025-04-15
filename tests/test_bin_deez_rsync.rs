@@ -348,6 +348,8 @@ fn rsync_hooks_ignore_other_commands_hooks() {
     conf::create_executable_file_in_configs("post-rsync.sh", None);
     conf::create_executable_file_in_configs("pre-link.sh", None);
     conf::create_executable_file_in_configs("post-link.sh", None);
+    conf::create_executable_file_in_configs("pre-status.sh", None);
+    conf::create_executable_file_in_configs("post-status.sh", None);
 
     let output = run(&["--verbose", "rsync", &conf::root()]);
     dbg!(&output.stdout);
@@ -361,6 +363,8 @@ fn rsync_hooks_ignore_other_commands_hooks() {
     assert!(output.stdout.contains("hook: post-rsync.sh"));
     assert!(!output.stdout.contains("hook: pre-link.sh"));
     assert!(!output.stdout.contains("hook: post-link.sh"));
+    assert!(!output.stdout.contains("hook: pre-status.sh"));
+    assert!(!output.stdout.contains("hook: post-status.sh"));
 }
 
 #[test]
@@ -373,6 +377,8 @@ fn rsync_hooks_are_not_treated_as_config_files() {
     let d = conf::create_executable_file_in_configs("post-rsync.sh", Some("# old"));
     let e = conf::create_executable_file_in_configs("pre-link.sh", Some("# old"));
     let f = conf::create_executable_file_in_configs("post-link.py", Some("# old"));
+    let g = conf::create_executable_file_in_configs("pre-status.sh", Some("# old"));
+    let h = conf::create_executable_file_in_configs("post-status.py", Some("# old"));
 
     conf::create_file_in_home("pre-sync.sh", Some("new"));
     conf::create_file_in_home("post-sync.py", Some("new"));
@@ -380,6 +386,8 @@ fn rsync_hooks_are_not_treated_as_config_files() {
     conf::create_file_in_home("post-rsync.py", Some("new"));
     conf::create_file_in_home("pre-link.sh", Some("new"));
     conf::create_file_in_home("post-link.py", Some("new"));
+    conf::create_file_in_home("pre-status.sh", Some("new"));
+    conf::create_file_in_home("post-satus.py", Some("new"));
 
     let output = run(&["--verbose", "rsync", &conf::root()]);
     dbg!(&output.stdout);
@@ -393,6 +401,8 @@ fn rsync_hooks_are_not_treated_as_config_files() {
     assert_eq!(read(&d), "# old");
     assert_eq!(read(&e), "# old");
     assert_eq!(read(&f), "# old");
+    assert_eq!(read(&g), "# old");
+    assert_eq!(read(&h), "# old");
 }
 
 #[test]

@@ -17,8 +17,10 @@
 pub mod common;
 pub mod link;
 pub mod rsync;
+pub mod status;
 pub mod sync;
 
 pub use link::link;
 pub use rsync::rsync;
+pub use status::status;
 pub use sync::sync;

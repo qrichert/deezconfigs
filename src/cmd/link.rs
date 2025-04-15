@@ -26,7 +26,7 @@ use super::common::{determine_config_root, get_home_directory, get_hooks_for_roo
 /// 1. Collect all files in `configs`.
 /// 2. Create matching symlinks to the files in `$HOME`.
 pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
-    let root = determine_config_root(root)?;
+    let root = determine_config_root(root, true)?;
     let home = get_home_directory()?;
     let hooks = get_hooks_for_root(&root)?;
 

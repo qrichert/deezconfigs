@@ -47,22 +47,23 @@ For more.
 ## Roadmap
 
 - [x] CLI arguments parsing.
-- [x] Basic `sync`.
+- [x] **Command `sync`**.
 - [x] Protect `$HOME` with a `.deez` file.
 - [x] Add `--verbose` mode (use `-V` for version).
 - [x] Use Git remote as `sync` root.
 - [x] Smart root finder (looks in parents)
 - [x] Hooks (pre, post actions)
-- [x] Basic `rsync`.
-- [x] Basic `link`.
-- [ ] Likely `list` (with up-to-date status for each file).
-- [ ] Likely `clean`.
-- [ ] Refactor argument parsing.
+- [x] **Command `rsync`**.
+- [x] **Command `link`**.
+- [x] **Command `status`** (with up-to-date status for each file).
+- [ ] Put `cmd` in lib. It's too weird like that.
+- [ ] **Command `clean`**.
+- [ ] Push files to a `Vec` in verbose mode instead of directly printing.
+- [ ] Refactor argument parsing? Maybe?.
 - [ ] Proper verbose `--help` section.
-- [ ] ~~Maybe `diff` (difference between source and target).~~
-- [ ] ~~Think about templating.~~ (hooks are enough)
 - [ ] Increase test coverage (features are mostly covered, what's
       missing are tests for the error cases).
+- [ ] Perf refactorings for bottlnecks or for fun.
 
 ## Yet Another Config Manager
 
@@ -140,6 +141,8 @@ ran on the wrong root.
   interpretable by `sh` directly (e.g., `python` scripts).
 - This script will be run through `sh`: `sh -c <root>/<thescript>`
   inside the config root directory.
+- Hooks are executed in lexicographic order based on their file name
+  (i.e., `post-sync.001.sh` will be run before `post-sync.002.sh`).
 
 _deezconfigs_ provides some basic information to hooks through
 environment variables:

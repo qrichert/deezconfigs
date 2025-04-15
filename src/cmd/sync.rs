@@ -14,15 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::env;
 use std::fs;
 use std::path::PathBuf;
-use std::process;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use deezconfigs::{ui, walk};
 
-use super::common::{determine_config_root, get_home_directory, get_hooks_for_root, run_hooks};
+use super::common::{
+    determine_config_root, get_config_root_from_git, get_home_directory, get_hooks_for_root,
+    is_git_remote_uri, run_hooks,
+};
 
 /// Sync config from root into Home.
 ///
@@ -32,7 +33,7 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
     let root = if is_git_remote_uri(root) {
         get_config_root_from_git(root.expect("not empty, contains a `git:` prefix"), verbose)?
     } else {
-        determine_config_root(root)?
+        determine_config_root(root, true)?
     };
     let home = get_home_directory()?;
     let hooks = get_hooks_for_root(&root)?;
@@ -146,72 +147,4 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
     );
 
     Ok(())
-}
-
-fn is_git_remote_uri(root: Option<&String>) -> bool {
-    root.as_ref().is_some_and(|r| r.starts_with("git:"))
-}
-
-fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<PathBuf, i32> {
-    let uri = uri.trim_start_matches("git:").to_string();
-
-    // Yes, I know. Not a solid UUID, I should use a crate, etc.
-    let uuid = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("current time > Unix epoch")
-        .as_millis()
-        .to_string();
-    let clone_path = env::temp_dir().join(format!("deez-{uuid}"));
-
-    if clone_path.is_dir() && fs::remove_dir_all(&clone_path).is_err() {
-        eprint!(
-            "\
-fatal: Could not clone the configuration repository.
-The target directory already exists and could not be deleted.
-"
-        );
-        return Err(1);
-    }
-
-    println!("Fetching config files remotely...");
-
-    let mut command = process::Command::new("git");
-    command
-        .env("LANG", "en_US.UTF-8")
-        .arg("clone")
-        .arg("--single-branch")
-        .arg("--depth=1")
-        .arg("--no-tags")
-        .arg(&uri)
-        .arg(&clone_path);
-
-    let status = if verbose {
-        command.status().ok()
-    } else {
-        command.arg("--quiet");
-        command.output().ok().map(|out| out.status)
-    };
-
-    if let Some(status) = status {
-        if !status.success() {
-            eprintln!("fatal: Could not clone the configuration repository.");
-            if !verbose {
-                eprintln!("Retry with `--verbose` for additional detail.");
-            }
-            return Err(1);
-        }
-    } else {
-        eprint!(
-            "\
-fatal: Could not clone the configuration repository.
-Did not find the 'git' executable. Please ensure Git is properly
-installed on your machine.
-"
-        );
-        return Err(1);
-    }
-
-    println!("Done.");
-
-    Ok(clone_path)
 }

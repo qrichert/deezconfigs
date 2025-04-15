@@ -14,17 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process;
 
-const HOOKS: [&str; 6] = [
+const HOOKS: [&str; 8] = [
     "pre-sync",
     "post-sync",
     "pre-rsync",
     "post-rsync",
     "pre-link",
     "post-link",
+    "pre-status",
+    "post-status",
 ];
 
 pub fn is_hook(path: &Path) -> bool {
@@ -44,6 +47,8 @@ pub struct Hooks<'a> {
     post_rsync: Vec<PathBuf>,
     pre_link: Vec<PathBuf>,
     post_link: Vec<PathBuf>,
+    pre_status: Vec<PathBuf>,
+    post_status: Vec<PathBuf>,
 }
 
 impl<'a> Hooks<'a> {
@@ -64,6 +69,8 @@ impl<'a> Hooks<'a> {
             post_rsync: Vec::new(),
             pre_link: Vec::new(),
             post_link: Vec::new(),
+            pre_status: Vec::new(),
+            post_status: Vec::new(),
         };
 
         let Ok(entries) = root.read_dir() else {
@@ -93,6 +100,8 @@ impl<'a> Hooks<'a> {
                 Some("post-rsync") => hooks.post_rsync.push(entry.to_path_buf()),
                 Some("pre-link") => hooks.pre_link.push(entry.to_path_buf()),
                 Some("post-link") => hooks.post_link.push(entry.to_path_buf()),
+                Some("pre-status") => hooks.pre_status.push(entry.to_path_buf()),
+                Some("post-status") => hooks.post_status.push(entry.to_path_buf()),
                 _ => {}
             }
         }
@@ -114,6 +123,8 @@ impl<'a> Hooks<'a> {
         hooks.post_rsync.sort();
         hooks.pre_link.sort();
         hooks.post_link.sort();
+        hooks.pre_status.sort();
+        hooks.post_status.sort();
     }
 
     /// Run "pre-sync" hooks.
@@ -182,6 +193,28 @@ impl<'a> Hooks<'a> {
         self.run_hooks(&self.post_link, verbose)
     }
 
+    /// Run "pre-status" hooks.
+    ///
+    /// Returns the number of hooks that ran.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `sh` executable cannot be found.
+    pub fn pre_status(&self, verbose: bool) -> Result<usize, &'static str> {
+        self.run_hooks(&self.pre_status, verbose)
+    }
+
+    /// Run "post-status" hooks.
+    ///
+    /// Returns the number of hooks that ran.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `sh` executable cannot be found.
+    pub fn post_status(&self, verbose: bool) -> Result<usize, &'static str> {
+        self.run_hooks(&self.post_status, verbose)
+    }
+
     fn run_hooks(&self, hooks: &[PathBuf], verbose: bool) -> Result<usize, &'static str> {
         for hook in hooks {
             self.run_hook(hook, verbose)?;
@@ -216,5 +249,24 @@ impl<'a> Hooks<'a> {
         }
 
         Ok(())
+    }
+
+    /// List of hooks, grouped by type, and in execution order.
+    ///
+    /// Hooks are already sorted in lexicographic order, that also
+    /// determines the order of execution.
+    #[must_use]
+    pub fn list(&self) -> Vec<Cow<str>> {
+        self.pre_sync
+            .iter()
+            .chain(self.post_sync.iter())
+            .chain(self.pre_rsync.iter())
+            .chain(self.post_rsync.iter())
+            .chain(self.pre_link.iter())
+            .chain(self.post_link.iter())
+            .chain(self.pre_status.iter())
+            .chain(self.post_status.iter())
+            .map(|hook| hook.to_string_lossy())
+            .collect()
     }
 }

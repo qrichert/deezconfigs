@@ -323,6 +323,8 @@ fn link_hooks_ignore_other_commands_hooks() {
     conf::create_executable_file_in_configs("post-rsync.sh", None);
     conf::create_executable_file_in_configs("pre-link.sh", None);
     conf::create_executable_file_in_configs("post-link.sh", None);
+    conf::create_executable_file_in_configs("pre-status.sh", None);
+    conf::create_executable_file_in_configs("post-status.sh", None);
 
     let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
@@ -336,6 +338,8 @@ fn link_hooks_ignore_other_commands_hooks() {
     assert!(!output.stdout.contains("hook: post-rsync.sh"));
     assert!(output.stdout.contains("hook: pre-link.sh"));
     assert!(output.stdout.contains("hook: post-link.sh"));
+    assert!(!output.stdout.contains("hook: pre-status.sh"));
+    assert!(!output.stdout.contains("hook: post-status.sh"));
 }
 
 #[test]
@@ -348,6 +352,8 @@ fn link_hooks_are_not_treated_as_config_files() {
     conf::create_executable_file_in_configs("post-rsync.py", None);
     conf::create_executable_file_in_configs("pre-link.sh", None);
     conf::create_executable_file_in_configs("post-link.py", None);
+    conf::create_executable_file_in_configs("pre-status.sh", None);
+    conf::create_executable_file_in_configs("post-status.sh", None);
 
     let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
@@ -361,6 +367,8 @@ fn link_hooks_are_not_treated_as_config_files() {
     assert!(!file_exists_in_home("post-rsync.py"));
     assert!(!file_exists_in_home("pre-link.sh"));
     assert!(!file_exists_in_home("post-link.py"));
+    assert!(!file_exists_in_home("pre-status.sh"));
+    assert!(!file_exists_in_home("post-status.py"));
 }
 
 #[test]

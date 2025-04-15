@@ -27,7 +27,7 @@ use super::common::{determine_config_root, get_home_directory, get_hooks_for_roo
 /// 2. Find matching files in `$HOME`.
 /// 3. Replace files in `configs` with files in `$HOME`.
 pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
-    let root = determine_config_root(root)?;
+    let root = determine_config_root(root, true)?;
     let home = get_home_directory()?;
     let hooks = get_hooks_for_root(&root)?;
 
