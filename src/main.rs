@@ -32,22 +32,22 @@ fn main() {
             "-V" | "--version" => {
                 version();
             }
-            "sync" => {
+            "sync" | "s" => {
                 if let Err(code) = cmd::sync(args.next().as_ref(), verbose) {
                     process::exit(code);
                 }
             }
-            "rsync" => {
+            "rsync" | "rs" => {
                 if let Err(code) = cmd::rsync(args.next().as_ref(), verbose) {
                     process::exit(code);
                 }
             }
-            "link" => {
+            "link" | "l" => {
                 if let Err(code) = cmd::link(args.next().as_ref(), verbose) {
                     process::exit(code);
                 }
             }
-            "status" => {
+            "status" | "st" => {
                 if let Err(code) = cmd::status(args.next().as_ref(), verbose) {
                     process::exit(code);
                 }
