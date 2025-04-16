@@ -79,9 +79,11 @@ For more.
       printing.
 - [ ] Refactor argument parsing? Maybe?.
 - [ ] Proper verbose `--help` section.
+- [ ] Custom Home directory. Maybe change terminology, Home being the
+      default "target".
 - [ ] Increase test coverage (features are mostly covered, what's
       missing are tests for the error cases).
-- [ ] Perf refactorings for bottlnecks or for fun.
+- [ ] Perf refactorings for bottlenecks (or for fun).
 
 ## FAQ
 

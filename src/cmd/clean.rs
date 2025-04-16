@@ -24,7 +24,10 @@ use super::common::{
     is_git_remote_uri, run_hooks,
 };
 
-/// TODO
+/// Remove config files from Home.
+///
+/// 1. Collect all files in `configs`.
+/// 2. Remove matching files in `$HOME`.
 pub fn clean(root: Option<&String>, verbose: bool) -> Result<(), i32> {
     let root = if is_git_remote_uri(root) {
         get_config_root_from_git(root.expect("not empty, contains a `git:` prefix"), verbose)?
@@ -64,7 +67,6 @@ pub fn clean(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             const DEPTH_LIMIT: usize = 20;
             // `skip()` self (file).
             for (i, dir) in destination.ancestors().skip(1).enumerate() {
-                dbg!(&dir);
                 // Don't remove Home or above.
                 if dir == home {
                     break;

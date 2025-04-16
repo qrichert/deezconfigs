@@ -48,12 +48,14 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
         // TODO: Handle case when a directory exists.
 
-        // `fs::copy()` follows symlinks. It will create files with the
-        // contents of the symlink's target; it will not create a link.
-        if let Err(err) = fs::copy(destination, source) {
-            eprintln!("error: Could not copy '{}' from Home: {err}", p.display());
-            nb_errors.fetch_add(1, Ordering::Relaxed);
-            return;
+        if destination.is_file() {
+            // `fs::copy()` follows symlinks. It will create files with the
+            // contents of the symlink's target; it will not create a link.
+            if let Err(err) = fs::copy(destination, source) {
+                eprintln!("error: Could not copy '{}' from Home: {err}", p.display());
+                nb_errors.fetch_add(1, Ordering::Relaxed);
+                return;
+            }
         }
 
         if verbose {
