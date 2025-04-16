@@ -378,6 +378,8 @@ fn sync_hooks_ignore_other_commands_hooks() {
     conf::create_executable_file_in_configs("post-link.sh", None);
     conf::create_executable_file_in_configs("pre-status.sh", None);
     conf::create_executable_file_in_configs("post-status.sh", None);
+    conf::create_executable_file_in_configs("pre-clean.sh", None);
+    conf::create_executable_file_in_configs("post-clean.sh", None);
 
     let output = run(&["--verbose", "sync", &conf::root()]);
     dbg!(&output.stdout);
@@ -393,11 +395,15 @@ fn sync_hooks_ignore_other_commands_hooks() {
     assert!(!output.stdout.contains("hook: post-link.sh"));
     assert!(!output.stdout.contains("hook: pre-status.sh"));
     assert!(!output.stdout.contains("hook: post-status.sh"));
+    assert!(!output.stdout.contains("hook: pre-clean.sh"));
+    assert!(!output.stdout.contains("hook: post-clean.sh"));
 }
 
 #[test]
 fn sync_hooks_are_not_treated_as_config_files() {
     conf::init();
+
+    conf::create_file_in_configs("foo", None);
 
     conf::create_executable_file_in_configs("pre-sync.sh", None);
     conf::create_executable_file_in_configs("post-sync.py", None);
@@ -407,6 +413,8 @@ fn sync_hooks_are_not_treated_as_config_files() {
     conf::create_executable_file_in_configs("post-link.py", None);
     conf::create_executable_file_in_configs("pre-status.sh", None);
     conf::create_executable_file_in_configs("post-status.sh", None);
+    conf::create_executable_file_in_configs("pre-clean.sh", None);
+    conf::create_executable_file_in_configs("post-clean.sh", None);
 
     let output = run(&["--verbose", "sync", &conf::root()]);
     dbg!(&output.stdout);
@@ -422,6 +430,8 @@ fn sync_hooks_are_not_treated_as_config_files() {
     assert!(!file_exists_in_home("post-link.py"));
     assert!(!file_exists_in_home("pre-status.sh"));
     assert!(!file_exists_in_home("post-status.py"));
+    assert!(!file_exists_in_home("pre-clean.sh"));
+    assert!(!file_exists_in_home("post-clean.sh"));
 }
 
 #[test]

@@ -125,6 +125,7 @@ pub fn print_files_summary(root: &Path, nb_files_written: usize, nb_errors: usiz
 
     let mut stdout = io::stdout().lock();
 
+    // TODO: Adapt the word `Wrote` to the action.
     _ = write!(
         stdout,
         "Wrote {nb_files_written} file{}",

@@ -15,6 +15,23 @@ neuron activation to operate.
 
 ## Usage
 
+```
+Usage: deez [<options>] <command> [<args>]
+
+Commands:
+  sync [<root>|<git>]    Update Home from configs
+  rsync [<root>]         Update configs from Home
+  link [<root>]          Symlink configs to Home
+
+  status [<root>|<git>]  List files and their status
+  clean [<root>|<git>]   Remove all configs from Home
+
+Options:
+  -h, --help             Show this message and exit
+  -V, --version          Show the version and exit
+  -v, --verbose          Show files being copied
+```
+
 > [!NOTE]
 >
 > The "config root" can be any directory containing config files. You
@@ -56,16 +73,19 @@ For more.
 - [x] **Command `rsync`**.
 - [x] **Command `link`**.
 - [x] **Command `status`** (with up-to-date status for each file).
+- [x] **Command `clean`**.
 - [ ] Put `cmd` in lib. It's too weird like that.
-- [ ] **Command `clean`**.
-- [ ] Push files to a `Vec` in verbose mode instead of directly printing.
+- [ ] Push files to a `Vec` in verbose mode instead of directly
+      printing.
 - [ ] Refactor argument parsing? Maybe?.
 - [ ] Proper verbose `--help` section.
 - [ ] Increase test coverage (features are mostly covered, what's
       missing are tests for the error cases).
 - [ ] Perf refactorings for bottlnecks or for fun.
 
-## Yet Another Config Manager
+## FAQ
+
+### Yet Another Config Manager
 
 I very rarely edit my configuration files. So when I do, I never quite
 remember how the config manager worked. I wanted a tool so easy that
@@ -77,8 +97,6 @@ That's also why `deezconfigs` does very little. Instead of making me
 remberer `deez` commands, it delegates to tools I use _way_ more often.
 I much rather `nvim` or `git commit` my config files, because those
 commands are burnt into my muscle memory.
-
-## Tips
 
 ### Do I need to use Git?
 

@@ -19,7 +19,7 @@ use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process;
 
-const HOOKS: [&str; 8] = [
+const HOOKS: [&str; 10] = [
     "pre-sync",
     "post-sync",
     "pre-rsync",
@@ -28,6 +28,8 @@ const HOOKS: [&str; 8] = [
     "post-link",
     "pre-status",
     "post-status",
+    "pre-clean",
+    "post-clean",
 ];
 
 pub fn is_hook(path: &Path) -> bool {
@@ -49,6 +51,8 @@ pub struct Hooks<'a> {
     post_link: Vec<PathBuf>,
     pre_status: Vec<PathBuf>,
     post_status: Vec<PathBuf>,
+    pre_clean: Vec<PathBuf>,
+    post_clean: Vec<PathBuf>,
 }
 
 impl<'a> Hooks<'a> {
@@ -71,6 +75,8 @@ impl<'a> Hooks<'a> {
             post_link: Vec::new(),
             pre_status: Vec::new(),
             post_status: Vec::new(),
+            pre_clean: Vec::new(),
+            post_clean: Vec::new(),
         };
 
         let Ok(entries) = root.read_dir() else {
@@ -102,6 +108,8 @@ impl<'a> Hooks<'a> {
                 Some("post-link") => hooks.post_link.push(entry.to_path_buf()),
                 Some("pre-status") => hooks.pre_status.push(entry.to_path_buf()),
                 Some("post-status") => hooks.post_status.push(entry.to_path_buf()),
+                Some("pre-clean") => hooks.pre_clean.push(entry.to_path_buf()),
+                Some("post-clean") => hooks.post_clean.push(entry.to_path_buf()),
                 _ => {}
             }
         }
@@ -125,6 +133,8 @@ impl<'a> Hooks<'a> {
         hooks.post_link.sort();
         hooks.pre_status.sort();
         hooks.post_status.sort();
+        hooks.pre_clean.sort();
+        hooks.post_clean.sort();
     }
 
     /// Run "pre-sync" hooks.
@@ -215,6 +225,28 @@ impl<'a> Hooks<'a> {
         self.run_hooks(&self.post_status, verbose)
     }
 
+    /// Run "pre-clean" hooks.
+    ///
+    /// Returns the number of hooks that ran.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `sh` executable cannot be found.
+    pub fn pre_clean(&self, verbose: bool) -> Result<usize, &'static str> {
+        self.run_hooks(&self.pre_clean, verbose)
+    }
+
+    /// Run "post-clean" hooks.
+    ///
+    /// Returns the number of hooks that ran.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `sh` executable cannot be found.
+    pub fn post_clean(&self, verbose: bool) -> Result<usize, &'static str> {
+        self.run_hooks(&self.post_clean, verbose)
+    }
+
     fn run_hooks(&self, hooks: &[PathBuf], verbose: bool) -> Result<usize, &'static str> {
         for hook in hooks {
             self.run_hook(hook, verbose)?;
@@ -266,6 +298,8 @@ impl<'a> Hooks<'a> {
             .chain(self.post_link.iter())
             .chain(self.pre_status.iter())
             .chain(self.post_status.iter())
+            .chain(self.pre_clean.iter())
+            .chain(self.post_clean.iter())
             .map(|hook| hook.to_string_lossy())
             .collect()
     }

@@ -52,6 +52,11 @@ fn main() {
                     process::exit(code);
                 }
             }
+            "clean" | "c" => {
+                if let Err(code) = cmd::clean(args.next().as_ref(), verbose) {
+                    process::exit(code);
+                }
+            }
             "-v" | "--verbose" => {
                 verbose = true;
                 continue;
@@ -80,6 +85,7 @@ Commands:
   link [<root>]          Symlink configs to Home
 
   status [<root>|<git>]  List files and their status
+  clean [<root>|<git>]   Remove all configs from Home
 
 Options:
   -h, --help             Show this message and exit

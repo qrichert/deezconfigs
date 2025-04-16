@@ -350,6 +350,8 @@ fn rsync_hooks_ignore_other_commands_hooks() {
     conf::create_executable_file_in_configs("post-link.sh", None);
     conf::create_executable_file_in_configs("pre-status.sh", None);
     conf::create_executable_file_in_configs("post-status.sh", None);
+    conf::create_executable_file_in_configs("pre-clean.sh", None);
+    conf::create_executable_file_in_configs("post-clean.sh", None);
 
     let output = run(&["--verbose", "rsync", &conf::root()]);
     dbg!(&output.stdout);
@@ -365,11 +367,15 @@ fn rsync_hooks_ignore_other_commands_hooks() {
     assert!(!output.stdout.contains("hook: post-link.sh"));
     assert!(!output.stdout.contains("hook: pre-status.sh"));
     assert!(!output.stdout.contains("hook: post-status.sh"));
+    assert!(!output.stdout.contains("hook: pre-clean.sh"));
+    assert!(!output.stdout.contains("hook: post-clean.sh"));
 }
 
 #[test]
 fn rsync_hooks_are_not_treated_as_config_files() {
     conf::init();
+
+    conf::create_file_in_configs("foo", None);
 
     let a = conf::create_executable_file_in_configs("pre-sync.sh", Some("# old"));
     let b = conf::create_executable_file_in_configs("post-sync.py", Some("# old"));
@@ -379,6 +385,8 @@ fn rsync_hooks_are_not_treated_as_config_files() {
     let f = conf::create_executable_file_in_configs("post-link.py", Some("# old"));
     let g = conf::create_executable_file_in_configs("pre-status.sh", Some("# old"));
     let h = conf::create_executable_file_in_configs("post-status.py", Some("# old"));
+    let i = conf::create_executable_file_in_configs("pre-clean.sh", Some("# old"));
+    let j = conf::create_executable_file_in_configs("post-clean.sh", Some("# old"));
 
     conf::create_file_in_home("pre-sync.sh", Some("new"));
     conf::create_file_in_home("post-sync.py", Some("new"));
@@ -388,6 +396,8 @@ fn rsync_hooks_are_not_treated_as_config_files() {
     conf::create_file_in_home("post-link.py", Some("new"));
     conf::create_file_in_home("pre-status.sh", Some("new"));
     conf::create_file_in_home("post-satus.py", Some("new"));
+    conf::create_file_in_home("pre-clean.sh", Some("new"));
+    conf::create_file_in_home("post-clean.py", Some("new"));
 
     let output = run(&["--verbose", "rsync", &conf::root()]);
     dbg!(&output.stdout);
@@ -403,6 +413,8 @@ fn rsync_hooks_are_not_treated_as_config_files() {
     assert_eq!(read(&f), "# old");
     assert_eq!(read(&g), "# old");
     assert_eq!(read(&h), "# old");
+    assert_eq!(read(&i), "# old");
+    assert_eq!(read(&j), "# old");
 }
 
 #[test]

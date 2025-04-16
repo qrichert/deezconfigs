@@ -14,12 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+pub mod clean;
 pub mod common;
 pub mod link;
 pub mod rsync;
 pub mod status;
 pub mod sync;
 
+pub use clean::clean;
 pub use link::link;
 pub use rsync::rsync;
 pub use status::status;
