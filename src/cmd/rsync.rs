@@ -35,7 +35,7 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
     nb_hooks_ran += run_hooks(|| hooks.pre_rsync(verbose))?;
 
-    let nb_files_written = AtomicUsize::new(0);
+    let nb_files_rsynced = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
 
     walk::find_files_recursively(&root, |p| {
@@ -65,14 +65,15 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             println!("{}", p.display());
         }
 
-        nb_files_written.fetch_add(1, Ordering::Relaxed);
+        nb_files_rsynced.fetch_add(1, Ordering::Relaxed);
     });
 
     nb_hooks_ran += run_hooks(|| hooks.post_rsync(verbose))?;
 
     ui::print_summary(
+        ui::Action::RSync,
         &root,
-        nb_files_written.into_inner(),
+        nb_files_rsynced.into_inner(),
         nb_errors.into_inner(),
         nb_hooks_ran,
     );

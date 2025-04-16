@@ -16,6 +16,7 @@
 
 use std::borrow::Cow;
 use std::env;
+use std::fmt;
 use std::io::{self, Write};
 use std::path::Path;
 use std::sync::LazyLock;
@@ -113,23 +114,46 @@ pub fn ask_confirmation_with_prompt(prompt: &str) -> bool {
     matches!(answer.to_ascii_lowercase().trim(), "y" | "yes")
 }
 
-pub fn print_summary(root: &Path, nb_files_written: usize, nb_errors: usize, nb_hooks_ran: usize) {
-    print_files_summary(root, nb_files_written, nb_errors);
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum Action {
+    Sync,
+    RSync,
+    Link,
+    Clean,
+}
+
+impl fmt::Display for Action {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Sync | Self::RSync => write!(f, "Synced"),
+            Self::Link => write!(f, "Linked"),
+            Self::Clean => write!(f, "Removed"),
+        }
+    }
+}
+
+pub fn print_summary(
+    action: Action,
+    root: &Path,
+    nb_files: usize,
+    nb_errors: usize,
+    nb_hooks_ran: usize,
+) {
+    print_files_summary(action, root, nb_files, nb_errors);
     print_hooks_summary(nb_hooks_ran);
 }
 
-pub fn print_files_summary(root: &Path, nb_files_written: usize, nb_errors: usize) {
-    if nb_files_written + nb_errors == 0 {
+pub fn print_files_summary(action: Action, root: &Path, nb_files: usize, nb_errors: usize) {
+    if nb_files + nb_errors == 0 {
         println!("No config files found in '{}'.", root.display());
     }
 
     let mut stdout = io::stdout().lock();
 
-    // TODO: Adapt the word `Wrote` to the action.
     _ = write!(
         stdout,
-        "Wrote {nb_files_written} file{}",
-        if nb_files_written == 1 { "" } else { "s" }
+        "{action} {nb_files} file{}",
+        if nb_files == 1 { "" } else { "s" }
     );
     if nb_errors > 0 {
         _ = write!(

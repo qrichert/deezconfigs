@@ -103,7 +103,7 @@ fn link_output() {
     assert!(!output.stdout.contains(".config/nvim/init.lua"));
     assert!(!output.stdout.contains(".config/fish/config.fish"));
     assert!(!output.stdout.contains(".config/ghostty/config"));
-    assert!(output.stdout.contains("Wrote 4 files."));
+    assert!(output.stdout.contains("Linked 4 files."));
     assert!(!output.stdout.contains("hook: post-link.sh"));
     assert!(output.stdout.contains("Ran 2 hooks"));
 }
@@ -131,7 +131,7 @@ fn link_output_verbose() {
     assert!(output.stdout.contains(".config/nvim/init.lua"));
     assert!(output.stdout.contains(".config/fish/config.fish"));
     assert!(output.stdout.contains(".config/ghostty/config"));
-    assert!(output.stdout.contains("Wrote 4 files."));
+    assert!(output.stdout.contains("Linked 4 files."));
     assert!(output.stdout.contains("hook: post-link.sh"));
     assert!(output.stdout.contains("Ran 2 hooks"));
 }
