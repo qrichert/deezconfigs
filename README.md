@@ -37,7 +37,7 @@ Options:
 > The "config root" can be any directory containing config files. You
 > _should_, but are not required to, create a `.deez` file in the root.
 > This lets _deezconfigs_ know it is safe to use, and lets you run
-> `deez` from within sub-directories.
+> `deez` inside sub-directories.
 
 ```console
 $ deez sync
