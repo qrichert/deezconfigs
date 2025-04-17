@@ -74,9 +74,10 @@ For more.
 - [x] **Command `link`**.
 - [x] **Command `status`** (with up-to-date status for each file).
 - [x] **Command `clean`**.
-- [ ] Put `cmd` in lib. It's too weird like that.
-- [ ] Push files to a `Vec` in verbose mode instead of directly
+- [x] Push files to a `Vec` in verbose mode instead of directly
       printing.
+- [ ] Refactor tests, there is too much duplication.
+- [ ] Pass `DEEZ_ROOT` and `DEEZ_HOME` to hooks.
 - [ ] Refactor argument parsing? Maybe?.
 - [ ] Proper verbose `--help` section.
 - [ ] Custom Home directory. Maybe change terminology, Home being the

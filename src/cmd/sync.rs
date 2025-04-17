@@ -17,6 +17,7 @@
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 use deezconfigs::{ui, walk};
 
@@ -42,6 +43,10 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
     nb_hooks_ran += run_hooks(|| hooks.pre_sync(verbose))?;
 
+    // There will be high contention, but it likely won't matter much
+    // given there are rarely _that_ many config files (and the syscalls
+    // we issue are a bigger bottleneck anyway).
+    let files = Arc::new(Mutex::new(Vec::with_capacity(20)));
     let nb_files_synced = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
 
@@ -126,16 +131,31 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         }
 
         if verbose {
-            // Since this is threaded, it's quite a pain to optimise the
-            // repeated prints. We can't properly share a stdout lock or
-            // a mutable string buffer without jumping through too many
-            // hoops. And quite frankly it would be overkill in regard
-            // to the limited number of config files we can expect.
-            println!("{}", p.display());
+            let file = p.to_string_lossy().to_string();
+            if let Ok(mut files) = files.lock() {
+                files.push(file);
+                // Release the lock ASAP.
+                drop(files);
+            } else {
+                // It's so unlikely we don't acquire the lock that we
+                // just silently fall back to printing directly.
+                println!("{}", p.display());
+            }
         }
 
         nb_files_synced.fetch_add(1, Ordering::Relaxed);
     });
+
+    let mut files = Arc::try_unwrap(files)
+        .expect("processing is over, we're back to a single thread.")
+        .into_inner()
+        .unwrap();
+    // Do not use `sort_unstable()` because the files are likely
+    // _partially_ sorted, in which case stable sort is faster,
+    // as per the docs.
+    files.sort();
+
+    ui::print_files(&files);
 
     nb_hooks_ran += run_hooks(|| hooks.post_sync(verbose))?;
 

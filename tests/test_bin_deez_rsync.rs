@@ -81,15 +81,13 @@ fn rsync_output() {
 
     assert_eq!(output.exit_code, 0);
 
-    // File order is non-deterministic.
-    assert!(!output.stdout.contains("hook: pre-rsync.sh"));
-    assert!(!output.stdout.contains(".gitconfig"));
-    assert!(!output.stdout.contains(".config/nvim/init.lua"));
-    assert!(!output.stdout.contains(".config/fish/config.fish"));
-    assert!(!output.stdout.contains(".config/ghostty/config"));
-    assert!(output.stdout.contains("Synced 4 files."));
-    assert!(!output.stdout.contains("hook: post-rsync.sh"));
-    assert!(output.stdout.contains("Ran 2 hooks"));
+    assert_eq!(
+        output.stdout,
+        "\
+Synced 4 files.
+Ran 2 hooks.
+"
+    );
 }
 
 #[test]
@@ -114,15 +112,19 @@ fn rsync_output_verbose() {
 
     assert_eq!(output.exit_code, 0);
 
-    // File order is non-deterministic.
-    assert!(output.stdout.contains("hook: pre-rsync.sh"));
-    assert!(output.stdout.contains(".gitconfig"));
-    assert!(output.stdout.contains(".config/nvim/init.lua"));
-    assert!(output.stdout.contains(".config/fish/config.fish"));
-    assert!(output.stdout.contains(".config/ghostty/config"));
-    assert!(output.stdout.contains("Synced 4 files."));
-    assert!(output.stdout.contains("hook: post-rsync.sh"));
-    assert!(output.stdout.contains("Ran 2 hooks"));
+    assert_eq!(
+        output.stdout,
+        "\
+hook: pre-rsync.sh
+.config/fish/config.fish
+.config/ghostty/config
+.config/nvim/init.lua
+.gitconfig
+hook: post-rsync.sh
+Synced 4 files.
+Ran 2 hooks.
+"
+    );
 }
 
 #[test]

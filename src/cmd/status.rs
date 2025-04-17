@@ -73,9 +73,9 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
     nb_hooks_ran += run_hooks(|| hooks.pre_status(verbose))?;
 
-    // There will be high contention, but we won't change the mechanics
-    // just for this one (and it likely won't matter much given the
-    // restricted number of potential config files).
+    // There will be high contention, but it likely won't matter much
+    // given there are rarely _that_ many config files (and the syscalls
+    // we issue are a bigger bottleneck anyway).
     let statuses = Arc::new(Mutex::new(Vec::with_capacity(20)));
     let nb_errors = AtomicUsize::new(0);
 
@@ -126,7 +126,6 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         .expect("processing is over, we're back to a single thread.")
         .into_inner()
         .unwrap();
-
     // Do not use `sort_unstable()` because the files are likely
     // _partially_ sorted, in which case stable sort is faster,
     // as per the docs.

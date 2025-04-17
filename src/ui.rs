@@ -132,6 +132,13 @@ impl fmt::Display for Action {
     }
 }
 
+pub fn print_files(files: &[String]) {
+    let mut stdout = io::stdout().lock();
+    for file in files {
+        _ = writeln!(stdout, "{file}");
+    }
+}
+
 pub fn print_summary(
     action: Action,
     root: &Path,

@@ -97,15 +97,13 @@ fn link_output() {
 
     assert_eq!(output.exit_code, 0);
 
-    // File order is non-deterministic.
-    assert!(!output.stdout.contains("hook: pre-link.sh"));
-    assert!(!output.stdout.contains(".gitconfig"));
-    assert!(!output.stdout.contains(".config/nvim/init.lua"));
-    assert!(!output.stdout.contains(".config/fish/config.fish"));
-    assert!(!output.stdout.contains(".config/ghostty/config"));
-    assert!(output.stdout.contains("Linked 4 files."));
-    assert!(!output.stdout.contains("hook: post-link.sh"));
-    assert!(output.stdout.contains("Ran 2 hooks"));
+    assert_eq!(
+        output.stdout,
+        "\
+Linked 4 files.
+Ran 2 hooks.
+"
+    );
 }
 
 #[test]
@@ -125,15 +123,19 @@ fn link_output_verbose() {
 
     assert_eq!(output.exit_code, 0);
 
-    // File order is non-deterministic.
-    assert!(output.stdout.contains("hook: pre-link.sh"));
-    assert!(output.stdout.contains(".gitconfig"));
-    assert!(output.stdout.contains(".config/nvim/init.lua"));
-    assert!(output.stdout.contains(".config/fish/config.fish"));
-    assert!(output.stdout.contains(".config/ghostty/config"));
-    assert!(output.stdout.contains("Linked 4 files."));
-    assert!(output.stdout.contains("hook: post-link.sh"));
-    assert!(output.stdout.contains("Ran 2 hooks"));
+    assert_eq!(
+        output.stdout,
+        "\
+hook: pre-link.sh
+.config/fish/config.fish
+.config/ghostty/config
+.config/nvim/init.lua
+.gitconfig
+hook: post-link.sh
+Linked 4 files.
+Ran 2 hooks.
+"
+    );
 }
 
 #[test]
