@@ -174,6 +174,10 @@ ran on the wrong root.
 _deezconfigs_ provides some basic information to hooks through
 environment variables:
 
+- `DEEZ_ROOT` Which should be the same as `$(pwd)` (hooks are executed
+  from within the root).
+- `DEEZ_HOME` Which for now is the same as `$HOME`, but will become
+  modifiable in the future.
 - `DEEZ_VERBOSE` Will be `true` if run in verbose mode, otherwise it
   will be unset (hint: use `[ -n $DEEZ_VERBOSE ]` to test for
   existance).
