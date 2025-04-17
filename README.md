@@ -76,8 +76,8 @@ For more.
 - [x] **Command `clean`**.
 - [x] Push files to a `Vec` in verbose mode instead of directly
       printing.
+- [x] Pass `DEEZ_ROOT` and `DEEZ_HOME` to hooks.
 - [ ] Refactor tests, there is too much duplication.
-- [ ] Pass `DEEZ_ROOT` and `DEEZ_HOME` to hooks.
 - [ ] Refactor argument parsing? Maybe?.
 - [ ] Proper verbose `--help` section.
 - [ ] Custom Home directory. Maybe change terminology, Home being the

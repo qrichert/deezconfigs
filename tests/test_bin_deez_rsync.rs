@@ -22,7 +22,7 @@ mod run;
 use std::fs;
 use std::path::Path;
 
-use conf::CONFIGS;
+use conf::{CONFIGS, HOME};
 use run::{run, run_in_dir};
 
 fn read(file_path: &Path) -> String {
@@ -417,6 +417,36 @@ fn rsync_hooks_are_not_treated_as_config_files() {
     assert_eq!(read(&h), "# old");
     assert_eq!(read(&i), "# old");
     assert_eq!(read(&j), "# old");
+}
+
+#[test]
+fn rsync_hooks_expose_root() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-rsync.sh", Some(r#"echo root=$DEEZ_ROOT"#));
+
+    let output = run(&["--verbose", "rsync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains(&format!("\nroot={CONFIGS}\n")));
+}
+
+#[test]
+fn rsync_hooks_expose_home() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-rsync.sh", Some(r#"echo home=$DEEZ_HOME"#));
+
+    let output = run(&["--verbose", "rsync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains(&format!("\nhome={HOME}\n")));
 }
 
 #[test]

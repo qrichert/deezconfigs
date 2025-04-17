@@ -15,7 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::borrow::Cow;
-use std::ffi::OsStr;
+use std::collections::HashMap;
+use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -39,10 +40,8 @@ pub fn is_hook(path: &Path) -> bool {
     false
 }
 
-/// Context for hooks for a given root.
 #[derive(Debug)]
-pub struct Hooks<'a> {
-    root: &'a Path,
+struct Scripts {
     pre_sync: Vec<PathBuf>,
     post_sync: Vec<PathBuf>,
     pre_rsync: Vec<PathBuf>,
@@ -55,6 +54,16 @@ pub struct Hooks<'a> {
     post_clean: Vec<PathBuf>,
 }
 
+/// Context for hooks for a given root.
+#[derive(Debug)]
+pub struct Hooks<'a> {
+    root: &'a Path,
+    home: &'a Path,
+    is_verbose: bool,
+    envs: HashMap<&'static str, OsString>,
+    scripts: Scripts,
+}
+
 impl<'a> Hooks<'a> {
     /// Create hooks handler given config root.
     ///
@@ -64,22 +73,40 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Errors if the config root cannot be read.
-    pub fn for_root(root: &'a Path) -> Result<Self, &'static str> {
+    pub fn for_command(
+        root: &'a Path,
+        home: &'a Path,
+        verbose: bool,
+    ) -> Result<Self, &'static str> {
         let mut hooks = Self {
             root,
-            pre_sync: Vec::new(),
-            post_sync: Vec::new(),
-            pre_rsync: Vec::new(),
-            post_rsync: Vec::new(),
-            pre_link: Vec::new(),
-            post_link: Vec::new(),
-            pre_status: Vec::new(),
-            post_status: Vec::new(),
-            pre_clean: Vec::new(),
-            post_clean: Vec::new(),
+            home,
+            is_verbose: verbose,
+            envs: HashMap::new(),
+            scripts: Scripts {
+                pre_sync: Vec::new(),
+                post_sync: Vec::new(),
+                pre_rsync: Vec::new(),
+                post_rsync: Vec::new(),
+                pre_link: Vec::new(),
+                post_link: Vec::new(),
+                pre_status: Vec::new(),
+                post_status: Vec::new(),
+                pre_clean: Vec::new(),
+                post_clean: Vec::new(),
+            },
         };
 
-        let Ok(entries) = root.read_dir() else {
+        Self::populate_hooks_scripts(&mut hooks)?;
+        Self::sort_hooks_scripts_by_file_name(&mut hooks);
+
+        Self::build_environment(&mut hooks);
+
+        Ok(hooks)
+    }
+
+    fn populate_hooks_scripts(hooks: &mut Hooks) -> Result<(), &'static str> {
+        let Ok(entries) = hooks.root.read_dir() else {
             return Err("Could not read root directory for hooks.");
         };
 
@@ -90,7 +117,7 @@ impl<'a> Hooks<'a> {
 
             // This is for normalization and consistency with `walk`
             // returning paths relative to `root`.
-            let Ok(entry) = entry.strip_prefix(root) else {
+            let Ok(entry) = entry.strip_prefix(hooks.root) else {
                 // `expect()` whines about missing panics doc.
                 unreachable!("we are inside `root`");
             };
@@ -100,41 +127,65 @@ impl<'a> Hooks<'a> {
             };
 
             match file_prefix.to_str() {
-                Some("pre-sync") => hooks.pre_sync.push(entry.to_path_buf()),
-                Some("post-sync") => hooks.post_sync.push(entry.to_path_buf()),
-                Some("pre-rsync") => hooks.pre_rsync.push(entry.to_path_buf()),
-                Some("post-rsync") => hooks.post_rsync.push(entry.to_path_buf()),
-                Some("pre-link") => hooks.pre_link.push(entry.to_path_buf()),
-                Some("post-link") => hooks.post_link.push(entry.to_path_buf()),
-                Some("pre-status") => hooks.pre_status.push(entry.to_path_buf()),
-                Some("post-status") => hooks.post_status.push(entry.to_path_buf()),
-                Some("pre-clean") => hooks.pre_clean.push(entry.to_path_buf()),
-                Some("post-clean") => hooks.post_clean.push(entry.to_path_buf()),
+                Some("pre-sync") => hooks.scripts.pre_sync.push(entry.to_path_buf()),
+                Some("post-sync") => hooks.scripts.post_sync.push(entry.to_path_buf()),
+                Some("pre-rsync") => hooks.scripts.pre_rsync.push(entry.to_path_buf()),
+                Some("post-rsync") => hooks.scripts.post_rsync.push(entry.to_path_buf()),
+                Some("pre-link") => hooks.scripts.pre_link.push(entry.to_path_buf()),
+                Some("post-link") => hooks.scripts.post_link.push(entry.to_path_buf()),
+                Some("pre-status") => hooks.scripts.pre_status.push(entry.to_path_buf()),
+                Some("post-status") => hooks.scripts.post_status.push(entry.to_path_buf()),
+                Some("pre-clean") => hooks.scripts.pre_clean.push(entry.to_path_buf()),
+                Some("post-clean") => hooks.scripts.post_clean.push(entry.to_path_buf()),
                 _ => {}
             }
         }
 
-        Self::sort_hooks_by_file_name(&mut hooks);
-
-        Ok(hooks)
+        Ok(())
     }
 
-    fn sort_hooks_by_file_name(hooks: &mut Hooks) {
+    fn sort_hooks_scripts_by_file_name(hooks: &mut Hooks) {
         // Do not use `sort_unstable()` because the files are likely
         // _partially_ sorted, in which case stable sort is faster,
         // as per the docs.
 
         // TODO: Test this behaviour.
-        hooks.pre_sync.sort();
-        hooks.post_sync.sort();
-        hooks.pre_rsync.sort();
-        hooks.post_rsync.sort();
-        hooks.pre_link.sort();
-        hooks.post_link.sort();
-        hooks.pre_status.sort();
-        hooks.post_status.sort();
-        hooks.pre_clean.sort();
-        hooks.post_clean.sort();
+        hooks.scripts.pre_sync.sort();
+        hooks.scripts.post_sync.sort();
+        hooks.scripts.pre_rsync.sort();
+        hooks.scripts.post_rsync.sort();
+        hooks.scripts.pre_link.sort();
+        hooks.scripts.post_link.sort();
+        hooks.scripts.pre_status.sort();
+        hooks.scripts.post_status.sort();
+        hooks.scripts.pre_clean.sort();
+        hooks.scripts.post_clean.sort();
+    }
+
+    fn build_environment(hooks: &mut Hooks) {
+        hooks.set_env_var(
+            "DEEZ_ROOT",
+            hooks
+                .root
+                .canonicalize()
+                .unwrap_or_else(|_| hooks.root.to_path_buf())
+                .as_os_str(),
+        );
+        hooks.set_env_var(
+            "DEEZ_HOME",
+            hooks
+                .home
+                .canonicalize()
+                .unwrap_or_else(|_| hooks.home.to_path_buf())
+                .as_os_str(),
+        );
+        if hooks.is_verbose {
+            hooks.set_env_var("DEEZ_VERBOSE", OsStr::new("true"));
+        }
+    }
+
+    pub fn set_env_var(&mut self, key: &'static str, value: impl AsRef<OsStr>) {
+        self.envs.insert(key, value.as_ref().to_os_string());
     }
 
     /// Run "pre-sync" hooks.
@@ -144,8 +195,8 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_sync(&self, verbose: bool) -> Result<usize, &'static str> {
-        self.run_hooks(&self.pre_sync, verbose)
+    pub fn pre_sync(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.pre_sync)
     }
 
     /// Run "post-sync" hooks.
@@ -155,8 +206,8 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_sync(&self, verbose: bool) -> Result<usize, &'static str> {
-        self.run_hooks(&self.post_sync, verbose)
+    pub fn post_sync(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.post_sync)
     }
 
     /// Run "pre-rsync" hooks.
@@ -166,8 +217,8 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_rsync(&self, verbose: bool) -> Result<usize, &'static str> {
-        self.run_hooks(&self.pre_rsync, verbose)
+    pub fn pre_rsync(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.pre_rsync)
     }
 
     /// Run "post-rsync" hooks.
@@ -177,8 +228,8 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_rsync(&self, verbose: bool) -> Result<usize, &'static str> {
-        self.run_hooks(&self.post_rsync, verbose)
+    pub fn post_rsync(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.post_rsync)
     }
 
     /// Run "pre-link" hooks.
@@ -188,8 +239,8 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_link(&self, verbose: bool) -> Result<usize, &'static str> {
-        self.run_hooks(&self.pre_link, verbose)
+    pub fn pre_link(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.pre_link)
     }
 
     /// Run "post-link" hooks.
@@ -199,8 +250,8 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_link(&self, verbose: bool) -> Result<usize, &'static str> {
-        self.run_hooks(&self.post_link, verbose)
+    pub fn post_link(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.post_link)
     }
 
     /// Run "pre-status" hooks.
@@ -210,8 +261,8 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_status(&self, verbose: bool) -> Result<usize, &'static str> {
-        self.run_hooks(&self.pre_status, verbose)
+    pub fn pre_status(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.pre_status)
     }
 
     /// Run "post-status" hooks.
@@ -221,8 +272,8 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_status(&self, verbose: bool) -> Result<usize, &'static str> {
-        self.run_hooks(&self.post_status, verbose)
+    pub fn post_status(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.post_status)
     }
 
     /// Run "pre-clean" hooks.
@@ -232,8 +283,8 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_clean(&self, verbose: bool) -> Result<usize, &'static str> {
-        self.run_hooks(&self.pre_clean, verbose)
+    pub fn pre_clean(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.pre_clean)
     }
 
     /// Run "post-clean" hooks.
@@ -243,37 +294,29 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_clean(&self, verbose: bool) -> Result<usize, &'static str> {
-        self.run_hooks(&self.post_clean, verbose)
+    pub fn post_clean(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.post_clean)
     }
 
-    fn run_hooks(&self, hooks: &[PathBuf], verbose: bool) -> Result<usize, &'static str> {
+    fn run_hooks(&self, hooks: &[PathBuf]) -> Result<usize, &'static str> {
         for hook in hooks {
-            self.run_hook(hook, verbose)?;
+            self.run_hook(hook)?;
         }
         Ok(hooks.len())
     }
 
-    fn run_hook(&self, hook: &Path, verbose: bool) -> Result<(), &'static str> {
+    fn run_hook(&self, hook: &Path) -> Result<(), &'static str> {
         // `root` cannot be an empty `Path`.
         debug_assert!(!self.root.to_str().is_some_and(str::is_empty));
 
-        let mut envs = Vec::new();
-
-        // TODO: This could be refactored by setting the env somewhere
-        // else (`&self.env` / `hooks.set_env()`). This would make it
-        // easier to pass other values without passing too many
-        // parameters here (and to each call to `run_hooks()`). It could
-        // come in handy to also pass `DEEZ_ROOT` and `DEEZ_HOME`.
-        if verbose {
+        if self.is_verbose {
             println!("hook: {}", hook.display());
-            envs.push(("DEEZ_VERBOSE", "true"));
         }
 
         let status = process::Command::new("sh")
             .arg("-c")
             .arg(self.root.join(hook)) // Always a path (`root` non-empty).
-            .envs(envs)
+            .envs(&self.envs)
             .current_dir(self.root)
             .status();
         if status.is_err() {
@@ -289,17 +332,18 @@ impl<'a> Hooks<'a> {
     /// determines the order of execution.
     #[must_use]
     pub fn list(&self) -> Vec<Cow<str>> {
-        self.pre_sync
+        self.scripts
+            .pre_sync
             .iter()
-            .chain(self.post_sync.iter())
-            .chain(self.pre_rsync.iter())
-            .chain(self.post_rsync.iter())
-            .chain(self.pre_link.iter())
-            .chain(self.post_link.iter())
-            .chain(self.pre_status.iter())
-            .chain(self.post_status.iter())
-            .chain(self.pre_clean.iter())
-            .chain(self.post_clean.iter())
+            .chain(self.scripts.post_sync.iter())
+            .chain(self.scripts.pre_rsync.iter())
+            .chain(self.scripts.post_rsync.iter())
+            .chain(self.scripts.pre_link.iter())
+            .chain(self.scripts.post_link.iter())
+            .chain(self.scripts.pre_status.iter())
+            .chain(self.scripts.post_status.iter())
+            .chain(self.scripts.pre_clean.iter())
+            .chain(self.scripts.post_clean.iter())
             .map(|hook| hook.to_string_lossy())
             .collect()
     }

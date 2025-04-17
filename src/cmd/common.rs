@@ -239,9 +239,13 @@ pub fn get_home_directory() -> Result<PathBuf, i32> {
     }
 }
 
-/// Helper function to instantiate [`Hooks`] from a root, or error.
-pub fn get_hooks_for_root(root: &Path) -> Result<Hooks, i32> {
-    match Hooks::for_root(root) {
+/// Helper function to instantiate [`Hooks`] from a command, or error.
+pub fn get_hooks_for_command<'a>(
+    root: &'a Path,
+    home: &'a Path,
+    verbose: bool,
+) -> Result<Hooks<'a>, i32> {
+    match Hooks::for_command(root, home, verbose) {
         Ok(hooks) => Ok(hooks),
         Err(err) => {
             eprintln!("fatal: {err}");

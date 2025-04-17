@@ -422,6 +422,36 @@ fn clean_hooks_are_not_treated_as_config_files() {
 }
 
 #[test]
+fn clean_hooks_expose_root() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-clean.sh", Some(r#"echo root=$DEEZ_ROOT"#));
+
+    let output = run(&["--verbose", "clean", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains(&format!("\nroot={CONFIGS}\n")));
+}
+
+#[test]
+fn clean_hooks_expose_home() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-clean.sh", Some(r#"echo home=$DEEZ_HOME"#));
+
+    let output = run(&["--verbose", "clean", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains(&format!("\nhome={HOME}\n")));
+}
+
+#[test]
 fn clean_hooks_expose_verbose_mode() {
     conf::init();
 

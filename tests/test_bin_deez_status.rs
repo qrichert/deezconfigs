@@ -17,7 +17,7 @@
 mod conf;
 mod run;
 
-use conf::CONFIGS;
+use conf::{CONFIGS, HOME};
 use run::{run, run_in_dir};
 
 #[test]
@@ -324,6 +324,36 @@ Hooks
   post-clean.sh
 "
     ));
+}
+
+#[test]
+fn status_hooks_expose_root() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-status.sh", Some(r#"echo root=$DEEZ_ROOT"#));
+
+    let output = run(&["--verbose", "status", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains(&format!("\nroot={CONFIGS}\n")));
+}
+
+#[test]
+fn status_hooks_expose_home() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-status.sh", Some(r#"echo home=$DEEZ_HOME"#));
+
+    let output = run(&["--verbose", "status", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains(&format!("\nhome={HOME}\n")));
 }
 
 #[test]

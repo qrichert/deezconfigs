@@ -23,7 +23,7 @@ use std::sync::{Arc, Mutex};
 use deezconfigs::{ui, walk};
 
 use super::common::{
-    determine_config_root, get_config_root_from_git, get_home_directory, get_hooks_for_root,
+    determine_config_root, get_config_root_from_git, get_home_directory, get_hooks_for_command,
     is_git_remote_uri, run_hooks,
 };
 
@@ -67,11 +67,11 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         determine_config_root(root, false)?
     };
     let home = get_home_directory()?;
-    let hooks = get_hooks_for_root(&root)?;
+    let hooks = get_hooks_for_command(&root, &home, verbose)?;
 
     let mut nb_hooks_ran = 0;
 
-    nb_hooks_ran += run_hooks(|| hooks.pre_status(verbose))?;
+    nb_hooks_ran += run_hooks(|| hooks.pre_status())?;
 
     // There will be high contention, but it likely won't matter much
     // given there are rarely _that_ many config files (and the syscalls
@@ -134,7 +134,7 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
     print_file_statuses(&statuses);
     print_hooks(&hooks.list());
 
-    nb_hooks_ran += run_hooks(|| hooks.post_status(verbose))?;
+    nb_hooks_ran += run_hooks(|| hooks.post_status())?;
 
     ui::print_hooks_summary(nb_hooks_ran);
 
