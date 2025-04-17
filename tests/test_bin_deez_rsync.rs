@@ -16,18 +16,11 @@
 
 #![allow(clippy::many_single_char_names)]
 
-mod conf;
-mod run;
+mod utils;
 
-use std::fs;
-use std::path::Path;
-
-use conf::{CONFIGS, HOME};
-use run::{run, run_in_dir};
-
-fn read(file_path: &Path) -> String {
-    fs::read_to_string(file_path).unwrap()
-}
+use utils::conf::{self, CONFIGS, HOME};
+use utils::files::read;
+use utils::run::{run, run_in_dir};
 
 #[test]
 fn rsync_regular() {
@@ -423,7 +416,7 @@ fn rsync_hooks_are_not_treated_as_config_files() {
 fn rsync_hooks_expose_root() {
     conf::init();
 
-    conf::create_executable_file_in_configs("pre-rsync.sh", Some(r#"echo root=$DEEZ_ROOT"#));
+    conf::create_executable_file_in_configs("pre-rsync.sh", Some(r"echo root=$DEEZ_ROOT"));
 
     let output = run(&["--verbose", "rsync", &conf::root()]);
     dbg!(&output.stdout);
@@ -438,7 +431,7 @@ fn rsync_hooks_expose_root() {
 fn rsync_hooks_expose_home() {
     conf::init();
 
-    conf::create_executable_file_in_configs("pre-rsync.sh", Some(r#"echo home=$DEEZ_HOME"#));
+    conf::create_executable_file_in_configs("pre-rsync.sh", Some(r"echo home=$DEEZ_HOME"));
 
     let output = run(&["--verbose", "rsync", &conf::root()]);
     dbg!(&output.stdout);

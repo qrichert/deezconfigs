@@ -14,23 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-mod conf;
-mod run;
+mod utils;
 
-use std::path::PathBuf;
-
-use conf::{CONFIGS, HOME};
-use run::{run, run_in_dir};
-
-fn file_exists_in_home(file_path: &str) -> bool {
-    let file = PathBuf::from(HOME).join(file_path);
-    file.is_file()
-}
-
-fn dir_exists_in_home(file_path: &str) -> bool {
-    let file = PathBuf::from(HOME).join(file_path);
-    file.is_dir()
-}
+use utils::conf::{self, CONFIGS, HOME};
+use utils::files::{dir_exists_in_home, file_exists_in_home};
+use utils::run::{run, run_in_dir};
 
 #[test]
 fn clean_regular() {
@@ -425,7 +413,7 @@ fn clean_hooks_are_not_treated_as_config_files() {
 fn clean_hooks_expose_root() {
     conf::init();
 
-    conf::create_executable_file_in_configs("pre-clean.sh", Some(r#"echo root=$DEEZ_ROOT"#));
+    conf::create_executable_file_in_configs("pre-clean.sh", Some(r"echo root=$DEEZ_ROOT"));
 
     let output = run(&["--verbose", "clean", &conf::root()]);
     dbg!(&output.stdout);
@@ -440,7 +428,7 @@ fn clean_hooks_expose_root() {
 fn clean_hooks_expose_home() {
     conf::init();
 
-    conf::create_executable_file_in_configs("pre-clean.sh", Some(r#"echo home=$DEEZ_HOME"#));
+    conf::create_executable_file_in_configs("pre-clean.sh", Some(r"echo home=$DEEZ_HOME"));
 
     let output = run(&["--verbose", "clean", &conf::root()]);
     dbg!(&output.stdout);

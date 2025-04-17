@@ -14,33 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-mod conf;
-mod run;
+mod utils;
 
-use std::fs;
-use std::path::{Path, PathBuf};
-
-use conf::{CONFIGS, HOME};
-use run::{run, run_in_dir};
-
-fn file_exists_in_home(file_path: &str) -> bool {
-    let file = PathBuf::from(HOME).join(file_path);
-    file.is_file()
-}
-
-fn symlink_exists_in_home(symlink_path: &str) -> bool {
-    let symlink = PathBuf::from(HOME).join(symlink_path);
-    symlink.is_symlink()
-}
-
-fn read(file_path: &Path) -> String {
-    fs::read_to_string(file_path).unwrap()
-}
-
-fn read_in_home(file_path: &str) -> String {
-    let file = PathBuf::from(HOME).join(file_path);
-    fs::read_to_string(file).unwrap()
-}
+use utils::conf::{self, CONFIGS, HOME};
+use utils::files::{file_exists_in_home, read, read_in_home, symlink_exists_in_home};
+use utils::run::{run, run_in_dir};
 
 #[test]
 fn link_regular() {
@@ -387,7 +365,7 @@ fn link_hooks_are_not_treated_as_config_files() {
 fn link_hooks_expose_root() {
     conf::init();
 
-    conf::create_executable_file_in_configs("pre-link.sh", Some(r#"echo root=$DEEZ_ROOT"#));
+    conf::create_executable_file_in_configs("pre-link.sh", Some(r"echo root=$DEEZ_ROOT"));
 
     let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
@@ -402,7 +380,7 @@ fn link_hooks_expose_root() {
 fn link_hooks_expose_home() {
     conf::init();
 
-    conf::create_executable_file_in_configs("pre-link.sh", Some(r#"echo home=$DEEZ_HOME"#));
+    conf::create_executable_file_in_configs("pre-link.sh", Some(r"echo home=$DEEZ_HOME"));
 
     let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);

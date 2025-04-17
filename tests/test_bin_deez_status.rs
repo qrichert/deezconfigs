@@ -14,11 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-mod conf;
-mod run;
+mod utils;
 
-use conf::{CONFIGS, HOME};
-use run::{run, run_in_dir};
+use utils::conf::{self, CONFIGS, HOME};
+use utils::run::{run, run_in_dir};
 
 #[test]
 fn status_regular() {
@@ -330,7 +329,7 @@ Hooks
 fn status_hooks_expose_root() {
     conf::init();
 
-    conf::create_executable_file_in_configs("pre-status.sh", Some(r#"echo root=$DEEZ_ROOT"#));
+    conf::create_executable_file_in_configs("pre-status.sh", Some(r"echo root=$DEEZ_ROOT"));
 
     let output = run(&["--verbose", "status", &conf::root()]);
     dbg!(&output.stdout);
@@ -345,7 +344,7 @@ fn status_hooks_expose_root() {
 fn status_hooks_expose_home() {
     conf::init();
 
-    conf::create_executable_file_in_configs("pre-status.sh", Some(r#"echo home=$DEEZ_HOME"#));
+    conf::create_executable_file_in_configs("pre-status.sh", Some(r"echo home=$DEEZ_HOME"));
 
     let output = run(&["--verbose", "status", &conf::root()]);
     dbg!(&output.stdout);
