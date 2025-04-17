@@ -42,6 +42,7 @@ pub const ATTENUATE: &str = "\x1b[0;90m";
 pub const TITLE: &str = "\x1b[1;4m";
 pub const RESET: &str = "\x1b[0m";
 
+// TODO: Remove unused colors after we write the full `--help`.
 pub struct Color;
 
 impl Color {
