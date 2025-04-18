@@ -1,6 +1,6 @@
 [package]
 name = "deezconfigs"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2024"
 authors = ["Quentin Richert <noreply@richert.co>"]
 description = "Manage deez config files."
@@ -23,3 +23,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 [dependencies]
 # Traverse directories recursively.
 ignore = "0.4.23"
+# Diff files.
+imara-diff = "0.1.8"
+# Output text through a pager.
+lessify = "0.4.0"

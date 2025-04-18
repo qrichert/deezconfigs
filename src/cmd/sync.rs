@@ -61,8 +61,8 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 .parent()
                 .expect("at the bare minimum, `parent` is `$HOME`"),
         ) {
-            eprintln!("error: Could not copy '{}' to Home: {err}", p.display());
             nb_errors.fetch_add(1, Ordering::Relaxed);
+            eprintln!("error: Could not copy '{}' to Home: {err}", p.display());
             return;
         }
 
@@ -80,11 +80,11 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             if destination.is_file() {
                 // Matches both files and symlinks.
                 if let Err(err) = fs::remove_file(&destination) {
+                    nb_errors.fetch_add(1, Ordering::Relaxed);
                     eprintln!(
                         "error: Could not remove exising file '{}': {err}",
                         destination.display()
                     );
-                    nb_errors.fetch_add(1, Ordering::Relaxed);
                     return;
                 }
             }
@@ -92,8 +92,8 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             let target: PathBuf = match fs::read_link(&source) {
                 Ok(target) => target,
                 Err(err) => {
-                    eprintln!("error: Could not read symlink '{}': {err}", p.display());
                     nb_errors.fetch_add(1, Ordering::Relaxed);
+                    eprintln!("error: Could not read symlink '{}': {err}", p.display());
                     return;
                 }
             };
@@ -104,8 +104,8 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             let res = std::os::windows::fs::symlink_file(&target, &destination);
 
             if let Err(err) = res {
-                eprintln!("error: Could not create symlink '{}': {err}", p.display());
                 nb_errors.fetch_add(1, Ordering::Relaxed);
+                eprintln!("error: Could not create symlink '{}': {err}", p.display());
                 return;
             }
         } else {
@@ -114,18 +114,18 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             // target.
             if destination.is_symlink() {
                 if let Err(err) = fs::remove_file(&destination) {
+                    nb_errors.fetch_add(1, Ordering::Relaxed);
                     eprintln!(
                         "error: Could not remove exising symlink '{}': {err}",
                         destination.display()
                     );
-                    nb_errors.fetch_add(1, Ordering::Relaxed);
                     return;
                 }
             }
 
             if let Err(err) = fs::copy(source, destination) {
-                eprintln!("error: Could not copy '{}' to Home: {err}", p.display());
                 nb_errors.fetch_add(1, Ordering::Relaxed);
+                eprintln!("error: Could not copy '{}' to Home: {err}", p.display());
                 return;
             }
         }

@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+// TODO: Move `Color` to `ui/color.rs` and the rest to `ui/io.rs`.
+
 use std::borrow::Cow;
 use std::env;
 use std::fmt;
@@ -38,13 +40,15 @@ pub const GREEN: &str = "\x1b[0;92m";
 pub const YELLOW: &str = "\x1b[0;93m";
 pub const RED: &str = "\x1b[0;91m";
 pub const BLUE: &str = "\x1b[0;94m";
-pub const ATTENUATE: &str = "\x1b[0;90m";
-pub const TITLE: &str = "\x1b[1;4m";
+pub const BOLD_PURPLE: &str = "\x1b[1;95m";
+pub const CYAN: &str = "\x1b[0;96m";
 pub const RESET: &str = "\x1b[0m";
 
 pub struct Color;
 
 impl Color {
+    // Status.
+
     #[must_use]
     pub fn in_sync(string: &str) -> Cow<str> {
         Self::color(GREEN, string)
@@ -65,16 +69,52 @@ impl Color {
         Self::color(BLUE, string)
     }
 
+    // Diff.
+
     #[must_use]
-    pub fn attenuate(string: &str) -> Cow<str> {
-        Self::color(ATTENUATE, string)
+    pub fn file_name(string: &str) -> Cow<str> {
+        Self::color(BOLD_PURPLE, string)
     }
 
     #[must_use]
-    pub fn title(string: &str) -> Cow<str> {
-        Self::color(TITLE, string)
+    pub fn line_range(string: &str) -> Cow<str> {
+        Self::color(CYAN, string)
     }
 
+    #[must_use]
+    pub fn added(string: &str) -> Cow<str> {
+        Self::color(GREEN, string)
+    }
+
+    #[must_use]
+    pub fn removed(string: &str) -> Cow<str> {
+        Self::color(RED, string)
+    }
+
+    // Generic.
+
+    /// Return string without adding color.
+    ///
+    /// The purpose of this function is uniformity.
+    ///
+    /// ```
+    /// # use std::borrow::Cow;
+    /// # use deezconfigs::ui::Color;
+    /// # let x = true;
+    /// // Very nice:
+    /// let color = if x {
+    ///     Color::in_sync("...")
+    /// } else {
+    ///     Color::none("...")
+    /// };
+    ///
+    /// // Not nice:
+    /// let color = if x {
+    ///     Color::in_sync("...")
+    /// } else {
+    ///     Cow::Borrowed("...")
+    /// };
+    /// ```
     #[must_use]
     pub fn none(string: &str) -> Cow<str> {
         Cow::Borrowed(string)
@@ -219,18 +259,34 @@ mod tests {
     }
 
     #[test]
-    fn color_attenuate_is_grey() {
+    fn color_file_name_is_bold_purple() {
         assert_eq!(
-            Color::attenuate("this is attenuated"),
-            "\x1b[0;90mthis is attenuated\x1b[0m"
+            Color::file_name("this is bold, and purple"),
+            "\x1b[1;95mthis is bold, and purple\x1b[0m"
         );
     }
 
     #[test]
-    fn color_title_is_bold_underlined() {
+    fn color_line_range_is_cyan() {
         assert_eq!(
-            Color::title("this is bold, and underlined"),
-            "\x1b[1;4mthis is bold, and underlined\x1b[0m"
+            Color::line_range("this is cyan"),
+            "\x1b[0;96mthis is cyan\x1b[0m"
+        );
+    }
+
+    #[test]
+    fn color_added_is_green() {
+        assert_eq!(
+            Color::added("+this is has been added"),
+            "\x1b[0;92m+this is has been added\x1b[0m"
+        );
+    }
+
+    #[test]
+    fn color_removed_is_red() {
+        assert_eq!(
+            Color::removed("+this is has been removed"),
+            "\x1b[0;91m+this is has been removed\x1b[0m"
         );
     }
 

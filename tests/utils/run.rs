@@ -34,6 +34,7 @@ pub fn run_in_dir(args: &[&str], dir: impl AsRef<Path>) -> Output {
     let mut command = Command::new(DEEZ);
     command.current_dir(dir.as_ref());
     command.env("NO_COLOR", "1");
+    command.env_remove("PAGER");
 
     for arg in args {
         command.arg(arg);

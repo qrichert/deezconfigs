@@ -52,6 +52,11 @@ fn main() {
                     process::exit(code);
                 }
             }
+            "diff" | "df" => {
+                if let Err(code) = cmd::diff(args.next().as_ref(), verbose) {
+                    process::exit(code);
+                }
+            }
             "clean" | "c" => {
                 if let Err(code) = cmd::clean(args.next().as_ref(), verbose) {
                     process::exit(code);
@@ -85,6 +90,7 @@ Commands:
   link [<root>]          Symlink configs to Home
 
   status [<root>|<git>]  List files and their status
+  diff [<root>|<git>]    Show what has changed
   clean [<root>|<git>]   Remove all configs from Home
 
 Options:

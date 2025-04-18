@@ -53,8 +53,8 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 .parent()
                 .expect("at the bare minimum, `parent` is `$HOME`"),
         ) {
-            eprintln!("error: Could not link '{}' to Home: {err}", p.display());
             nb_errors.fetch_add(1, Ordering::Relaxed);
+            eprintln!("error: Could not link '{}' to Home: {err}", p.display());
             return;
         }
 
@@ -66,11 +66,11 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             //  link is broken (and so `is_file()` presubably wouldn't
             //  match?). Test it out.
             if let Err(err) = fs::remove_file(&destination) {
+                nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
                     "error: Could not remove exising file '{}': {err}",
                     destination.display()
                 );
-                nb_errors.fetch_add(1, Ordering::Relaxed);
                 return;
             }
         }
@@ -81,11 +81,11 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         let res = std::os::windows::fs::symlink_file(&source, &destination);
 
         if let Err(err) = res {
+            nb_errors.fetch_add(1, Ordering::Relaxed);
             eprintln!(
                 "error: Could not create link to '{}': {err}",
                 source.display()
             );
-            nb_errors.fetch_add(1, Ordering::Relaxed);
             return;
         }
 

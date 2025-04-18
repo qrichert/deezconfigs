@@ -24,6 +24,7 @@ Commands:
   link [<root>]          Symlink configs to Home
 
   status [<root>|<git>]  List files and their status
+  diff [<root>|<git>]    Show what has changed
   clean [<root>|<git>]   Remove all configs from Home
 
 Options:
@@ -154,8 +155,7 @@ ran on the wrong root.
 
 ### Hooks
 
-- You can have hooks: `pre-sync`, `post-sync`, `pre-rsync`,
-  `post-rsync`, `pre-link`, `post-link`.
+- You can have hooks: `pre-<command>`, `post-<command>`.
 - The extension can be any type of script (it's the file name that
   counts).
 - The script must be executable and must contain a shebang (`#!`) if not

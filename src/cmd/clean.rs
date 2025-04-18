@@ -59,11 +59,11 @@ pub fn clean(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         // Matches both files and symlinks.
         if destination.is_file() {
             if let Err(err) = fs::remove_file(&destination) {
+                nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
                     "error: Could not remove file '{}': {err}",
                     destination.display()
                 );
-                nb_errors.fetch_add(1, Ordering::Relaxed);
                 return;
             }
 
