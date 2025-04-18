@@ -20,7 +20,7 @@ use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::process;
 
-const HOOKS: [&str; 10] = [
+const HOOKS: [&str; 12] = [
     "pre-sync",
     "post-sync",
     "pre-rsync",
@@ -29,6 +29,8 @@ const HOOKS: [&str; 10] = [
     "post-link",
     "pre-status",
     "post-status",
+    "pre-diff",
+    "post-diff",
     "pre-clean",
     "post-clean",
 ];
@@ -50,6 +52,8 @@ struct Scripts {
     post_link: Vec<PathBuf>,
     pre_status: Vec<PathBuf>,
     post_status: Vec<PathBuf>,
+    pre_diff: Vec<PathBuf>,
+    post_diff: Vec<PathBuf>,
     pre_clean: Vec<PathBuf>,
     post_clean: Vec<PathBuf>,
 }
@@ -92,6 +96,8 @@ impl<'a> Hooks<'a> {
                 post_link: Vec::new(),
                 pre_status: Vec::new(),
                 post_status: Vec::new(),
+                pre_diff: Vec::new(),
+                post_diff: Vec::new(),
                 pre_clean: Vec::new(),
                 post_clean: Vec::new(),
             },
@@ -135,6 +141,8 @@ impl<'a> Hooks<'a> {
                 Some("post-link") => hooks.scripts.post_link.push(entry.to_path_buf()),
                 Some("pre-status") => hooks.scripts.pre_status.push(entry.to_path_buf()),
                 Some("post-status") => hooks.scripts.post_status.push(entry.to_path_buf()),
+                Some("pre-diff") => hooks.scripts.pre_diff.push(entry.to_path_buf()),
+                Some("post-diff") => hooks.scripts.post_diff.push(entry.to_path_buf()),
                 Some("pre-clean") => hooks.scripts.pre_clean.push(entry.to_path_buf()),
                 Some("post-clean") => hooks.scripts.post_clean.push(entry.to_path_buf()),
                 _ => {}
@@ -158,11 +166,14 @@ impl<'a> Hooks<'a> {
         hooks.scripts.post_link.sort();
         hooks.scripts.pre_status.sort();
         hooks.scripts.post_status.sort();
+        hooks.scripts.pre_diff.sort();
+        hooks.scripts.post_diff.sort();
         hooks.scripts.pre_clean.sort();
         hooks.scripts.post_clean.sort();
     }
 
     fn build_environment(hooks: &mut Hooks) {
+        // TODO: Add target system (linux, mac, windows, other).
         hooks.set_env_var(
             "DEEZ_ROOT",
             hooks
@@ -276,6 +287,28 @@ impl<'a> Hooks<'a> {
         self.run_hooks(&self.scripts.post_status)
     }
 
+    /// Run "pre-diff" hooks.
+    ///
+    /// Returns the number of hooks that ran.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `sh` executable cannot be found.
+    pub fn pre_diff(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.pre_diff)
+    }
+
+    /// Run "post-diff" hooks.
+    ///
+    /// Returns the number of hooks that ran.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `sh` executable cannot be found.
+    pub fn post_diff(&self) -> Result<usize, &'static str> {
+        self.run_hooks(&self.scripts.post_diff)
+    }
+
     /// Run "pre-clean" hooks.
     ///
     /// Returns the number of hooks that ran.
@@ -342,6 +375,8 @@ impl<'a> Hooks<'a> {
             .chain(self.scripts.post_link.iter())
             .chain(self.scripts.pre_status.iter())
             .chain(self.scripts.post_status.iter())
+            .chain(self.scripts.pre_diff.iter())
+            .chain(self.scripts.post_diff.iter())
             .chain(self.scripts.pre_clean.iter())
             .chain(self.scripts.post_clean.iter())
             .map(|hook| hook.to_string_lossy())

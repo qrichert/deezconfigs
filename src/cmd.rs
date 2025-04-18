@@ -16,12 +16,14 @@
 
 pub mod clean;
 pub mod common;
+pub mod diff;
 pub mod link;
 pub mod rsync;
 pub mod status;
 pub mod sync;
 
 pub use clean::clean;
+pub use diff::diff;
 pub use link::link;
 pub use rsync::rsync;
 pub use status::status;

@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+// TODO: Move `Color` to `ui/color.rs` and the rest to `ui/io.rs`.
+
 use std::borrow::Cow;
 use std::env;
 use std::fmt;
@@ -38,8 +40,8 @@ pub const GREEN: &str = "\x1b[0;92m";
 pub const YELLOW: &str = "\x1b[0;93m";
 pub const RED: &str = "\x1b[0;91m";
 pub const BLUE: &str = "\x1b[0;94m";
-pub const ATTENUATE: &str = "\x1b[0;90m";
-pub const TITLE: &str = "\x1b[1;4m";
+pub const HIGHLIGHT: &str = "\x1b[1;95m";
+pub const ATTENUATE: &str = "\x1b[0;96m";
 pub const RESET: &str = "\x1b[0m";
 
 pub struct Color;
@@ -66,13 +68,13 @@ impl Color {
     }
 
     #[must_use]
-    pub fn attenuate(string: &str) -> Cow<str> {
-        Self::color(ATTENUATE, string)
+    pub fn highlight(string: &str) -> Cow<str> {
+        Self::color(HIGHLIGHT, string)
     }
 
     #[must_use]
-    pub fn title(string: &str) -> Cow<str> {
-        Self::color(TITLE, string)
+    pub fn attenuate(string: &str) -> Cow<str> {
+        Self::color(ATTENUATE, string)
     }
 
     #[must_use]
@@ -219,18 +221,18 @@ mod tests {
     }
 
     #[test]
-    fn color_attenuate_is_grey() {
+    fn color_highlight_is_bold_purple() {
         assert_eq!(
-            Color::attenuate("this is attenuated"),
-            "\x1b[0;90mthis is attenuated\x1b[0m"
+            Color::highlight("this is bold, and purple"),
+            "\x1b[1;95mthis is bold, and purple\x1b[0m"
         );
     }
 
     #[test]
-    fn color_title_is_bold_underlined() {
+    fn color_attenuate_is_cyan() {
         assert_eq!(
-            Color::title("this is bold, and underlined"),
-            "\x1b[1;4mthis is bold, and underlined\x1b[0m"
+            Color::attenuate("this is cyan"),
+            "\x1b[0;96mthis is cyan\x1b[0m"
         );
     }
 

@@ -138,6 +138,8 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
     ui::print_hooks_summary(nb_hooks_ran);
 
+    // TODO: We never use `nb_errors`.
+
     Ok(())
 }
 
