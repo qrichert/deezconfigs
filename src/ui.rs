@@ -36,6 +36,7 @@ pub static NO_COLOR: LazyLock<bool> = LazyLock::new(|| {
     env::var_os("NO_COLOR").is_some_and(|v| !v.is_empty())
 });
 
+// TODO: Rename colors.
 pub const GREEN: &str = "\x1b[0;92m";
 pub const YELLOW: &str = "\x1b[0;93m";
 pub const RED: &str = "\x1b[0;91m";
