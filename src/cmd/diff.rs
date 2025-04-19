@@ -76,21 +76,29 @@ pub fn diff(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         let source = root.join(p);
         let destination = home.join(p);
 
-        let diff = match diff_files(&source, &destination) {
-            Ok(diff) => diff,
-            Err(err) => {
-                eprintln!("error: Could not compare '{}': {err}.", source.display());
+        let diff = if destination.is_file() {
+            let diff = match diff_files(&source, &destination) {
+                Ok(diff) => diff,
+                Err(err) => {
+                    nb_errors.fetch_add(1, Ordering::Relaxed);
+                    eprintln!("error: Could not compare '{}': {err}.", source.display());
+                    return;
+                }
+            };
+
+            let Some(diff) = diff else {
                 return;
+            };
+
+            Diff {
+                file: p.to_string_lossy().to_string(),
+                diff,
             }
-        };
-
-        let Some(diff) = diff else {
-            return;
-        };
-
-        let diff = Diff {
-            file: p.to_string_lossy().to_string(),
-            diff,
+        } else {
+            Diff {
+                file: p.to_string_lossy().to_string(),
+                diff: String::from("! File does not exist in Home.\n! Skipping..."),
+            }
         };
 
         match diffs.lock() {
@@ -100,8 +108,8 @@ pub fn diff(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 drop(diffs);
             }
             Err(err) => {
-                eprintln!("error: Could not acquire lock: {err}.");
                 nb_errors.fetch_add(1, Ordering::Relaxed);
+                eprintln!("error: Could not acquire lock: {err}.");
                 #[allow(clippy::needless_return)] // Keep this one explicit.
                 return;
             }
@@ -169,7 +177,7 @@ fn print_file_diffs(diffs: &[Diff]) {
                     .map(|l| {
                         match l.chars().next() {
                             Some('+') => ui::Color::in_sync(l),
-                            Some('-') => ui::Color::missing(l),
+                            Some('-') | Some('!') => ui::Color::missing(l),
                             Some('@') => ui::Color::attenuate(l),
                             _ => Cow::Borrowed(l),
                         }

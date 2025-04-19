@@ -114,8 +114,8 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 drop(statuses);
             }
             Err(err) => {
-                eprintln!("error: Could not acquire lock: {err}.");
                 nb_errors.fetch_add(1, Ordering::Relaxed);
+                eprintln!("error: Could not acquire lock: {err}.");
                 #[allow(clippy::needless_return)] // Keep this one explicit.
                 return;
             }
