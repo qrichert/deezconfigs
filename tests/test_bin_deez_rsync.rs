@@ -345,6 +345,8 @@ fn rsync_hooks_ignore_other_commands_hooks() {
     conf::create_executable_file_in_configs("post-link.sh", None);
     conf::create_executable_file_in_configs("pre-status.sh", None);
     conf::create_executable_file_in_configs("post-status.sh", None);
+    conf::create_executable_file_in_configs("post-diff.sh", None);
+    conf::create_executable_file_in_configs("pre-diff.sh", None);
     conf::create_executable_file_in_configs("pre-clean.sh", None);
     conf::create_executable_file_in_configs("post-clean.sh", None);
 
@@ -362,6 +364,8 @@ fn rsync_hooks_ignore_other_commands_hooks() {
     assert!(!output.stdout.contains("hook: post-link.sh"));
     assert!(!output.stdout.contains("hook: pre-status.sh"));
     assert!(!output.stdout.contains("hook: post-status.sh"));
+    assert!(!output.stdout.contains("hook: pre-diff.sh"));
+    assert!(!output.stdout.contains("hook: post-diff.sh"));
     assert!(!output.stdout.contains("hook: pre-clean.sh"));
     assert!(!output.stdout.contains("hook: post-clean.sh"));
 }
