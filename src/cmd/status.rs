@@ -15,12 +15,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::fs;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use deezconfigs::{ui, walk};
+use deezconfigs::{ui, utils, walk};
 
 use super::common::{
     determine_config_root, get_config_root_from_git, get_home_directory, get_hooks_for_command,
@@ -143,11 +144,12 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
     Ok(())
 }
 
-fn are_files_equal(a: &Path, b: &Path) -> std::io::Result<bool> {
+fn are_files_equal(a: &Path, b: &Path) -> Result<bool, std::io::Error> {
     // Possible improvements if this is a bottleneck:
     //  - Compare _streaming_ bytes, to cater for big files.
-    //  - Read into `thread_local!` pre-allocated buffers.
-    //  - Compare hashes (e.g., xxHashes).
+    //  - Compare hashes (e.g., xxHashes) if we do the streaming.
+    //    Streaming is slower because you have to jump back-and-forth
+    //    between files.
 
     // 1. Compare by file size (quick).
     if fs::metadata(a)?.len() != fs::metadata(b)?.len() {
@@ -155,10 +157,19 @@ fn are_files_equal(a: &Path, b: &Path) -> std::io::Result<bool> {
     }
 
     // 2. Compare contents (slow; as raw bytes to avoid UTF-8 overhead).
-    let a = fs::read(a)?;
-    let b = fs::read(b)?;
+    thread_local! {
+        static BUFFERS: RefCell<(Vec<u8>, Vec<u8>)> = RefCell::new(
+            // 64 Kb should be plenty for the majority of config files.
+            (Vec::with_capacity(65_536), Vec::with_capacity(65_536))
+        );
+    }
 
-    Ok(a == b)
+    BUFFERS.with_borrow_mut(|(a_buf, b_buf)| {
+        utils::read_to_bytes_buffer(a_buf, a)?;
+        utils::read_to_bytes_buffer(b_buf, b)?;
+
+        Ok(a_buf == b_buf)
+    })
 }
 
 fn print_file_statuses(statuses: &[Status]) {

@@ -16,5 +16,5 @@
 
 pub mod hooks;
 pub mod ui;
-pub(crate) mod utils;
+pub mod utils;
 pub mod walk;

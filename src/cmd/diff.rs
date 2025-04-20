@@ -15,14 +15,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::borrow::Cow;
-use std::fs;
+use std::cell::RefCell;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use lessify::Pager;
 
-use deezconfigs::{ui, walk};
+use deezconfigs::{ui, utils, walk};
 
 use super::common::{
     determine_config_root, get_config_root_from_git, get_home_directory, get_hooks_for_command,
@@ -147,22 +147,30 @@ fn diff_files(before: &Path, after: &Path) -> Result<Option<String>, std::io::Er
     use imara_diff::intern::InternedInput;
     use imara_diff::{Algorithm, UnifiedDiffBuilder, diff};
 
-    // TODO: Thread-local buffer.
-    let before = fs::read_to_string(before)?;
-    let after = fs::read_to_string(after)?;
-
-    let input = InternedInput::new(before.as_str(), after.as_str());
-    let diff = diff(
-        Algorithm::Histogram,
-        &input,
-        UnifiedDiffBuilder::new(&input),
-    );
-
-    if diff.is_empty() {
-        return Ok(None);
+    thread_local! {
+        static BUFFERS: RefCell<(String, String)> = RefCell::new(
+            // 64 Kb should be plenty for the majority of config files.
+            (String::with_capacity(65_536), String::with_capacity(65_536))
+        );
     }
 
-    Ok(Some(diff))
+    BUFFERS.with_borrow_mut(|(before_buf, after_buf)| {
+        utils::read_to_string_buffer(before_buf, before)?;
+        utils::read_to_string_buffer(after_buf, after)?;
+
+        let input = InternedInput::new(before_buf.as_str(), after_buf.as_str());
+        let diff = diff(
+            Algorithm::Histogram,
+            &input,
+            UnifiedDiffBuilder::new(&input),
+        );
+
+        if diff.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(diff))
+    })
 }
 
 fn print_file_diffs(diffs: &[Diff]) {
