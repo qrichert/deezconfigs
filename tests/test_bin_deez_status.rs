@@ -386,3 +386,22 @@ fn status_hooks_expose_verbose_mode() {
 
     assert!(output.stdout.contains("verbose=true"));
 }
+
+#[test]
+fn status_hooks_expose_os() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-status.sh", Some(r"echo os=$DEEZ_OS"));
+
+    let output = run(&["--verbose", "status", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(
+        output
+            .stdout
+            .contains(&format!("\nos={}\n", std::env::consts::OS))
+    );
+}

@@ -18,7 +18,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
-use std::process;
+use std::{env, process};
 
 const HOOKS: [&str; 12] = [
     "pre-sync",
@@ -173,7 +173,6 @@ impl<'a> Hooks<'a> {
     }
 
     fn build_environment(hooks: &mut Hooks) {
-        // TODO: Add target system (linux, mac, windows, other).
         hooks.set_env_var(
             "DEEZ_ROOT",
             hooks
@@ -193,6 +192,7 @@ impl<'a> Hooks<'a> {
         if hooks.is_verbose {
             hooks.set_env_var("DEEZ_VERBOSE", OsStr::new("true"));
         }
+        hooks.set_env_var("DEEZ_OS", env::consts::OS);
     }
 
     pub fn set_env_var(&mut self, key: &'static str, value: impl AsRef<OsStr>) {

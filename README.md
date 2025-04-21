@@ -81,6 +81,7 @@ For more.
 - [ ] Refactor tests, there is too much duplication.
 - [ ] Refactor argument parsing? Maybe?.
 - [ ] Proper verbose `--help` section.
+- [ ] Add hooks examples (maybe even in `--help`).
 - [ ] Custom Home directory. Maybe change terminology, Home being the
       default "target".
 - [ ] Increase test coverage (features are mostly covered, what's
@@ -168,6 +169,13 @@ ran on the wrong root.
 _deezconfigs_ provides some basic information to hooks through
 environment variables:
 
+- `DEEZ_ROOT` Absolute path to the config Root. This is equal to `pwd`
+  on Unix systems, since hooks are run in the root.
+- `DEEZ_HOME` Absolute path to the Home directory. This is equal to
+  `$HOME` on Unix systems.
 - `DEEZ_VERBOSE` Will be `true` if run in verbose mode, otherwise it
   will be unset (hint: use `[ -n $DEEZ_VERBOSE ]` to test for
   existance).
+- `DEEZ_OS` Contains the name of the current operating system (e.g,
+  `linux`, `macos`, `windows`, etc.) The name is a re-export of Rust's
+  [`std::consts::OS`](https://doc.rust-lang.org/std/env/consts/constant.OS.html).

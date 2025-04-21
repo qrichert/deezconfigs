@@ -424,6 +424,25 @@ fn link_hooks_expose_verbose_mode() {
 }
 
 #[test]
+fn link_hooks_expose_os() {
+    conf::init();
+
+    conf::create_executable_file_in_configs("pre-link.sh", Some(r"echo os=$DEEZ_OS"));
+
+    let output = run(&["--verbose", "link", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(
+        output
+            .stdout
+            .contains(&format!("\nos={}\n", std::env::consts::OS))
+    );
+}
+
+#[test]
 fn link_hooks_are_not_copied_to_home() {
     conf::init();
 
