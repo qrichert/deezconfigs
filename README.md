@@ -64,32 +64,25 @@ For more.
 
 ## Roadmap
 
-- [x] CLI arguments parsing.
 - [x] **Command `sync`**.
-- [x] Protect `$HOME` with a `.deez` file.
-- [x] Add `--verbose` mode (use `-V` for version).
-- [x] Use Git remote as `sync` root.
-- [x] Smart root finder (looks in parents)
-- [x] Hooks (pre, post actions)
 - [x] **Command `rsync`**.
 - [x] **Command `link`**.
-- [x] **Command `status`** (with up-to-date status for each file).
+- [x] **Command `status`**.
+- [x] **Command `diff`**.
 - [x] **Command `clean`**.
-- [x] Push files to a `Vec` in verbose mode instead of directly
-      printing.
-- [x] Pass `DEEZ_ROOT` and `DEEZ_HOME` to hooks.
 - [ ] Warn or error if trying to `rsync` `link`ed config. If you do that
       it will empty the config files in the root. So add a check to
       `rsync` that ensures symlinks don't point at configs in root.
 - [ ] Handle case where a directory exists where we expect a file (see
       `TODO` comment in all commands).
+- [ ] Think about allowing ignore files everywhere (i.e., never sync
+  ignore files).
+- [ ] Proper verbose `--help` section.
 - [ ] Refactor tests, there is too much duplication (everything `ignore`
       and `walk` can be tested _once_ for all commands).
 - [ ] Refactor argument parsing? Maybe?
-- [ ] Proper verbose `--help` section.
 - [ ] Add hooks examples (maybe even in `--help`).
-- [ ] Custom Home directory. Maybe change terminology, Home being the
-      default "target".
+- [ ] Custom Home directory, or document exporting `HOME=whatever`.
 - [ ] Increase test coverage (features are mostly covered, what's
       missing are tests for the error cases).
 - [ ] Perf refactorings for bottlenecks (or for fun).
