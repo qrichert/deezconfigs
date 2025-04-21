@@ -38,7 +38,7 @@ Options:
 > The "config root" can be any directory containing config files. You
 > _should_, but are not required to, create a `.deez` file in the root.
 > This lets _deezconfigs_ know it is safe to use, and lets you run
-> `deez` from within sub-directories.
+> `deez` inside sub-directories.
 
 ```console
 $ deez sync
@@ -78,8 +78,14 @@ For more.
 - [x] Push files to a `Vec` in verbose mode instead of directly
       printing.
 - [x] Pass `DEEZ_ROOT` and `DEEZ_HOME` to hooks.
-- [ ] Refactor tests, there is too much duplication.
-- [ ] Refactor argument parsing? Maybe?.
+- [ ] Warn or error if trying to `rsync` `link`ed config. If you do that
+      it will empty the config files in the root. So add a check to
+      `rsync` that ensures symlinks don't point at configs in root.
+- [ ] Handle case where a directory exists where we expect a file (see
+      `TODO` comment in all commands).
+- [ ] Refactor tests, there is too much duplication (everything `ignore`
+      and `walk` can be tested _once_ for all commands).
+- [ ] Refactor argument parsing? Maybe?
 - [ ] Proper verbose `--help` section.
 - [ ] Add hooks examples (maybe even in `--help`).
 - [ ] Custom Home directory. Maybe change terminology, Home being the
