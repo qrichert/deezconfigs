@@ -62,6 +62,10 @@ fn main() {
                     process::exit(code);
                 }
             }
+            "nuts" => {
+                println!("Ha! Got 'em!");
+                process::exit(0);
+            }
             "-v" | "--verbose" => {
                 verbose = true;
                 continue;
