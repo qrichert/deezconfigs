@@ -17,7 +17,12 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::conf::HOME;
+use super::conf::{CONFIGS, HOME};
+
+pub fn file_exists_in_configs(file_path: &str) -> bool {
+    let file = PathBuf::from(CONFIGS).join(file_path);
+    file.is_file()
+}
 
 pub fn file_exists_in_home(file_path: &str) -> bool {
     let file = PathBuf::from(HOME).join(file_path);
@@ -29,9 +34,14 @@ pub fn symlink_exists_in_home(symlink_path: &str) -> bool {
     symlink.is_symlink()
 }
 
-pub fn dir_exists_in_home(file_path: &str) -> bool {
-    let file = PathBuf::from(HOME).join(file_path);
-    file.is_dir()
+pub fn dir_exists_in_configs(dir_path: &str) -> bool {
+    let dir = PathBuf::from(CONFIGS).join(dir_path);
+    dir.is_dir()
+}
+
+pub fn dir_exists_in_home(dir_path: &str) -> bool {
+    let dir = PathBuf::from(HOME).join(dir_path);
+    dir.is_dir()
 }
 
 pub fn read(file_path: &Path) -> String {

@@ -195,6 +195,44 @@ fn clean_ignores_special_files() {
 }
 
 #[test]
+fn clean_replaces_existing_directory_if_empty() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", None);
+
+    conf::create_dir_in_home("foo.txt");
+
+    let output = run(&["--verbose", "clean", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(output.exit_code, 0);
+
+    assert!(!dir_exists_in_home("foo.txt"));
+}
+
+#[test]
+fn clean_replaces_existing_directory_only_if_empty() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", None);
+
+    // `foo.txt` directory is not empty.
+    conf::create_file_in_home("foo.txt/baz.log", None);
+
+    let output = run(&["--verbose", "clean", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(output.exit_code, 0);
+
+    assert!(dir_exists_in_home("foo.txt"));
+    assert!(file_exists_in_home("foo.txt/baz.log"));
+}
+
+#[test]
 fn clean_respects_ignore_patters() {
     conf::init();
 
@@ -381,6 +419,8 @@ fn clean_hooks_are_not_treated_as_config_files() {
     conf::create_executable_file_in_configs("post-link.py", None);
     conf::create_executable_file_in_configs("pre-status.sh", None);
     conf::create_executable_file_in_configs("post-status.sh", None);
+    conf::create_executable_file_in_configs("pre-diff.sh", None);
+    conf::create_executable_file_in_configs("post-diff.sh", None);
     conf::create_executable_file_in_configs("pre-clean.sh", None);
     conf::create_executable_file_in_configs("post-clean.sh", None);
 
@@ -392,6 +432,8 @@ fn clean_hooks_are_not_treated_as_config_files() {
     conf::create_file_in_home("post-link.py", None);
     conf::create_file_in_home("pre-status.sh", None);
     conf::create_file_in_home("post-status.sh", None);
+    conf::create_file_in_home("pre-diff.sh", None);
+    conf::create_file_in_home("post-diff.sh", None);
     conf::create_file_in_home("pre-clean.sh", None);
     conf::create_file_in_home("post-clean.sh", None);
 
@@ -409,6 +451,8 @@ fn clean_hooks_are_not_treated_as_config_files() {
     assert!(file_exists_in_home("post-link.py"));
     assert!(file_exists_in_home("pre-status.sh"));
     assert!(file_exists_in_home("post-status.sh"));
+    assert!(file_exists_in_home("pre-diff.sh"));
+    assert!(file_exists_in_home("post-diff.sh"));
     assert!(file_exists_in_home("pre-clean.sh"));
     assert!(file_exists_in_home("post-clean.sh"));
 }

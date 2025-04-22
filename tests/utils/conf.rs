@@ -126,3 +126,20 @@ fn create_symlink(root: &str, symlink_path: &str, target: Option<&str>) -> (Path
 
     (symlink, target)
 }
+
+pub fn create_dir_in_configs(dir_path: &str) -> PathBuf {
+    create_dir(CONFIGS, dir_path)
+}
+
+pub fn create_dir_in_home(dir_path: &str) -> PathBuf {
+    create_dir(HOME, dir_path)
+}
+
+fn create_dir(root: &str, dir_path: &str) -> PathBuf {
+    let dir = PathBuf::from(root).join(dir_path);
+    println!("create dir: '{}'.", dir.display());
+
+    fs::create_dir_all(&dir).unwrap();
+
+    dir
+}

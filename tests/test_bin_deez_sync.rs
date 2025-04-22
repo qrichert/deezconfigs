@@ -20,7 +20,8 @@ use std::path::PathBuf;
 
 use utils::conf::{self, CONFIGS, HOME};
 use utils::files::{
-    file_exists_in_home, read, read_in_home, read_symlink_in_home, symlink_exists_in_home,
+    dir_exists_in_home, file_exists_in_home, read, read_in_home, read_symlink_in_home,
+    symlink_exists_in_home,
 };
 use utils::run::{run, run_in_dir};
 
@@ -223,6 +224,46 @@ fn sync_replaces_existing_file_with_symlink() {
     assert_eq!(output.exit_code, 0);
 
     assert!(symlink_exists_in_home("config.conf"));
+}
+
+#[test]
+fn sync_replaces_existing_directory_if_empty() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", None);
+
+    conf::create_dir_in_home("foo.txt");
+
+    let output = run(&["--verbose", "sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(output.exit_code, 0);
+
+    assert!(!dir_exists_in_home("foo.txt"));
+    assert!(file_exists_in_home("foo.txt"));
+}
+
+#[test]
+fn sync_replaces_existing_directory_only_if_empty() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", None);
+
+    // `foo.txt` directory is not empty.
+    conf::create_file_in_home("foo.txt/baz.log", None);
+
+    let output = run(&["--verbose", "sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(output.exit_code, 0);
+
+    assert!(dir_exists_in_home("foo.txt"));
+    assert!(file_exists_in_home("foo.txt/baz.log"));
+    assert!(!file_exists_in_home("foo.txt"));
 }
 
 #[test]

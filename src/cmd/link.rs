@@ -48,6 +48,21 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         let source = root.join(p);
         let destination = home.join(p);
 
+        if destination.is_dir() {
+            // If destination exists and is a directory, try to `rmdir`
+            // it. If it works, the directory was empty anyway. If it
+            // doesn't work, the directory is not empty so we abort
+            // because it is too risky to remove an entire tree.
+            if let Err(err) = fs::remove_dir(&destination) {
+                nb_errors.fetch_add(1, Ordering::Relaxed);
+                eprintln!(
+                    "error: Could not remove exising directory '{}': {err}",
+                    destination.display()
+                );
+                return;
+            }
+        }
+
         if let Err(err) = fs::create_dir_all(
             destination
                 .parent()
@@ -57,8 +72,6 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             eprintln!("error: Could not link '{}' to Home: {err}", p.display());
             return;
         }
-
-        // TODO: Handle case when a directory exists.
 
         // If destination exists, remove it.
         if destination.is_file() || destination.is_symlink() {

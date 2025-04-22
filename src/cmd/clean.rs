@@ -54,7 +54,20 @@ pub fn clean(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
         let destination = home.join(p);
 
-        // TODO: Handle case when a directory exists.
+        if destination.is_dir() {
+            // If destination exists and is a directory, try to `rmdir`
+            // it. If it works, the directory was empty anyway. If it
+            // doesn't work, the directory is not empty so we abort
+            // because it is too risky to remove an entire tree.
+            if let Err(err) = fs::remove_dir(&destination) {
+                nb_errors.fetch_add(1, Ordering::Relaxed);
+                eprintln!(
+                    "error: Could not remove exising directory '{}': {err}",
+                    destination.display()
+                );
+                return;
+            }
+        }
 
         // Matches both files and symlinks.
         if destination.is_file() {

@@ -51,7 +51,9 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         let source = root.join(p);
         let destination = home.join(p);
 
-        // TODO: Handle case when a directory exists.
+        // Note: Here won't don't worry about `source` being a directory
+        // because it can't be. If it was, `find_files_recursively()`
+        // would not yield it.
 
         if destination.is_file() {
             // `fs::copy()` follows symlinks. It will create files with the
