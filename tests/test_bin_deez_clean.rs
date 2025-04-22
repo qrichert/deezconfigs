@@ -17,7 +17,7 @@
 mod utils;
 
 use utils::conf::{self, CONFIGS, HOME};
-use utils::files::{dir_exists_in_home, file_exists_in_home};
+use utils::files;
 use utils::run::{run, run_in_dir};
 
 #[test]
@@ -40,10 +40,10 @@ fn clean_regular() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(!file_exists_in_home(".gitconfig"));
-    assert!(!file_exists_in_home(".config/nvim/init.lua"));
-    assert!(!file_exists_in_home(".config/fish/config.fish"));
-    assert!(!file_exists_in_home(".config/ghostty/config"));
+    assert!(!files::file_exists_in_home(".gitconfig"));
+    assert!(!files::file_exists_in_home(".config/nvim/init.lua"));
+    assert!(!files::file_exists_in_home(".config/fish/config.fish"));
+    assert!(!files::file_exists_in_home(".config/ghostty/config"));
 }
 
 #[test]
@@ -130,9 +130,9 @@ fn clean_cleans_up_directories_left_empty() {
     assert_eq!(output.exit_code, 0);
 
     // Both `file/` and `nested/` are left empty and should be deleted.
-    assert!(!dir_exists_in_home("deeply/nested/"));
+    assert!(!files::dir_exists_in_home("deeply/nested/"));
     // `deeply/` still contains a file and should _not_ be deleted.
-    assert!(dir_exists_in_home("deeply/"));
+    assert!(files::dir_exists_in_home("deeply/"));
 }
 
 #[test]
@@ -150,10 +150,10 @@ fn clean_cleans_up_directories_left_empty_but_not_home_and_above() {
     assert_eq!(output.exit_code, 0);
 
     // The whole subtree is empty and should be deleted.
-    assert!(!file_exists_in_home("deeply/nested/file/foo.txt"));
+    assert!(!files::file_exists_in_home("deeply/nested/file/foo.txt"));
 
     // Home itself still exists.
-    assert!(dir_exists_in_home("./"));
+    assert!(files::dir_exists_in_home("./"));
 }
 
 #[test]
@@ -185,13 +185,13 @@ fn clean_ignores_special_files() {
     assert_eq!(output.exit_code, 0);
 
     // OK in sub-directories.
-    assert!(!file_exists_in_home("subdir/.git/config"));
-    assert!(!file_exists_in_home("subdir/.gitignore"));
+    assert!(!files::file_exists_in_home("subdir/.git/config"));
+    assert!(!files::file_exists_in_home("subdir/.gitignore"));
     // NOT OK in root.
-    assert!(file_exists_in_home(".gitignore"));
-    assert!(file_exists_in_home(".git/config"));
+    assert!(files::file_exists_in_home(".gitignore"));
+    assert!(files::file_exists_in_home(".git/config"));
     // NOT OK, even in subdirectories.
-    assert!(file_exists_in_home("subdir/.deez"));
+    assert!(files::file_exists_in_home("subdir/.deez"));
 }
 
 #[test]
@@ -209,7 +209,7 @@ fn clean_replaces_existing_directory_if_empty() {
     assert_eq!(output.exit_code, 0);
     assert_eq!(output.exit_code, 0);
 
-    assert!(!dir_exists_in_home("foo.txt"));
+    assert!(!files::dir_exists_in_home("foo.txt"));
 }
 
 #[test]
@@ -228,8 +228,8 @@ fn clean_replaces_existing_directory_only_if_empty() {
     assert_eq!(output.exit_code, 0);
     assert_eq!(output.exit_code, 0);
 
-    assert!(dir_exists_in_home("foo.txt"));
-    assert!(file_exists_in_home("foo.txt/baz.log"));
+    assert!(files::dir_exists_in_home("foo.txt"));
+    assert!(files::file_exists_in_home("foo.txt/baz.log"));
 }
 
 #[test]
@@ -256,12 +256,12 @@ fn clean_respects_ignore_patters() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(file_exists_in_home("foo/a.txt"));
-    assert!(file_exists_in_home("bar/b.txt"));
-    assert!(!file_exists_in_home("baz/c.txt"));
+    assert!(files::file_exists_in_home("foo/a.txt"));
+    assert!(files::file_exists_in_home("bar/b.txt"));
+    assert!(!files::file_exists_in_home("baz/c.txt"));
 
-    assert!(file_exists_in_home(".ignore"));
-    assert!(file_exists_in_home(".gitignore"));
+    assert!(files::file_exists_in_home(".ignore"));
+    assert!(files::file_exists_in_home(".gitignore"));
 }
 
 #[test]
@@ -277,7 +277,7 @@ fn clean_looks_for_root_in_parents() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(!file_exists_in_home("foo/bar/baz.txt"));
+    assert!(!files::file_exists_in_home("foo/bar/baz.txt"));
 }
 
 /// This test is important because the implementation `skip()`s the
@@ -296,7 +296,7 @@ fn clean_looks_for_root_in_direct_parent() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(!file_exists_in_home("foo/bar.txt"));
+    assert!(!files::file_exists_in_home("foo/bar.txt"));
 }
 
 #[test]
@@ -443,18 +443,18 @@ fn clean_hooks_are_not_treated_as_config_files() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(file_exists_in_home("pre-sync.sh"));
-    assert!(file_exists_in_home("post-sync.py"));
-    assert!(file_exists_in_home("pre-rsync.sh"));
-    assert!(file_exists_in_home("post-rsync.py"));
-    assert!(file_exists_in_home("pre-link.sh"));
-    assert!(file_exists_in_home("post-link.py"));
-    assert!(file_exists_in_home("pre-status.sh"));
-    assert!(file_exists_in_home("post-status.sh"));
-    assert!(file_exists_in_home("pre-diff.sh"));
-    assert!(file_exists_in_home("post-diff.sh"));
-    assert!(file_exists_in_home("pre-clean.sh"));
-    assert!(file_exists_in_home("post-clean.sh"));
+    assert!(files::file_exists_in_home("pre-sync.sh"));
+    assert!(files::file_exists_in_home("post-sync.py"));
+    assert!(files::file_exists_in_home("pre-rsync.sh"));
+    assert!(files::file_exists_in_home("post-rsync.py"));
+    assert!(files::file_exists_in_home("pre-link.sh"));
+    assert!(files::file_exists_in_home("post-link.py"));
+    assert!(files::file_exists_in_home("pre-status.sh"));
+    assert!(files::file_exists_in_home("post-status.sh"));
+    assert!(files::file_exists_in_home("pre-diff.sh"));
+    assert!(files::file_exists_in_home("post-diff.sh"));
+    assert!(files::file_exists_in_home("pre-clean.sh"));
+    assert!(files::file_exists_in_home("post-clean.sh"));
 }
 
 #[test]

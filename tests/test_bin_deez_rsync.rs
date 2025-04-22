@@ -19,7 +19,7 @@
 mod utils;
 
 use utils::conf::{self, CONFIGS, HOME};
-use utils::files::read;
+use utils::files;
 use utils::run::{run, run_in_dir};
 
 #[test]
@@ -46,10 +46,10 @@ fn rsync_regular() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert_eq!(read(&git), "new");
-    assert_eq!(read(&nvim), "new");
-    assert_eq!(read(&fish), "new");
-    assert_eq!(read(&ghostty), "new");
+    assert_eq!(files::read(&git), "new");
+    assert_eq!(files::read(&nvim), "new");
+    assert_eq!(files::read(&fish), "new");
+    assert_eq!(files::read(&ghostty), "new");
 }
 
 #[test]
@@ -149,13 +149,13 @@ fn rsync_ignores_special_files() {
     assert_eq!(output.exit_code, 0);
 
     // OK in sub-directories.
-    assert_eq!(read(&sub_gitconfig), "new");
-    assert_eq!(read(&sub_gitignore), "new");
+    assert_eq!(files::read(&sub_gitconfig), "new");
+    assert_eq!(files::read(&sub_gitignore), "new");
     // NOT OK in root.
-    assert_eq!(read(&gitignore), "old");
-    assert_eq!(read(&gitconfig), "old");
+    assert_eq!(files::read(&gitignore), "old");
+    assert_eq!(files::read(&gitconfig), "old");
     // NOT OK, even in subdirectories.
-    assert_eq!(read(&sub_deez), "old");
+    assert_eq!(files::read(&sub_deez), "old");
 }
 
 /// If we have a `.vimrc` symlink pointing at the `vimrc.vim` in
@@ -179,7 +179,7 @@ fn rsync_does_not_replace_symlink_with_file() {
 
     // Ensure the symlink in configs links to target file.
     assert!(symlink_in_configs.is_symlink());
-    assert_eq!(read(&symlink_in_configs), "should be replaced");
+    assert_eq!(files::read(&symlink_in_configs), "should be replaced");
 
     let output = run(&["--verbose", "rsync", &conf::root()]);
     dbg!(&output.stdout);
@@ -189,10 +189,10 @@ fn rsync_does_not_replace_symlink_with_file() {
 
     // Ensure the symlink in configs still is a symlink.
     assert!(symlink_in_configs.is_symlink());
-    assert_eq!(read(&symlink_in_configs), "new content");
+    assert_eq!(files::read(&symlink_in_configs), "new content");
 
     // Ensure the symlink's target has been updated.
-    assert_eq!(read(&symlink_target_in_configs), "new content");
+    assert_eq!(files::read(&symlink_target_in_configs), "new content");
 }
 
 #[test]
@@ -219,12 +219,12 @@ fn rsync_respects_ignore_patters() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert_eq!(read(&a), "old");
-    assert_eq!(read(&b), "old");
-    assert_eq!(read(&c), "new");
+    assert_eq!(files::read(&a), "old");
+    assert_eq!(files::read(&b), "old");
+    assert_eq!(files::read(&c), "new");
 
-    assert_ne!(read(&ignore), "new");
-    assert_ne!(read(&gitignore), "new");
+    assert_ne!(files::read(&ignore), "new");
+    assert_ne!(files::read(&gitignore), "new");
 }
 
 #[test]
@@ -241,7 +241,7 @@ fn rsync_looks_for_root_in_parents() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert_eq!(read(&file), "new");
+    assert_eq!(files::read(&file), "new");
 }
 
 /// This test is important because the implementation `skip()`s the
@@ -261,7 +261,7 @@ fn rsync_looks_for_root_in_direct_parent() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert_eq!(read(&file), "new");
+    assert_eq!(files::read(&file), "new");
 }
 
 #[test]
@@ -404,16 +404,16 @@ fn rsync_hooks_are_not_treated_as_config_files() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert_eq!(read(&a), "# old");
-    assert_eq!(read(&b), "# old");
-    assert_eq!(read(&c), "# old");
-    assert_eq!(read(&d), "# old");
-    assert_eq!(read(&e), "# old");
-    assert_eq!(read(&f), "# old");
-    assert_eq!(read(&g), "# old");
-    assert_eq!(read(&h), "# old");
-    assert_eq!(read(&i), "# old");
-    assert_eq!(read(&j), "# old");
+    assert_eq!(files::read(&a), "# old");
+    assert_eq!(files::read(&b), "# old");
+    assert_eq!(files::read(&c), "# old");
+    assert_eq!(files::read(&d), "# old");
+    assert_eq!(files::read(&e), "# old");
+    assert_eq!(files::read(&f), "# old");
+    assert_eq!(files::read(&g), "# old");
+    assert_eq!(files::read(&h), "# old");
+    assert_eq!(files::read(&i), "# old");
+    assert_eq!(files::read(&j), "# old");
 }
 
 #[test]
@@ -520,10 +520,10 @@ fn rsync_hooks_are_not_copied_from_home() {
     assert_eq!(output.exit_code, 0);
 
     // Non-root "hooks" are not hooks, but regular files.
-    assert_eq!(read(&sub_pre), "new");
-    assert_eq!(read(&sub_post), "new");
+    assert_eq!(files::read(&sub_pre), "new");
+    assert_eq!(files::read(&sub_post), "new");
 
     // Hooks are not copied.
-    assert_eq!(read(&pre), "old");
-    assert_eq!(read(&post), "old");
+    assert_eq!(files::read(&pre), "old");
+    assert_eq!(files::read(&post), "old");
 }

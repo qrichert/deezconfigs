@@ -17,9 +17,7 @@
 mod utils;
 
 use utils::conf::{self, CONFIGS, HOME};
-use utils::files::{
-    dir_exists_in_home, file_exists_in_home, read, read_in_home, symlink_exists_in_home,
-};
+use utils::files;
 use utils::run::{run, run_in_dir};
 
 #[test]
@@ -37,10 +35,10 @@ fn link_regular() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(symlink_exists_in_home(".gitconfig"));
-    assert!(symlink_exists_in_home(".config/nvim/init.lua"));
-    assert!(symlink_exists_in_home(".config/fish/config.fish"));
-    assert!(symlink_exists_in_home(".config/ghostty/config"));
+    assert!(files::symlink_exists_in_home(".gitconfig"));
+    assert!(files::symlink_exists_in_home(".config/nvim/init.lua"));
+    assert!(files::symlink_exists_in_home(".config/fish/config.fish"));
+    assert!(files::symlink_exists_in_home(".config/ghostty/config"));
 }
 
 #[test]
@@ -56,8 +54,8 @@ fn link_points_to_correct_file() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert_eq!(read_in_home("foo.txt"), "this is foo");
-    assert_eq!(read_in_home("bar/baz.txt"), "this is bar/baz");
+    assert_eq!(files::read_in_home("foo.txt"), "this is foo");
+    assert_eq!(files::read_in_home("bar/baz.txt"), "this is bar/baz");
 }
 
 #[test]
@@ -138,13 +136,13 @@ fn link_ignores_special_files() {
     assert_eq!(output.exit_code, 0);
 
     // OK in sub-directories.
-    assert!(symlink_exists_in_home("subdir/.git/config"));
-    assert!(symlink_exists_in_home("subdir/.gitignore"));
+    assert!(files::symlink_exists_in_home("subdir/.git/config"));
+    assert!(files::symlink_exists_in_home("subdir/.gitignore"));
     // NOT OK in root.
-    assert!(!symlink_exists_in_home(".gitignore"));
-    assert!(!symlink_exists_in_home(".git/config"));
+    assert!(!files::symlink_exists_in_home(".gitignore"));
+    assert!(!files::symlink_exists_in_home(".git/config"));
     // NOT OK, even in subdirectories.
-    assert!(!symlink_exists_in_home("subdir/.deez"));
+    assert!(!files::symlink_exists_in_home("subdir/.deez"));
 }
 
 #[test]
@@ -168,11 +166,11 @@ fn link_replaces_file_with_symlink() {
 
     // Ensure the file in home is a symlink now.
     assert!(file_in_home.is_symlink());
-    assert_eq!(read(&file_in_home), "new");
+    assert_eq!(files::read(&file_in_home), "new");
 
     // Ensure the symlink in home points to the updated target.
     assert!(symlink_in_home.is_symlink());
-    assert_eq!(read(&symlink_in_home), "new");
+    assert_eq!(files::read(&symlink_in_home), "new");
 }
 
 #[test]
@@ -190,8 +188,8 @@ fn link_replaces_existing_directory_if_empty() {
     assert_eq!(output.exit_code, 0);
     assert_eq!(output.exit_code, 0);
 
-    assert!(!dir_exists_in_home("foo.txt"));
-    assert!(symlink_exists_in_home("foo.txt"));
+    assert!(!files::dir_exists_in_home("foo.txt"));
+    assert!(files::symlink_exists_in_home("foo.txt"));
 }
 
 #[test]
@@ -210,9 +208,9 @@ fn link_replaces_existing_directory_only_if_empty() {
     assert_eq!(output.exit_code, 0);
     assert_eq!(output.exit_code, 0);
 
-    assert!(dir_exists_in_home("foo.txt"));
-    assert!(file_exists_in_home("foo.txt/baz.log"));
-    assert!(!symlink_exists_in_home("foo.txt"));
+    assert!(files::dir_exists_in_home("foo.txt"));
+    assert!(files::file_exists_in_home("foo.txt/baz.log"));
+    assert!(!files::symlink_exists_in_home("foo.txt"));
 }
 
 #[test]
@@ -232,12 +230,12 @@ fn link_respects_ignore_patters() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(!symlink_exists_in_home("foo/a.txt"));
-    assert!(!symlink_exists_in_home("bar/b.txt"));
-    assert!(symlink_exists_in_home("baz/c.txt"));
+    assert!(!files::symlink_exists_in_home("foo/a.txt"));
+    assert!(!files::symlink_exists_in_home("bar/b.txt"));
+    assert!(files::symlink_exists_in_home("baz/c.txt"));
 
-    assert!(!symlink_exists_in_home(".ignore"));
-    assert!(!symlink_exists_in_home(".gitignore"));
+    assert!(!files::symlink_exists_in_home(".ignore"));
+    assert!(!files::symlink_exists_in_home(".gitignore"));
 }
 
 #[test]
@@ -252,7 +250,7 @@ fn link_looks_for_root_in_parents() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(symlink_exists_in_home("foo/bar/baz.txt"));
+    assert!(files::symlink_exists_in_home("foo/bar/baz.txt"));
 }
 
 /// This test is important because the implementation `skip()`s the
@@ -270,7 +268,7 @@ fn link_looks_for_root_in_direct_parent() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(symlink_exists_in_home("foo/bar.txt"));
+    assert!(files::symlink_exists_in_home("foo/bar.txt"));
 }
 
 #[test]
@@ -395,16 +393,16 @@ fn link_hooks_are_not_treated_as_config_files() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(!file_exists_in_home("pre-sync.sh"));
-    assert!(!file_exists_in_home("post-sync.py"));
-    assert!(!file_exists_in_home("pre-rsync.sh"));
-    assert!(!file_exists_in_home("post-rsync.py"));
-    assert!(!file_exists_in_home("pre-link.sh"));
-    assert!(!file_exists_in_home("post-link.py"));
-    assert!(!file_exists_in_home("pre-status.sh"));
-    assert!(!file_exists_in_home("post-status.py"));
-    assert!(!file_exists_in_home("pre-clean.sh"));
-    assert!(!file_exists_in_home("post-clean.sh"));
+    assert!(!files::file_exists_in_home("pre-sync.sh"));
+    assert!(!files::file_exists_in_home("post-sync.py"));
+    assert!(!files::file_exists_in_home("pre-rsync.sh"));
+    assert!(!files::file_exists_in_home("post-rsync.py"));
+    assert!(!files::file_exists_in_home("pre-link.sh"));
+    assert!(!files::file_exists_in_home("post-link.py"));
+    assert!(!files::file_exists_in_home("pre-status.sh"));
+    assert!(!files::file_exists_in_home("post-status.py"));
+    assert!(!files::file_exists_in_home("pre-clean.sh"));
+    assert!(!files::file_exists_in_home("post-clean.sh"));
 }
 
 #[test]
@@ -503,10 +501,10 @@ fn link_hooks_are_not_copied_to_home() {
     assert_eq!(output.exit_code, 0);
 
     // Non-root "hooks" are not hooks, but regular files.
-    assert!(file_exists_in_home("foo/pre-link.sh"));
-    assert!(file_exists_in_home("foo/post-link.sh"));
+    assert!(files::file_exists_in_home("foo/pre-link.sh"));
+    assert!(files::file_exists_in_home("foo/post-link.sh"));
 
     // Hooks are not copied.
-    assert!(!file_exists_in_home("pre-link.sh"));
-    assert!(!file_exists_in_home("post-link.sh"));
+    assert!(!files::file_exists_in_home("pre-link.sh"));
+    assert!(!files::file_exists_in_home("post-link.sh"));
 }
