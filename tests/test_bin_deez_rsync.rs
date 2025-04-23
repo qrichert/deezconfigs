@@ -195,6 +195,35 @@ fn rsync_does_not_replace_symlink_with_file() {
     assert_eq!(files::read(&symlink_target_in_configs), "new content");
 }
 
+/// If a symlink in Home links to a file in configs, copying it back to
+/// configs (i.e, `cp B A` where `B@ -> A`) would (likely) truncate the
+/// file. This behaviour is documented in `std::fs::copy()` (Rust 1.86)
+/// and observed at least on macOS. This should be a no-op for us since
+/// a symlink is always up-to-date.
+#[test]
+fn rsync_errors_if_symlink_in_home_links_to_file_in_configs() {
+    conf::init();
+
+    let file = conf::create_file_in_configs("a.txt", Some("Hello from A!"));
+    conf::create_symlink_in_home("a.txt", Some(&file.to_string_lossy()));
+
+    let output = run(&["--verbose", "rsync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    // Look for a no-op:
+
+    assert!(files::file_exists_in_configs("a.txt"));
+    assert_eq!(files::read_in_configs("a.txt"), "Hello from A!");
+
+    assert!(files::symlink_exists_in_home("a.txt"));
+    assert_eq!(files::read_in_home("a.txt"), "Hello from A!");
+    dbg!(files::read_symlink_in_home("a.txt"));
+    assert_eq!(files::read_symlink_in_home("a.txt"), file);
+}
+
 #[test]
 fn rsync_respects_ignore_patters() {
     conf::init();

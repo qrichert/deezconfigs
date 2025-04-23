@@ -40,7 +40,7 @@ fn sync_regular() {
     assert!(files::file_exists_in_home(".gitconfig"));
     assert!(files::file_exists_in_home(".config/nvim/init.lua"));
     assert!(files::file_exists_in_home(".config/fish/config.fish"));
-    assert!(files::file_exists_in_home(".config/ghostty/config"));
+    assert!(files::symlink_exists_in_home(".config/ghostty/config"));
 }
 
 #[test]

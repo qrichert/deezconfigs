@@ -21,12 +21,12 @@ use super::conf::{CONFIGS, HOME};
 
 pub fn file_exists_in_configs(file_path: &str) -> bool {
     let file = PathBuf::from(CONFIGS).join(file_path);
-    file.is_file()
+    file.is_file() && !file.is_symlink()
 }
 
 pub fn file_exists_in_home(file_path: &str) -> bool {
     let file = PathBuf::from(HOME).join(file_path);
-    file.is_file()
+    file.is_file() && !file.is_symlink()
 }
 
 pub fn symlink_exists_in_home(symlink_path: &str) -> bool {
@@ -48,9 +48,19 @@ pub fn read(file_path: &Path) -> String {
     fs::read_to_string(file_path).unwrap()
 }
 
+pub fn read_in_configs(file_path: &str) -> String {
+    let file = PathBuf::from(CONFIGS).join(file_path);
+    fs::read_to_string(file).unwrap()
+}
+
 pub fn read_in_home(file_path: &str) -> String {
     let file = PathBuf::from(HOME).join(file_path);
     fs::read_to_string(file).unwrap()
+}
+
+pub fn read_symlink_in_configs(symlink_path: &str) -> PathBuf {
+    let file = PathBuf::from(CONFIGS).join(symlink_path);
+    fs::read_link(file).unwrap()
 }
 
 pub fn read_symlink_in_home(symlink_path: &str) -> PathBuf {

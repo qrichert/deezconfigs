@@ -491,8 +491,8 @@ fn link_hooks_are_not_copied_to_home() {
     conf::create_file_in_configs("foo/post-link.sh", None);
 
     // Hooks.
-    conf::create_file_in_configs("pre-link.sh", None);
-    conf::create_file_in_configs("post-link.sh", None);
+    conf::create_executable_file_in_configs("pre-link.sh", None);
+    conf::create_executable_file_in_configs("post-link.sh", None);
 
     let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
@@ -501,8 +501,8 @@ fn link_hooks_are_not_copied_to_home() {
     assert_eq!(output.exit_code, 0);
 
     // Non-root "hooks" are not hooks, but regular files.
-    assert!(files::file_exists_in_home("foo/pre-link.sh"));
-    assert!(files::file_exists_in_home("foo/post-link.sh"));
+    assert!(files::symlink_exists_in_home("foo/pre-link.sh"));
+    assert!(files::symlink_exists_in_home("foo/post-link.sh"));
 
     // Hooks are not copied.
     assert!(!files::file_exists_in_home("pre-link.sh"));

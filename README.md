@@ -70,9 +70,6 @@ For more.
 - [x] **Command `status`**.
 - [x] **Command `diff`**.
 - [x] **Command `clean`**.
-- [ ] Warn or error if trying to `rsync` `link`ed config. If you do that
-      it will empty the config files in the root. So add a check to
-      `rsync` that ensures symlinks don't point at configs in root.
 - [ ] Think about allowing ignore files everywhere (i.e., never sync
       ignore files).
 - [ ] Proper verbose `--help` section.

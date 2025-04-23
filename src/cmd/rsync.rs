@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::fs;
+use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -55,9 +56,29 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         // because it can't be. If it was, `find_files_recursively()`
         // would not yield it.
 
-        if destination.is_file() {
-            // `fs::copy()` follows symlinks. It will create files with the
-            // contents of the symlink's target; it will not create a link.
+        if destination.is_symlink()
+            && match does_symlink_point_to_file(&destination, &source) {
+                Ok(points_to_source) => points_to_source,
+                Err(err) => {
+                    nb_errors.fetch_add(1, Ordering::Relaxed);
+                    eprintln!("{err}");
+                    return;
+                }
+            }
+        {
+            // No-op.
+            //
+            // If a symlink in Home links to a file in configs, copying
+            // it back to configs (i.e, `cp B A` where `B@ -> A`) would
+            // (likely) truncate the file. This behaviour is documented
+            // in `std::fs::copy()` (Rust 1.86) and observed at least on
+            // macOS. This is a no-op for us since a symlink is always
+            // up-to-date.
+        } else if destination.is_file() {
+            // Follows symlinks.
+            // `fs::copy()` follows symlinks. It will create files with
+            // the contents of the symlink's target; it will not create
+            // a link.
             if let Err(err) = fs::copy(destination, source) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!("error: Could not copy '{}' from Home: {err}", p.display());
@@ -103,4 +124,37 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
     );
 
     Ok(())
+}
+
+fn does_symlink_point_to_file(symlink: &Path, file: &Path) -> Result<bool, String> {
+    let symlink_target = match fs::read_link(symlink) {
+        Ok(target) => target,
+        Err(err) => {
+            return Err(format!(
+                "error: Symbolic link is broken '{}': {err}",
+                symlink.display()
+            ));
+        }
+    };
+
+    let symlink_target = match symlink_target.canonicalize() {
+        Ok(target) => target,
+        Err(err) => {
+            return Err(format!(
+                "error: Could not resolve '{}': {err}",
+                symlink_target.display()
+            ));
+        }
+    };
+    let file = match file.canonicalize() {
+        Ok(file) => file,
+        Err(err) => {
+            return Err(format!(
+                "error: Could not resolve '{}': {err}",
+                file.display()
+            ));
+        }
+    };
+
+    Ok(symlink_target == file)
 }
