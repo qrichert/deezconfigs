@@ -10,12 +10,14 @@ _deezconfigs_ will mirror your config files to your `$HOME` directory
 (`sync`) and synchronize them back (`rsync`). Additionally, you can
 choose to symlink the files instead (`link`).
 
-Same idea as _GNU Stow_ or _chezmoi_, but way simpler, requiring less
-neuron activation to operate.
+Same idea as _GNU Stow_ or _chezmoi_, but simpler, requiring less neuron
+activation to operate.
 
-## Usage
+## Get `--help`
 
 ```
+Manage deez config files.
+
 Usage: deez [<options>] <command> [<args>]
 
 Commands:
@@ -33,34 +35,230 @@ Options:
   -v, --verbose          Show files being copied
 ```
 
-> [!NOTE]
->
-> The "config root" can be any directory containing config files. You
-> _should_, but are not required to, create a `.deez` file in the root.
-> This lets _deezconfigs_ know it is safe to use, and lets you run
-> `deez` inside sub-directories.
+### What does deezconfigs do?
+
+The core of deezconfigs is to replicate the file structure of a given
+directory (i.e., the config root), inside the Home. The main purpose of
+this is to keep all the config files in one place, making it easy to
+version them.
+
+deezconfigs is very un-opinionated by default. It tries to do its job
+well (syncing config files), while avoiding to do what other tools do
+better. For instance, there is no automatic versioning, no embedded text
+editor, and no templating. You absolutely _can_ do all of the above, but
+it's not something that's forced on you. It's _your_ processes, _your_
+tools. All the extensibility power lies in hooks (read further below).
+
+### Copying vs. Linking
+
+deezconfigs supports two configuration models: copying and linking. Both
+models come with different trade-offs. For instance, linking ensures
+files are always up-to-date, but on the flip-side, you can't really have
+machine specific configuration. On the other hand, copying files need to
+be kept up-to-date manually by `sync`ing or `rsync`ing all changes. But,
+having separate copies makes it easier to keep configuration generic in
+the root, and specific in the Home.
+
+### The Config Root
+
+As mentioned before, the config root is any directory whose structure
+you want to replicate in the Home directory.
+
+That said, you _should_, but are not required to, create a `.deez` file
+in the root. This lets deezconfigs know it is safe to use. If
+deezconfigs doesn't find a `.deez` file, it will ask you confirmation
+before modifying you file system. This is a security feature to prevent
+you from accidentally messing up your Home if you run `deez` from the
+wrong directory.
+
+Another advantage of creating a proper root is that that it lets you run
+`deez` inside sub-directories as well. Just like you can run Git
+commands from anywhere in the repo, deezconfigs is smart enough to
+search for a root in parent directories before warning you that the
+current directory is not a root.
+
+### Home
+
+This is the directory where config files are copied or symlinked to. On
+Unix, this is read from the `HOME` environment variable, and on Windows
+from `USERPROFILE`.
+
+Using a different Home is not natively supported by an argumment, but
+you can override the environment variable to achieve what you want.
 
 ```console
-$ deez sync
-Mirror the files in the current root to `$HOME`.
-Also create any missing directories.
-
-$ deez sync ~/myconfigs
-Use `~/myconfigs` as the config root.
-
-$ deez sync git:git@github.com:qrichert/configs.git
-Sync directly from a Git remote (`https://` works too).
-
-$ deez rsync
-Sync files from `$HOME` back into the config root.
-
-$ deez link
-Create symlinks in `$HOME` instead of copying the files.
-Also create any missing directories.
-
-$ deez --help
-For more.
+$ HOME=/home/other deez sync
 ```
+
+### Sync
+
+Syncing in deezconfigs replicates the file structure from the config
+root inside the Home directory (minus ignored files).
+
+```console
+# Sync current config root.
+$ deez sync
+
+# Sync given config root, verbosely.
+$ deez --verbose sync ~/configs
+
+# Sync from remote.
+$ deez sync git:https://github.com/qrichert/configs
+```
+
+### rSync
+
+Reverse-syncing is the complimentary opposite of syncing: it updates
+your config files in the root with the current content from Home.
+
+```console
+# 1. Sync your config file to your Home.
+$ deez sync
+
+# 2. Make some changes.
+$ vim ~/.gitconfig
+
+# 3. rSync the changes back into your root.
+$ deez rsync
+```
+
+### Link
+
+Linking is the same as syncing, but it creates symbolic links in the
+Home instead of copying files. Linking has no `rsync` equivalent because
+linked files are always up-to-date.
+
+```console
+# Symlink current config root.
+$ deez link
+```
+
+### Status
+
+Status prints the list of configuration files with their respective
+state of 'syncness', and also prints your hooks.
+
+Configuration files can be:
+
+```
+S  In Sync
+M  Modified
+!  Missing
+```
+
+### Diff
+
+Diffing prints the line-diff between your config root and your Home.
+This shows you exactly what has changed and where. There is not merge
+feature however, as merging is best done by your VCS.
+
+### Clean
+
+Cleaning is removing all the files and symlinks from the Home.
+
+```console
+# 1. Link your files to your Home.
+$ deez link
+
+# 2. Now remove all the links you've just created.
+$ deez clean
+```
+
+### Ignore some files
+
+By default, deezconfigs ignores all the hook files (at the root) the
+`.git` directory at the root (if any), all `.ignore` and `.gitignore`
+files, and all `.deez` files, wherever they are (enabling multi-root
+repos).
+
+You can extend this list by adding entries to your `.ignore` and/or
+`.gitignore` files, they are both respected by deezconfigs.
+
+If you want to both version a file in Git and have it ignored by
+deezconfigs, you can either add it to a `.gitignore` and `git add -f`
+it, or you can use a generic `.ignore` file instead.
+
+### Hooks
+
+deezconfigs let you run hooks before and after commands. Hooks are
+scripts or executables located at the root and whose names match the
+following pattern:
+
+```
+(pre|post)-<command>[.extension]
+```
+
+A common example would be...
+
+```
+post-sync.sh
+```
+
+...a shell script that gets run after every `deez sync` command.
+
+You can have multiple hooks for the same action; they will be run in
+name order (`post-sync.001.sh`, then `post-sync.002.sh`, etc.).
+
+Hooks are executed through `sh`. It is roughly equivalent to:
+
+```console
+$ cd <root>
+$ export DEEZ_...  # deez envionrment variables.
+$ sh -c "<root>/<hook>"
+```
+
+Note that you'll likely want the scripts to start with a shebang (e.g.,
+`#!/usr/bin/env python3`).
+
+As an example, here are two complimentary scripts that respectively set
+and unset Git's email address in the `.gitconfig` file when you `sync`
+and `rsync` it:
+
+```console
+$ cat post-sync.sh
+#!/usr/bin/env bash
+[[ -n $DEEZ_VERBOSE ]] && echo "Set global Git email address."
+git config --global user.email your.email@example.com
+
+$ cat post-rsync.sh
+#!/usr/bin/env bash
+[[ -n $DEEZ_VERBOSE ]] && echo "Unset Git email address."
+git config --file ./.gitconfig user.email '<>'
+```
+
+They both make use of the `DEEZ_VERBOSE` environment variable to enrich
+the output of `deez` in verbose mode.
+
+deezconfigs passes a few envionrment variables to hooks to make your
+life easier:
+
+- `DEEZ_ROOT` Absolute path to the config Root. This is equal to `pwd`
+  on Unix systems, since hooks are run in the root.
+- `DEEZ_HOME` Absolute path to the Home directory. This is equal to
+  `$HOME` on Unix systems.
+- `DEEZ_VERBOSE` Will be `true` if run in verbose mode, otherwise it
+  will be unset (hint: use `[[ -n $DEEZ_VERBOSE ]]` to test for
+  existance).
+- `DEEZ_OS` Contains the name of the current operating system (e.g,
+  `linux`, `macos`, `windows`, etc.). The name is a re-export of Rust's
+  [`std::consts::OS`].
+
+[`std::consts::OS`]:
+  https://doc.rust-lang.org/std/env/consts/constant.OS.html
+
+### Templating
+
+There is no built-in templating in deezconfigs, but you can implement
+simple to very tailored templating with hooks. From simple `sed`
+commands, to something way more advanced like Jinja2 in Python.
+
+### Copy some files, and link others
+
+Use mutliple roots. You can have multiple roots (subdirectories) in one
+repo. Use `sync` in one, and `link` in the other.
+
+If you need anything more advanced than that, `deezconfigs` is likely
+not the right tool for you.
 
 ## Roadmap
 
@@ -72,104 +270,10 @@ For more.
 - [x] **Command `clean`**.
 - [ ] Think about allowing ignore files everywhere (i.e., never sync
       ignore files).
-- [ ] Proper verbose `--help` section.
 - [ ] Refactor tests, there is too much duplication (everything `ignore`
       and `walk` can be tested _once_ for all commands).
 - [ ] Refactor argument parsing? Maybe?
-- [ ] Add hooks examples (maybe even in `--help`).
-- [ ] Custom Home directory, or document exporting `HOME=whatever`.
+- [ ] Add hooks examples.
 - [ ] Increase test coverage (features are mostly covered, what's
       missing are tests for the error cases).
 - [ ] Perf refactorings for bottlenecks (or for fun).
-
-## FAQ
-
-### Yet Another Config Manager
-
-I very rarely edit my configuration files. So when I do, I never quite
-remember how the config manager worked. I wanted a tool so easy that
-taking 3s to glance at the `--help` would be enough to remember how to
-update the configs repo (`deez rsync`), and mirror the changes to my
-other environments (`deez sync`).
-
-That's also why `deezconfigs` does very little. Instead of making me
-remberer `deez` commands, it delegates to tools I use _way_ more often.
-I much rather `nvim` or `git commit` my config files, because those
-commands are burnt into my muscle memory.
-
-### Do I need to use Git?
-
-Not at all. `deezconfigs` is designed to integrate nicely with Git, but
-Git is absolutely not a requirement.
-
-### Ignore some files
-
-By default, `deezconfigs` ignores the `.git` directory at the root, the
-`.ignore` and/or `.gitignore` file at the root (but not elsewhere,
-although it respects them everywhere), all `.deez` files, wherever they
-are (enabling multi-root repos), and the hooks (at the root).
-
-If you want to ignore more files than this, add them to your root
-`.gitignore`. Git will let you version the files regardless, just
-`git add -f` them.
-
-This, in my mind, strikes a nice balance between configurability and
-simplicity. You can ignore whatever you want, without squeezing too many
-heuristics into `deezconfigs`. It's a Git thing, nothing new to learn.
-
-### Copying some files, while linking others
-
-Use mutliple roots. You can have multiple roots (subdirectories) in one
-repo. Use `sync` in one, and `link` in the other.
-
-If you need anything more advanced than that, `deezconfigs` is likely
-not the right tool for you.
-
-### No templating?
-
-No. It was an idea at first, but hooks are powerful enough to let you do
-your own templating. It's the same idea as "let Git do its thing".
-Instead of supporting sub-par templating, _deezconfigs_ defers to hooks.
-Nothing's stopping you from using a Python script as a hook with some
-Jinja2 template, or any other language/template engine combination you
-like.
-
-## Unstructured info dump that needs editing
-
-`deez` requires a `.deez` file in the config root (or it will ask for
-confirmation), to prevent yourself from ruining the `$HOME` directory if
-ran on the wrong root.
-
-- Respects `.ignore` and `.gitignore` files.
-- `list` colors out-of-date files in red (respecting `NO_COLOR`).
-- Smart root finding will be used when 1) no root was explicitly
-  supplied, and 2) the current working directory (default roor) is not a
-  config root (no `.deez` file). In this case, deezconfigs will look
-  into parent dirs for a `.deez` file. If one is found, use it as root
-  instead of warning "this is not a deez root".
-
-### Hooks
-
-- You can have hooks: `pre-<command>`, `post-<command>`.
-- The extension can be any type of script (it's the file name that
-  counts).
-- The script must be executable and must contain a shebang (`#!`) if not
-  interpretable by `sh` directly (e.g., `python` scripts).
-- This script will be run through `sh`: `sh -c <root>/<thescript>`
-  inside the config root directory.
-- Hooks are executed in lexicographic order based on their file name
-  (i.e., `post-sync.001.sh` will be run before `post-sync.002.sh`).
-
-_deezconfigs_ provides some basic information to hooks through
-environment variables:
-
-- `DEEZ_ROOT` Absolute path to the config Root. This is equal to `pwd`
-  on Unix systems, since hooks are run in the root.
-- `DEEZ_HOME` Absolute path to the Home directory. This is equal to
-  `$HOME` on Unix systems.
-- `DEEZ_VERBOSE` Will be `true` if run in verbose mode, otherwise it
-  will be unset (hint: use `[ -n $DEEZ_VERBOSE ]` to test for
-  existance).
-- `DEEZ_OS` Contains the name of the current operating system (e.g,
-  `linux`, `macos`, `windows`, etc.) The name is a re-export of Rust's
-  [`std::consts::OS`](https://doc.rust-lang.org/std/env/consts/constant.OS.html).

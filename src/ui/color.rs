@@ -39,7 +39,9 @@ pub const BOLD_PURPLE: &str = "\x1b[1;95m";
 pub const CYAN: &str = "\x1b[0;96m";
 pub const RESET: &str = "\x1b[0m";
 
-// TODO: Remove unused colors after we write the full `--help`.
+pub const HIGHLIGHT: &str = GREEN;
+pub const ATTENUATE: &str = "\x1b[0;90m";
+
 pub struct Color;
 
 impl Color {
@@ -132,6 +134,40 @@ impl Color {
             return Cow::Borrowed(string);
         }
         Cow::Owned(format!("{color}{string}{RESET}"))
+    }
+
+    /// Return input color, or nothing in no-color mode.
+    ///
+    /// This makes it easy to support no-color mode.
+    ///
+    /// Wrap color code strings in this function. In regular mode, it
+    /// will return the string as-is. But it no-color mode, it will
+    /// return an empty string.
+    ///
+    /// This can be used if you don't want to use the pre-defined
+    /// coloring functions. It is lower level, but nicer than manually
+    /// checking the [`NO_COLOR`] static variable.
+    ///
+    /// ```ignore
+    /// // In regular colored-mode.
+    /// assert_eq(
+    ///     Color::maybe_color("\x1b[96m"),
+    ///     "\x1b[96m",
+    /// );
+    ///
+    /// // In no-color mode.
+    /// assert_eq(
+    ///     Color::maybe_color("\x1b[96m"),
+    ///     "",
+    /// )
+    /// ```
+    #[must_use]
+    pub fn maybe_color(color: &str) -> &str {
+        if *NO_COLOR {
+            #[cfg(not(tarpaulin_include))] // Unreachable in tests.
+            return "";
+        }
+        color
     }
 }
 
