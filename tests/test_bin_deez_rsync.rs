@@ -126,20 +126,22 @@ fn rsync_ignores_special_files() {
 
     // OK.
     let sub_gitconfig = conf::create_file_in_configs("subdir/.git/config", Some("old"));
-    let sub_gitignore = conf::create_file_in_configs("subdir/.gitignore", Some("old"));
     // NOT OK.
+    let ignore = conf::create_file_in_configs(".ignore", Some("old"));
+    let sub_ignore = conf::create_file_in_configs("subdir/.ignore", Some("old"));
     let gitignore = conf::create_file_in_configs(".gitignore", Some("old"));
     let gitconfig = conf::create_file_in_configs(".git/config", Some("old"));
-    // NOT OK, even in subdirectories.
+    let sub_gitignore = conf::create_file_in_configs("subdir/.gitignore", Some("old"));
     let sub_deez = conf::create_file_in_configs("subdir/.deez", Some("old"));
 
     // OK.
     conf::create_file_in_home("subdir/.git/config", Some("new"));
-    conf::create_file_in_home("subdir/.gitignore", Some("new"));
     // NOT OK.
+    conf::create_file_in_home(".ignore", Some("new"));
+    conf::create_file_in_home("subdir/.ignore", Some("new"));
     conf::create_file_in_home(".gitignore", Some("new"));
     conf::create_file_in_home(".git/config", Some("new"));
-    // NOT OK, even in subdirectories.
+    conf::create_file_in_home("subdir/.gitignore", Some("new"));
     conf::create_file_in_home("subdir/.deez", Some("new"));
 
     let output = run(&["--verbose", "rsync", &conf::root()]);
@@ -148,13 +150,14 @@ fn rsync_ignores_special_files() {
 
     assert_eq!(output.exit_code, 0);
 
-    // OK in sub-directories.
+    // OK.
     assert_eq!(files::read(&sub_gitconfig), "new");
-    assert_eq!(files::read(&sub_gitignore), "new");
-    // NOT OK in root.
+    // NOT OK.
+    assert_eq!(files::read(&ignore), "old");
+    assert_eq!(files::read(&sub_ignore), "old");
     assert_eq!(files::read(&gitignore), "old");
     assert_eq!(files::read(&gitconfig), "old");
-    // NOT OK, even in subdirectories.
+    assert_eq!(files::read(&sub_gitignore), "old");
     assert_eq!(files::read(&sub_deez), "old");
 }
 

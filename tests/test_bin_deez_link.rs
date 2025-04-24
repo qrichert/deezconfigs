@@ -122,11 +122,12 @@ fn link_ignores_special_files() {
 
     // OK.
     conf::create_file_in_configs("subdir/.git/config", None);
-    conf::create_file_in_configs("subdir/.gitignore", None);
     // NOT OK.
+    conf::create_file_in_configs(".ignore", None);
+    conf::create_file_in_configs("subdir/.ignore", None);
     conf::create_file_in_configs(".gitignore", None);
     conf::create_file_in_configs(".git/config", None);
-    // NOT OK, even in subdirectories.
+    conf::create_file_in_configs("subdir/.gitignore", None);
     conf::create_file_in_configs("subdir/.deez", None);
 
     let output = run(&["--verbose", "link", &conf::root()]);
@@ -135,13 +136,14 @@ fn link_ignores_special_files() {
 
     assert_eq!(output.exit_code, 0);
 
-    // OK in sub-directories.
+    // OK.
     assert!(files::symlink_exists_in_home("subdir/.git/config"));
-    assert!(files::symlink_exists_in_home("subdir/.gitignore"));
-    // NOT OK in root.
+    // NOT OK.
+    assert!(!files::symlink_exists_in_home(".ignore"));
+    assert!(!files::symlink_exists_in_home("subdir/.ignore"));
     assert!(!files::symlink_exists_in_home(".gitignore"));
     assert!(!files::symlink_exists_in_home(".git/config"));
-    // NOT OK, even in subdirectories.
+    assert!(!files::symlink_exists_in_home("subdir/.gitignore"));
     assert!(!files::symlink_exists_in_home("subdir/.deez"));
 }
 

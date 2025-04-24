@@ -51,21 +51,16 @@ pub fn find_files_recursively(root: impl AsRef<Path>, f: impl Fn(&Path) + Sync) 
     let does_file_entry_match = move |path: &Path| {
         // At the root.
         let is_at_root = path.components().count() == 1;
-        // TODO: This is likely too restrictive. Is there a good reason
-        //  not to allow ignore files and hooks elsewhere? Can they be
-        //  part of some config?
-        if is_at_root {
-            if [".ignore", ".gitignore"].map(Path::new).contains(&path) {
-                return false;
-            }
-            if hooks::is_hook(path) {
-                return false;
-            }
+        if is_at_root && hooks::is_hook(path) {
+            return false;
         }
 
         // Anywhere.
         let file_name = path.file_name().expect("we don't have `..` here");
-        if [".deez"].map(OsStr::new).contains(&file_name) {
+        if [".deez", ".ignore", ".gitignore"]
+            .map(OsStr::new)
+            .contains(&file_name)
+        {
             return false;
         }
 
