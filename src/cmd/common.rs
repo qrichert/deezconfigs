@@ -146,6 +146,8 @@ fn is_a_config_root(root: &Path) -> bool {
 
 /// Detect if provided root is a Git remote.
 pub fn is_git_remote_uri(root: Option<&String>) -> bool {
+    // TODO: Or starts with `http://`, `https://`, `ssh://`.
+    //  `git:` is still necessary for local repo directories.
     root.as_ref().is_some_and(|r| r.starts_with("git:"))
 }
 
@@ -231,7 +233,11 @@ installed on your machine.
 /// The Home directory is read from `HOME` environment variable.
 pub fn get_home_directory() -> Result<PathBuf, i32> {
     // TODO: Use `std::env::home_dir()` once it gets un-deprecated.
-    if let Ok(home_directory) = env::var("HOME") {
+    #[cfg(unix)]
+    let home = env::var("HOME");
+    #[cfg(windows)]
+    let home = env::var("USERPROFILE");
+    if let Ok(home_directory) = home {
         Ok(PathBuf::from(home_directory))
     } else {
         eprintln!("fatal: Could not read Home directory from environment.");

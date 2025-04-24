@@ -32,13 +32,13 @@ pub fn init() {
         fs::remove_dir_all(HOME).unwrap();
     }
     fs::create_dir_all(HOME).unwrap();
-    // TODO: This will likely fail on Windows. But we won't need it once
-    //  we implement the custom Home feature (then we'll add it as
-    //  parameter to the command issued by `run()`).
     unsafe {
         // This patches `HOME` with the same value every time, so it
         // doesn't matter who writes when.
+        #[cfg(unix)]
         env::set_var("HOME", HOME);
+        #[cfg(windows)]
+        env::set_var("USERPROFILE", HOME);
     }
 
     // Clean new config dir.
