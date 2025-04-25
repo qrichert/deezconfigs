@@ -282,7 +282,7 @@ Hooks:
       {highlight}${reset} cat post-sync.sh
       #!/usr/bin/env bash
       [[ -n $DEEZ_VERBOSE ]] && echo \"Set global Git email address.\"
-      git config --global user.email your.email@example.com
+      git config --global user.email you@example.com
 
       {highlight}${reset} cat post-rsync.sh
       #!/usr/bin/env bash

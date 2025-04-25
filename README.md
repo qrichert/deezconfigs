@@ -218,7 +218,7 @@ and `rsync` it:
 $ cat post-sync.sh
 #!/usr/bin/env bash
 [[ -n $DEEZ_VERBOSE ]] && echo "Set global Git email address."
-git config --global user.email your.email@example.com
+git config --global user.email you@example.com
 
 $ cat post-rsync.sh
 #!/usr/bin/env bash
@@ -268,12 +268,9 @@ not the right tool for you.
 - [x] **Command `status`**.
 - [x] **Command `diff`**.
 - [x] **Command `clean`**.
-- [ ] Think about allowing ignore files everywhere (i.e., never sync
-      ignore files).
+- [ ] Refactor argument parsing? Maybe?
 - [ ] Refactor tests, there is too much duplication (everything `ignore`
       and `walk` can be tested _once_ for all commands).
-- [ ] Refactor argument parsing? Maybe?
-- [ ] Add hooks examples.
 - [ ] Increase test coverage (features are mostly covered, what's
       missing are tests for the error cases).
 - [ ] Perf refactorings for bottlenecks (or for fun).
