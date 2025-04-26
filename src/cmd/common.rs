@@ -254,18 +254,18 @@ pub fn get_hooks_for_command<'a>(
     match Hooks::for_command(root, home, verbose) {
         Ok(hooks) => Ok(hooks),
         Err(err) => {
-            eprintln!("fatal: {err}");
+            eprintln!("{err}");
             Err(1)
         }
     }
 }
 
 /// Helper function to run a group of hooks, or error.
-pub fn run_hooks(hooks: impl Fn() -> Result<usize, &'static str>) -> Result<usize, i32> {
+pub fn run_hooks(hooks: impl Fn() -> Result<usize, String>) -> Result<usize, i32> {
     match hooks() {
         Ok(nb_hooks) => Ok(nb_hooks),
         Err(err) => {
-            eprintln!("fatal: {err}");
+            eprintln!("{err}");
             Err(1)
         }
     }

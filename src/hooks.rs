@@ -113,7 +113,7 @@ impl<'a> Hooks<'a> {
 
     fn populate_hooks_scripts(hooks: &mut Hooks) -> Result<(), &'static str> {
         let Ok(entries) = hooks.root.read_dir() else {
-            return Err("Could not read root directory for hooks.");
+            return Err("fatal: Could not read root directory for hooks.");
         };
 
         for entry in entries.filter_map(|entry| entry.map(|e| e.path()).ok()) {
@@ -206,7 +206,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_sync(&self) -> Result<usize, &'static str> {
+    pub fn pre_sync(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.pre_sync)
     }
 
@@ -217,7 +217,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_sync(&self) -> Result<usize, &'static str> {
+    pub fn post_sync(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.post_sync)
     }
 
@@ -228,7 +228,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_rsync(&self) -> Result<usize, &'static str> {
+    pub fn pre_rsync(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.pre_rsync)
     }
 
@@ -239,7 +239,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_rsync(&self) -> Result<usize, &'static str> {
+    pub fn post_rsync(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.post_rsync)
     }
 
@@ -250,7 +250,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_link(&self) -> Result<usize, &'static str> {
+    pub fn pre_link(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.pre_link)
     }
 
@@ -261,7 +261,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_link(&self) -> Result<usize, &'static str> {
+    pub fn post_link(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.post_link)
     }
 
@@ -272,7 +272,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_status(&self) -> Result<usize, &'static str> {
+    pub fn pre_status(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.pre_status)
     }
 
@@ -283,7 +283,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_status(&self) -> Result<usize, &'static str> {
+    pub fn post_status(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.post_status)
     }
 
@@ -294,7 +294,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_diff(&self) -> Result<usize, &'static str> {
+    pub fn pre_diff(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.pre_diff)
     }
 
@@ -305,7 +305,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_diff(&self) -> Result<usize, &'static str> {
+    pub fn post_diff(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.post_diff)
     }
 
@@ -316,7 +316,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn pre_clean(&self) -> Result<usize, &'static str> {
+    pub fn pre_clean(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.pre_clean)
     }
 
@@ -327,18 +327,18 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Returns an error if the `sh` executable cannot be found.
-    pub fn post_clean(&self) -> Result<usize, &'static str> {
+    pub fn post_clean(&self) -> Result<usize, String> {
         self.run_hooks(&self.scripts.post_clean)
     }
 
-    fn run_hooks(&self, hooks: &[PathBuf]) -> Result<usize, &'static str> {
+    fn run_hooks(&self, hooks: &[PathBuf]) -> Result<usize, String> {
         for hook in hooks {
             self.run_hook(hook)?;
         }
         Ok(hooks.len())
     }
 
-    fn run_hook(&self, hook: &Path) -> Result<(), &'static str> {
+    fn run_hook(&self, hook: &Path) -> Result<(), String> {
         // `root` cannot be an empty `Path`.
         debug_assert!(!self.root.to_str().is_some_and(str::is_empty));
 
@@ -352,11 +352,17 @@ impl<'a> Hooks<'a> {
             .envs(&self.envs)
             .current_dir(self.root)
             .status();
-        if status.is_err() {
-            return Err("Could not find the 'sh' executable.");
-        }
 
-        Ok(())
+        match status {
+            Err(_) => Err("fatal: Could not find the 'sh' executable.".to_string()),
+            Ok(status) => {
+                if status.success() {
+                    Ok(())
+                } else {
+                    Err(format!("abort: Execution aborted by '{}'.", hook.display()))
+                }
+            }
+        }
     }
 
     /// List of hooks, grouped by type, and in execution order.

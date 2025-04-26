@@ -536,3 +536,26 @@ fn clean_hooks_expose_os() {
             .contains(&format!("\nos={}\n", std::env::consts::OS))
     );
 }
+
+#[test]
+fn clean_hooks_abort_execution_if_exit_code_is_non_zero() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_home(".gitconfig", None);
+
+    conf::create_executable_file_in_configs("pre-clean.sh", Some(r"exit 1"));
+
+    let output = run(&["--verbose", "clean", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 1);
+
+    assert!(files::file_exists_in_home(".gitconfig"));
+    assert!(
+        output
+            .stderr
+            .contains("abort: Execution aborted by 'pre-clean.sh'.")
+    );
+}

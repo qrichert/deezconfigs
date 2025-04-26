@@ -407,3 +407,25 @@ fn status_hooks_expose_os() {
             .contains(&format!("\nos={}\n", std::env::consts::OS))
     );
 }
+
+#[test]
+fn status_hooks_abort_execution_if_exit_code_is_non_zero() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+
+    conf::create_executable_file_in_configs("pre-status.sh", Some(r"exit 1"));
+
+    let output = run(&["--verbose", "status", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 1);
+
+    assert!(!output.stdout.contains(".gitconfig"));
+    assert!(
+        output
+            .stderr
+            .contains("abort: Execution aborted by 'pre-status.sh'.")
+    );
+}

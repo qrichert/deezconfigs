@@ -534,8 +534,8 @@ fn rsync_hooks_are_not_copied_from_home() {
     let sub_post = conf::create_file_in_configs("foo/post-rsync.sh", Some("old"));
 
     // Hooks (configs).
-    let pre = conf::create_file_in_configs("pre-rsync.sh", Some("old"));
-    let post = conf::create_file_in_configs("post-rsync.sh", Some("old"));
+    let pre = conf::create_executable_file_in_configs("pre-rsync.sh", Some("# old"));
+    let post = conf::create_executable_file_in_configs("post-rsync.sh", Some("# old"));
 
     // Regular files (home).
     conf::create_file_in_home("foo/pre-rsync.sh", Some("new"));
@@ -556,6 +556,30 @@ fn rsync_hooks_are_not_copied_from_home() {
     assert_eq!(files::read(&sub_post), "new");
 
     // Hooks are not copied.
-    assert_eq!(files::read(&pre), "old");
-    assert_eq!(files::read(&post), "old");
+    assert_eq!(files::read(&pre), "# old");
+    assert_eq!(files::read(&post), "# old");
+}
+
+#[test]
+fn rsync_hooks_abort_execution_if_exit_code_is_non_zero() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", Some("old"));
+    conf::create_file_in_home(".gitconfig", Some("new"));
+
+    conf::create_executable_file_in_configs("pre-rsync.sh", Some(r"exit 1"));
+
+    let output = run(&["--verbose", "rsync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 1);
+
+    // Not updated.
+    assert_eq!(files::read_in_configs(".gitconfig"), "old");
+    assert!(
+        output
+            .stderr
+            .contains("abort: Execution aborted by 'pre-rsync.sh'.")
+    );
 }

@@ -76,7 +76,7 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         // If destination exists, remove it.
         if destination.is_file() || destination.is_symlink() {
             // TODO: We put `is_symlink()` to handle the case when the
-            //  link is broken (and so `is_file()` presubably wouldn't
+            //  link is broken (and so `is_file()` presumably wouldn't
             //  match?). Test it out.
             if let Err(err) = fs::remove_file(&destination) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);

@@ -510,3 +510,25 @@ fn link_hooks_are_not_copied_to_home() {
     assert!(!files::file_exists_in_home("pre-link.sh"));
     assert!(!files::file_exists_in_home("post-link.sh"));
 }
+
+#[test]
+fn link_hooks_abort_execution_if_exit_code_is_non_zero() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+
+    conf::create_executable_file_in_configs("pre-link.sh", Some(r"exit 1"));
+
+    let output = run(&["--verbose", "link", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 1);
+
+    assert!(!files::symlink_exists_in_home(".gitconfig"));
+    assert!(
+        output
+            .stderr
+            .contains("abort: Execution aborted by 'pre-link.sh'.")
+    );
+}
