@@ -241,7 +241,6 @@ fn sync_replaces_existing_directory_if_empty() {
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
-    assert_eq!(output.exit_code, 0);
 
     assert!(!files::dir_exists_in_home("foo.txt"));
     assert!(files::file_exists_in_home("foo.txt"));
@@ -260,8 +259,7 @@ fn sync_replaces_existing_directory_only_if_empty() {
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
-    assert_eq!(output.exit_code, 0);
-    assert_eq!(output.exit_code, 0);
+    assert_eq!(output.exit_code, 1);
 
     assert!(files::dir_exists_in_home("foo.txt"));
     assert!(files::file_exists_in_home("foo.txt/baz.log"));

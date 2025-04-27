@@ -139,9 +139,11 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
     ui::print_hooks_summary(nb_hooks_ran);
 
-    // TODO: We never use `nb_errors`.
-
-    Ok(())
+    if nb_errors.into_inner() > 0 {
+        Err(1)
+    } else {
+        Ok(())
+    }
 }
 
 fn are_files_equal(a: &Path, b: &Path) -> Result<bool, std::io::Error> {

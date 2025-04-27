@@ -130,6 +130,7 @@ pub fn diff(root: Option<&String>, verbose: bool) -> Result<(), i32> {
     nb_hooks_ran += run_hooks(|| hooks.post_diff())?;
 
     let nb_errors = nb_errors.into_inner();
+
     if nb_errors == 0 {
         if diffs.is_empty() {
             println!("Home is in sync.");
@@ -140,7 +141,7 @@ pub fn diff(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
     ui::print_hooks_summary(nb_hooks_ran);
 
-    Ok(())
+    if nb_errors > 0 { Err(1) } else { Ok(()) }
 }
 
 fn diff_files(before: &Path, after: &Path) -> Result<Option<String>, std::io::Error> {

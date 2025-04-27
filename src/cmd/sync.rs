@@ -173,13 +173,16 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
     nb_hooks_ran += run_hooks(|| hooks.post_sync())?;
 
+    let nb_files_synced = nb_files_synced.into_inner();
+    let nb_errors = nb_errors.into_inner();
+
     ui::print_summary(
         ui::Action::Sync,
         &root,
-        nb_files_synced.into_inner(),
-        nb_errors.into_inner(),
+        nb_files_synced,
+        nb_errors,
         nb_hooks_ran,
     );
 
-    Ok(())
+    if nb_errors > 0 { Err(1) } else { Ok(()) }
 }
