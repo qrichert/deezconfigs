@@ -134,6 +134,7 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
     print_file_statuses(&statuses);
     print_hooks(&hooks.list());
+    print_summary_line(&statuses);
 
     nb_hooks_ran += run_hooks(|| hooks.post_status())?;
 
@@ -175,8 +176,6 @@ fn are_files_equal(a: &Path, b: &Path) -> Result<bool, std::io::Error> {
 }
 
 fn print_file_statuses(statuses: &[Status]) {
-    // TODO: Idea: Print a summary:
-    //  Summary: 2 in sync, 1 modified, 1 missing.
     let summary = statuses
         .iter()
         .map(|s| {
@@ -212,4 +211,17 @@ fn print_hooks(hooks: &[Cow<str>]) {
         .join("\n");
 
     println!("Hooks\n{summary}");
+}
+
+fn print_summary_line(statuses: &[Status]) {
+    let (mut nb_in_sync, mut nb_modified, mut nb_missing) = (0, 0, 0);
+    for s in statuses {
+        match &s.state {
+            State::InSync => nb_in_sync += 1,
+            State::Modified => nb_modified += 1,
+            State::Missing => nb_missing += 1,
+        }
+    }
+
+    println!("{nb_in_sync} in sync, {nb_modified} modified, {nb_missing} missing.");
 }

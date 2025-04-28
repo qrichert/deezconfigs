@@ -50,6 +50,7 @@ Files
   !  boz.txt
   S  buz.txt@
   S  foo.txt
+2 in sync, 2 modified, 1 missing.
 "
     );
 }
@@ -90,6 +91,7 @@ Hooks
   post-link.sh
   pre-status.sh
   post-status.sh
+0 in sync, 0 modified, 1 missing.
 hook: post-status.sh
 Ran 2 hooks.
 "
