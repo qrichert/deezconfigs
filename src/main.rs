@@ -190,7 +190,7 @@ Sync:
       {highlight}${reset} {bin} --verbose sync ~/configs
 
       {attenuate}# Sync from remote.{reset}
-      {highlight}${reset} {bin} sync git:https://github.com/qrichert/configs
+      {highlight}${reset} {bin} sync https://github.com/qrichert/configs
 
 rSync:
   Reverse-syncing is the complimentary opposite of syncing: it updates
@@ -249,6 +249,25 @@ Ignore some files:
   If you want to both version a file in Git and have it ignored by
   {package}, you can either add it to a `.gitignore` and `git add -f`
   it, or you can use a generic `.ignore` file instead.
+
+Git:
+  Git is optional, but {package} is designed to integrate nicely with
+  it. Beyond respecting `.gitignore` files, {package} can use any Git
+  remote as config root with `sync`, `status`, `diff` and `clean`.
+
+  To expand on a previous example:
+
+      {attenuate}# Sync from remote.{reset}
+      {highlight}${reset} {bin} sync https://github.com/qrichert/configs
+
+  This will clone the repository to a temporary directory behind the
+  scenes, and update your Home with its contents. This is useful in
+  places where you don't want to maintain a proper clone, and always
+  just want to get the latest version.
+
+  {package} considers a Git root any root starting with either `git:`,
+  `ssh://`, `git@`, `https://`, or `http://`. `git:` is a special label
+  you can use to force a path to be considered a Git root.
 
 Hooks:
   {package} let you run hooks before and after commands. Hooks are

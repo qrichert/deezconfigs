@@ -146,9 +146,11 @@ fn is_a_config_root(root: &Path) -> bool {
 
 /// Detect if provided root is a Git remote.
 pub fn is_git_remote_uri(root: Option<&String>) -> bool {
-    // TODO: Or starts with `http://`, `https://`, `ssh://`.
-    //  `git:` is still necessary for local repo directories.
-    root.as_ref().is_some_and(|r| r.starts_with("git:"))
+    root.is_some_and(|root| {
+        ["git:", "ssh://", "git@", "https://", "http://"]
+            .iter()
+            .any(|prefix| root.starts_with(prefix))
+    })
 }
 
 /// Clone Git repository and return its path.
@@ -268,5 +270,23 @@ pub fn run_hooks(hooks: impl Fn() -> Result<usize, String>) -> Result<usize, i32
             eprintln!("{err}");
             Err(1)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_git_remote_uri() {
+        fn is_git_uri(uri: &'static str) -> bool {
+            is_git_remote_uri(Some(&uri.to_string()))
+        }
+        assert!(is_git_uri("git:../configs"));
+        assert!(is_git_uri("git:~/Developer/configs"));
+        assert!(is_git_uri("ssh://misc/home/misc/configs"));
+        assert!(is_git_uri("git@github.com:qrichert/configs.git"));
+        assert!(is_git_uri("https://github.com/qrichert/configs.git"));
+        assert!(is_git_uri("http://github.com/qrichert/configs.git"));
     }
 }

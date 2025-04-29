@@ -104,7 +104,7 @@ $ deez sync
 $ deez --verbose sync ~/configs
 
 # Sync from remote.
-$ deez sync git:https://github.com/qrichert/configs
+$ deez sync https://github.com/qrichert/configs
 ```
 
 ### rSync
@@ -178,6 +178,28 @@ You can extend this list by adding entries to your `.ignore` and/or
 If you want to both version a file in Git and have it ignored by
 deezconfigs, you can either add it to a `.gitignore` and `git add -f`
 it, or you can use a generic `.ignore` file instead.
+
+### Git
+
+Git is optional, but deezconfigs is designed to integrate nicely with
+it. Beyond respecting `.gitignore` files, deezconfigs can use any Git
+remote as config root with `sync`, `status`, `diff` and `clean`.
+
+To expand on a previous example:
+
+```console
+# Sync from remote.
+$ deez sync https://github.com/qrichert/configs
+```
+
+This will clone the repository to a temporary directory behind the
+scenes, and update your Home with its contents. This is useful in places
+where you don't want to maintain a proper clone, and always just want to
+get the latest version.
+
+deezconfigs considers a Git root any root starting with either `git:`,
+`ssh://`, `git@`, `https://`, or `http://`. `git:` is a special label
+you can use to force a path to be considered a Git root.
 
 ### Hooks
 
