@@ -98,7 +98,11 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                         }
                     }
                     Err(err) => {
-                        eprintln!("error: Could not compare '{}': {err}.", source.display());
+                        eprintln!(
+                            "{error} Could not compare '{}': {err}.",
+                            source.display(),
+                            error = ui::Color::error("error:"),
+                        );
                         return;
                     }
                 }
@@ -116,7 +120,10 @@ pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             }
             Err(err) => {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
-                eprintln!("error: Could not acquire lock: {err}.");
+                eprintln!(
+                    "{error} Could not acquire lock: {err}.",
+                    error = ui::Color::error("error:")
+                );
                 #[allow(clippy::needless_return)] // Keep this one explicit.
                 return;
             }

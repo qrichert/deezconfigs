@@ -45,6 +45,18 @@ pub const ATTENUATE: &str = "\x1b[0;90m";
 pub struct Color;
 
 impl Color {
+    // Errors.
+
+    #[must_use]
+    pub fn error(string: &str) -> Cow<str> {
+        Self::color(RED, string)
+    }
+
+    #[must_use]
+    pub fn warning(string: &str) -> Cow<str> {
+        Self::color(YELLOW, string)
+    }
+
     // Status.
 
     #[must_use]
@@ -174,6 +186,22 @@ impl Color {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn color_error_is_red() {
+        assert_eq!(
+            Color::error("this is an error"),
+            "\x1b[0;91mthis is an error\x1b[0m"
+        );
+    }
+
+    #[test]
+    fn color_warning_is_yellow() {
+        assert_eq!(
+            Color::warning("this is a warning"),
+            "\x1b[0;93mthis is a warning\x1b[0m"
+        );
+    }
 
     #[test]
     fn color_in_sync_is_green() {

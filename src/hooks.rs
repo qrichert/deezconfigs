@@ -20,6 +20,8 @@ use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::{env, process};
 
+use crate::ui;
+
 const HOOKS: [&str; 12] = [
     "pre-sync",
     "post-sync",
@@ -77,11 +79,7 @@ impl<'a> Hooks<'a> {
     /// # Errors
     ///
     /// Errors if the config root cannot be read.
-    pub fn for_command(
-        root: &'a Path,
-        home: &'a Path,
-        verbose: bool,
-    ) -> Result<Self, &'static str> {
+    pub fn for_command(root: &'a Path, home: &'a Path, verbose: bool) -> Result<Self, String> {
         let mut hooks = Self {
             root,
             home,
@@ -111,9 +109,12 @@ impl<'a> Hooks<'a> {
         Ok(hooks)
     }
 
-    fn populate_hooks_scripts(hooks: &mut Hooks) -> Result<(), &'static str> {
+    fn populate_hooks_scripts(hooks: &mut Hooks) -> Result<(), String> {
         let Ok(entries) = hooks.root.read_dir() else {
-            return Err("fatal: Could not read root directory for hooks.");
+            return Err(format!(
+                "{fatal} Could not read root directory for hooks.",
+                fatal = ui::Color::error("fatal:")
+            ));
         };
 
         for entry in entries.filter_map(|entry| entry.map(|e| e.path()).ok()) {
@@ -354,12 +355,19 @@ impl<'a> Hooks<'a> {
             .status();
 
         match status {
-            Err(_) => Err("fatal: Could not find the 'sh' executable.".to_string()),
+            Err(_) => Err(format!(
+                "{fatal} Could not find the 'sh' executable.",
+                fatal = ui::Color::error("fatal:")
+            )),
             Ok(status) => {
                 if status.success() {
                     Ok(())
                 } else {
-                    Err(format!("abort: Execution aborted by '{}'.", hook.display()))
+                    Err(format!(
+                        "{abort} Execution aborted by '{}'.",
+                        hook.display(),
+                        abort = ui::Color::error("abort:")
+                    ))
                 }
             }
         }
