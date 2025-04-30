@@ -23,71 +23,47 @@ use lessify::Pager;
 
 use deezconfigs::ui;
 
+use cmd::cli;
+
 fn main() {
-    let mut verbose = false;
+    let args = match cli::Args::build_from_args(env::args().skip(1)) {
+        Ok(args) => args,
+        Err(err) => {
+            // TODO: Color error labels (e.g., `fatal:`).
+            eprintln!("fatal: {err}.");
+            println!("Try '{bin} -h' for help.", bin = env!("CARGO_BIN_NAME"));
+            process::exit(2);
+        }
+    };
 
-    // TODO: Clean parsing into `Config`.
-    let mut args = env::args().skip(1);
-    while let Some(arg) = args.next() {
-        return match arg.as_str() {
-            "-h" => {
-                short_help();
-            }
-            "--help" => {
-                long_help();
-            }
-            "-V" | "--version" => {
-                version();
-            }
-            "sync" | "s" => {
-                if let Err(code) = cmd::sync(args.next().as_ref(), verbose) {
-                    process::exit(code);
-                }
-            }
-            "rsync" | "rs" => {
-                if let Err(code) = cmd::rsync(args.next().as_ref(), verbose) {
-                    process::exit(code);
-                }
-            }
-            "link" | "l" => {
-                if let Err(code) = cmd::link(args.next().as_ref(), verbose) {
-                    process::exit(code);
-                }
-            }
-            "status" | "st" => {
-                if let Err(code) = cmd::status(args.next().as_ref(), verbose) {
-                    process::exit(code);
-                }
-            }
-            "diff" | "df" => {
-                if let Err(code) = cmd::diff(args.next().as_ref(), verbose) {
-                    process::exit(code);
-                }
-            }
-            "clean" | "c" => {
-                if let Err(code) = cmd::clean(args.next().as_ref(), verbose) {
-                    process::exit(code);
-                }
-            }
-            "nuts" => {
+    if args.long_help {
+        long_help();
+    } else if args.short_help {
+        short_help();
+    } else if args.version {
+        version();
+    } else if let Some(command) = args.command {
+        let root = args.root.as_ref();
+        let verbose = args.verbose;
+
+        if let Err(code) = match command {
+            cli::Command::Sync => cmd::sync(root, verbose),
+            cli::Command::RSync => cmd::rsync(root, verbose),
+            cli::Command::Link => cmd::link(root, verbose),
+            cli::Command::Status => cmd::status(root, verbose),
+            cli::Command::Diff => cmd::diff(root, verbose),
+            cli::Command::Clean => cmd::clean(root, verbose),
+            cli::Command::Nuts => {
                 println!("Ha! Got 'em!");
-                process::exit(0);
+                Ok(())
             }
-            "-v" | "--verbose" => {
-                verbose = true;
-                continue;
-            }
-            arg => {
-                eprintln!("Unknown argument: '{arg}'.\n");
-                short_help();
-                process::exit(2);
-            }
-        };
+        } {
+            process::exit(code);
+        }
+    } else {
+        // No arguments.
+        short_help();
     }
-
-    // No arguments.
-
-    short_help();
 }
 
 fn short_help() {

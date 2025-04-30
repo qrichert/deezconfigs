@@ -291,7 +291,6 @@ not the right tool for you.
 - [x] **Command `status`**.
 - [x] **Command `diff`**.
 - [x] **Command `clean`**.
-- [ ] Refactor argument parsing? Maybe?
 - [ ] Increase test coverage (features are mostly covered, what's
       missing are tests for the error cases).
 - [ ] Perf refactorings for bottlenecks (or for fun).
