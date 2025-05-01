@@ -125,7 +125,7 @@ fn ensure_root_is_a_config_root(root: &Path) -> Result<(), i32> {
 
 To make it a configuration root, create a `.deez` file inside of it.
 This is a security feature. `{bin}` doesn't want to mess up your Home
-directory if you run it at the wrong root.
+directory if you run it in the wrong root.
 
 Selected root: '{}'.
 
