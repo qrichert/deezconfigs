@@ -29,7 +29,7 @@ fn main() {
     let args = match cli::Args::build_from_args(env::args().skip(1)) {
         Ok(args) => args,
         Err(err) => {
-            eprintln!("{fatal} {err}.", fatal = ui::Color::error("fatal:"));
+            eprintln!("{fatal}: {err}.", fatal = ui::Color::error("fatal"));
             println!("Try '{bin} -h' for help.", bin = env!("CARGO_BIN_NAME"));
             process::exit(2);
         }

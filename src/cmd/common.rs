@@ -65,8 +65,8 @@ fn get_config_root_from_args(root: &str) -> Result<PathBuf, i32> {
     let root = PathBuf::from(root);
     if !root.is_dir() {
         eprintln!(
-            "{fatal} Root must be a valid directory.",
-            fatal = ui::Color::error("fatal:")
+            "{fatal}: Root must be a valid directory.",
+            fatal = ui::Color::error("fatal")
         );
         if root.is_file() {
             eprintln!("'{}' is a file.", root.display());
@@ -86,10 +86,10 @@ fn get_default_config_root() -> Result<PathBuf, i32> {
     let Ok(root) = env::current_dir() else {
         eprint!(
             "\
-{fatal} Could not determine current working directory.
+{fatal}: Could not determine current working directory.
 Please provide a Root directory as argument.
 ",
-            fatal = ui::Color::error("fatal:")
+            fatal = ui::Color::error("fatal")
         );
         return Err(1);
     };
@@ -121,7 +121,7 @@ fn ensure_root_is_a_config_root(root: &Path) -> Result<(), i32> {
 
     eprint!(
         "\
-{warning} `root` is not a configuration root.
+{warning}: `root` is not a configuration root.
 
 To make it a configuration root, create a `.deez` file inside of it.
 This is a security feature. `{bin}` doesn't want to mess up your Home
@@ -131,7 +131,7 @@ Selected root: '{}'.
 
 ",
         root.display(),
-        warning = ui::Color::warning("warning:"),
+        warning = ui::Color::warning("warning"),
         bin = env!("CARGO_BIN_NAME"),
     );
 
@@ -191,10 +191,10 @@ pub fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<PathBuf, i32
     if clone_path.is_dir() && fs::remove_dir_all(&clone_path).is_err() {
         eprint!(
             "\
-{fatal} Could not clone the configuration repository.
+{fatal}: Could not clone the configuration repository.
 The target directory already exists and could not be deleted.
 ",
-            fatal = ui::Color::error("fatal:")
+            fatal = ui::Color::error("fatal")
         );
         return Err(1);
     }
@@ -221,8 +221,8 @@ The target directory already exists and could not be deleted.
     if let Some(status) = status {
         if !status.success() {
             eprintln!(
-                "{fatal} Could not clone the configuration repository.",
-                fatal = ui::Color::error("fatal:")
+                "{fatal}: Could not clone the configuration repository.",
+                fatal = ui::Color::error("fatal")
             );
             if !verbose {
                 eprintln!("Retry with `--verbose` for additional detail.");
@@ -232,11 +232,11 @@ The target directory already exists and could not be deleted.
     } else {
         eprint!(
             "\
-{fatal} Could not clone the configuration repository.
+{fatal}: Could not clone the configuration repository.
 Did not find the 'git' executable. Please ensure Git is properly
 installed on your machine.
 ",
-            fatal = ui::Color::error("fatal:")
+            fatal = ui::Color::error("fatal")
         );
         return Err(1);
     }
@@ -259,8 +259,8 @@ pub fn get_home_directory() -> Result<PathBuf, i32> {
         Ok(PathBuf::from(home_directory))
     } else {
         eprintln!(
-            "{fatal} Could not read Home directory from environment.",
-            fatal = ui::Color::error("fatal:")
+            "{fatal}: Could not read Home directory from environment.",
+            fatal = ui::Color::error("fatal")
         );
         Err(1)
     }
