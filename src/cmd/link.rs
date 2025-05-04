@@ -56,9 +56,9 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             if let Err(err) = fs::remove_dir(&destination) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error} Could not remove exising directory '{}': {err}",
+                    "{error}: Could not remove exising directory '{}': {err}",
                     destination.display(),
-                    error = ui::Color::error("error:"),
+                    error = ui::Color::error("error"),
                 );
                 return;
             }
@@ -71,9 +71,9 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         ) {
             nb_errors.fetch_add(1, Ordering::Relaxed);
             eprintln!(
-                "{error} Could not link '{}' to Home: {err}",
+                "{error}: Could not link '{}' to Home: {err}",
                 p.display(),
-                error = ui::Color::error("error:"),
+                error = ui::Color::error("error"),
             );
             return;
         }
@@ -86,9 +86,9 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             if let Err(err) = fs::remove_file(&destination) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error} Could not remove exising file '{}': {err}",
+                    "{error}: Could not remove exising file '{}': {err}",
                     destination.display(),
-                    error = ui::Color::error("error:"),
+                    error = ui::Color::error("error"),
                 );
                 return;
             }
@@ -102,9 +102,9 @@ pub fn link(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         if let Err(err) = res {
             nb_errors.fetch_add(1, Ordering::Relaxed);
             eprintln!(
-                "{error} Could not create link to '{}': {err}",
+                "{error}: Could not create link to '{}': {err}",
                 source.display(),
-                error = ui::Color::error("error:"),
+                error = ui::Color::error("error"),
             );
             return;
         }

@@ -112,8 +112,8 @@ impl<'a> Hooks<'a> {
     fn populate_hooks_scripts(hooks: &mut Hooks) -> Result<(), String> {
         let Ok(entries) = hooks.root.read_dir() else {
             return Err(format!(
-                "{fatal} Could not read root directory for hooks.",
-                fatal = ui::Color::error("fatal:")
+                "{fatal}: Could not read root directory for hooks.",
+                fatal = ui::Color::error("fatal")
             ));
         };
 
@@ -358,8 +358,8 @@ impl<'a> Hooks<'a> {
 
         match status {
             Err(_) => Err(format!(
-                "{fatal} Could not find the 'sh' executable.",
-                fatal = ui::Color::error("fatal:")
+                "{fatal}: Could not find the 'sh' executable.",
+                fatal = ui::Color::error("fatal")
             )),
             Ok(status) => {
                 if status.success() {
@@ -380,10 +380,10 @@ impl<'a> Hooks<'a> {
                         if let Ok(metadata) = File::open(&hook_file).and_then(|f| f.metadata()) {
                             if metadata.permissions().mode() & 0o111 == 0 {
                                 return Err(format!(
-                                    "{error} '{}' is not executable.\nConsider running 'chmod +x {}'.",
+                                    "{error}: '{}' is not executable.\nConsider running 'chmod +x {}'.",
                                     hook.display(),
                                     hook.display(),
-                                    error = ui::Color::error("error:")
+                                    error = ui::Color::error("error")
                                 ));
                             }
                         }
@@ -391,9 +391,9 @@ impl<'a> Hooks<'a> {
                     }
 
                     Err(format!(
-                        "{abort} Execution aborted by '{}'.",
+                        "{abort}: Execution aborted by '{}'.",
                         hook.display(),
-                        abort = ui::Color::error("abort:")
+                        abort = ui::Color::error("abort")
                     ))
                 }
             }

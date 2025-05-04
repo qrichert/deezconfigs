@@ -82,9 +82,9 @@ pub fn diff(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 Err(err) => {
                     nb_errors.fetch_add(1, Ordering::Relaxed);
                     eprintln!(
-                        "{error} Could not compare '{}': {err}.",
+                        "{error}: Could not compare '{}': {err}.",
                         p.display(),
-                        error = ui::Color::error("error:"),
+                        error = ui::Color::error("error"),
                     );
                     return;
                 }
@@ -114,8 +114,8 @@ pub fn diff(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             Err(err) => {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error} Could not acquire lock: {err}.",
-                    error = ui::Color::error("error:"),
+                    "{error}: Could not acquire lock: {err}.",
+                    error = ui::Color::error("error"),
                 );
                 #[allow(clippy::needless_return)] // Keep this one explicit.
                 return;

@@ -82,9 +82,9 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             if let Err(err) = fs::copy(destination, source) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error} Could not copy '{}' from Home: {err}",
+                    "{error}: Could not copy '{}' from Home: {err}",
                     p.display(),
-                    error = ui::Color::error("error:"),
+                    error = ui::Color::error("error"),
                 );
                 return;
             }
@@ -138,9 +138,9 @@ fn does_symlink_point_to_file(symlink: &Path, file: &Path) -> Result<bool, Strin
         Ok(target) => target,
         Err(err) => {
             return Err(format!(
-                "{error} Symbolic link is broken '{}': {err}",
+                "{error}: Symbolic link is broken '{}': {err}",
                 symlink.display(),
-                error = ui::Color::error("error:"),
+                error = ui::Color::error("error"),
             ));
         }
     };
@@ -149,9 +149,9 @@ fn does_symlink_point_to_file(symlink: &Path, file: &Path) -> Result<bool, Strin
         Ok(target) => target,
         Err(err) => {
             return Err(format!(
-                "{error} Could not resolve '{}': {err}",
+                "{error}: Could not resolve '{}': {err}",
                 symlink_target.display(),
-                error = ui::Color::error("error:"),
+                error = ui::Color::error("error"),
             ));
         }
     };
@@ -159,9 +159,9 @@ fn does_symlink_point_to_file(symlink: &Path, file: &Path) -> Result<bool, Strin
         Ok(file) => file,
         Err(err) => {
             return Err(format!(
-                "{error} Could not resolve '{}': {err}",
+                "{error}: Could not resolve '{}': {err}",
                 file.display(),
-                error = ui::Color::error("error:"),
+                error = ui::Color::error("error"),
             ));
         }
     };

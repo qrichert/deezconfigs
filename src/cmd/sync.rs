@@ -65,9 +65,9 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             if let Err(err) = fs::remove_dir(&destination) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error} Could not remove exising directory '{}': {err}",
+                    "{error}: Could not remove exising directory '{}': {err}",
                     destination.display(),
-                    error = ui::Color::error("error:"),
+                    error = ui::Color::error("error"),
                 );
                 return;
             }
@@ -80,9 +80,9 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         ) {
             nb_errors.fetch_add(1, Ordering::Relaxed);
             eprintln!(
-                "{error} Could not copy '{}' to Home: {err}",
+                "{error}: Could not copy '{}' to Home: {err}",
                 p.display(),
-                error = ui::Color::error("error:"),
+                error = ui::Color::error("error"),
             );
             return;
         }
@@ -101,9 +101,9 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 if let Err(err) = fs::remove_file(&destination) {
                     nb_errors.fetch_add(1, Ordering::Relaxed);
                     eprintln!(
-                        "{error} Could not remove exising file '{}': {err}",
+                        "{error}: Could not remove exising file '{}': {err}",
                         destination.display(),
-                        error = ui::Color::error("error:"),
+                        error = ui::Color::error("error"),
                     );
                     return;
                 }
@@ -114,9 +114,9 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 Err(err) => {
                     nb_errors.fetch_add(1, Ordering::Relaxed);
                     eprintln!(
-                        "{error} Could not read symlink '{}': {err}",
+                        "{error}: Could not read symlink '{}': {err}",
                         p.display(),
-                        error = ui::Color::error("error:"),
+                        error = ui::Color::error("error"),
                     );
                     return;
                 }
@@ -130,9 +130,9 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             if let Err(err) = res {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error} Could not create symlink '{}': {err}",
+                    "{error}: Could not create symlink '{}': {err}",
                     p.display(),
-                    error = ui::Color::error("error:"),
+                    error = ui::Color::error("error"),
                 );
                 return;
             }
@@ -144,9 +144,9 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 if let Err(err) = fs::remove_file(&destination) {
                     nb_errors.fetch_add(1, Ordering::Relaxed);
                     eprintln!(
-                        "{error} Could not remove exising symlink '{}': {err}",
+                        "{error}: Could not remove exising symlink '{}': {err}",
                         destination.display(),
-                        error = ui::Color::error("error:"),
+                        error = ui::Color::error("error"),
                     );
                     return;
                 }
@@ -155,9 +155,9 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             if let Err(err) = fs::copy(source, destination) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error} Could not copy '{}' to Home: {err}",
+                    "{error}: Could not copy '{}' to Home: {err}",
                     p.display(),
-                    error = ui::Color::error("error:"),
+                    error = ui::Color::error("error"),
                 );
                 return;
             }

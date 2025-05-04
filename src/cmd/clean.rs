@@ -62,9 +62,9 @@ pub fn clean(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             if let Err(err) = fs::remove_dir(&destination) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error} Could not remove exising directory '{}': {err}",
+                    "{error}: Could not remove exising directory '{}': {err}",
                     destination.display(),
-                    error = ui::Color::error("error:"),
+                    error = ui::Color::error("error"),
                 );
                 return;
             }
@@ -75,9 +75,9 @@ pub fn clean(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             if let Err(err) = fs::remove_file(&destination) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error} Could not remove file '{}': {err}",
+                    "{error}: Could not remove file '{}': {err}",
                     destination.display(),
-                    error = ui::Color::error("error:"),
+                    error = ui::Color::error("error"),
                 );
                 return;
             }
