@@ -201,6 +201,9 @@ deezconfigs considers a Git root any root starting with either `git:`,
 `ssh://`, `git@`, `https://`, or `http://`. `git:` is a special label
 you can use to force a path to be considered a Git root.
 
+In addition, `gh:` will be replaced with `git@github.com:`, (e.g.,
+`gh:qrichert/configs`).
+
 ### Hooks
 
 deezconfigs let you run hooks before and after commands. Hooks are

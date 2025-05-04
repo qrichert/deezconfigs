@@ -152,7 +152,7 @@ fn is_a_config_root(root: &Path) -> bool {
 /// Detect if provided root is a Git remote.
 pub fn is_git_remote_uri(root: Option<&String>) -> bool {
     root.is_some_and(|root| {
-        ["git:", "ssh://", "git@", "https://", "http://"]
+        ["git:", "ssh://", "git@", "https://", "http://", "gh:"]
             .iter()
             .any(|prefix| root.starts_with(prefix))
     })
@@ -172,7 +172,13 @@ pub fn is_git_remote_uri(root: Option<&String>) -> bool {
 /// or because the command itself fails (e.g., due to network issues,
 /// access rights, etc.).
 pub fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<PathBuf, i32> {
-    let uri = uri.trim_start_matches("git:").to_string();
+    let uri = if let Some(uri) = uri.strip_prefix("git:") {
+        uri.to_string()
+    } else if let Some(uri) = uri.strip_prefix("gh:") {
+        format!("git@github.com:{uri}")
+    } else {
+        uri.to_string()
+    };
 
     // Yes, I know. Not a solid UUID, I should use a crate, etc.
     let uuid = std::time::SystemTime::now()
@@ -301,5 +307,6 @@ mod tests {
         assert!(is_git_uri("git@github.com:qrichert/configs.git"));
         assert!(is_git_uri("https://github.com/qrichert/configs.git"));
         assert!(is_git_uri("http://github.com/qrichert/configs.git"));
+        assert!(is_git_uri("gh:qrichert/configs.git"));
     }
 }

@@ -244,6 +244,9 @@ Git:
   `ssh://`, `git@`, `https://`, or `http://`. `git:` is a special label
   you can use to force a path to be considered a Git root.
 
+  In addition, `gh:` will be replaced with `git@github.com:`, (e.g.,
+  `gh:qrichert/configs`).
+
 Hooks:
   {package} let you run hooks before and after commands. Hooks are
   scripts or executables located at the root and whose names match the
