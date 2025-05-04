@@ -250,13 +250,8 @@ installed on your machine.
 ///
 /// The Home directory is read from `HOME` environment variable.
 pub fn get_home_directory() -> Result<PathBuf, i32> {
-    // TODO: Use `std::env::home_dir()` once it gets un-deprecated.
-    #[cfg(unix)]
-    let home = env::var("HOME");
-    #[cfg(windows)]
-    let home = env::var("USERPROFILE");
-    if let Ok(home_directory) = home {
-        Ok(PathBuf::from(home_directory))
+    if let Some(home_directory) = std::env::home_dir() {
+        Ok(home_directory)
     } else {
         eprintln!(
             "{fatal}: Could not read Home directory from environment.",
