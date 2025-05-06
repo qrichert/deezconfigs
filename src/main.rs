@@ -212,6 +212,13 @@ Clean:
       {attenuate}# 2. Now remove all the links you've just created.{reset}
       {highlight}${reset} {bin} clean
 
+Shortcuts:
+  Each command has a shortcut:
+
+      sync   {underline}s{reset}     status  {underline}st{reset}
+      rsync  {underline}rs{reset}    diff    {underline}df{reset}
+      link   {underline}l{reset}     clean   {underline}c{reset}
+
 Ignore some files:
   By default, {package} ignores all the hook files (at the root) the
   `.git` directory at the root (if any), all `.ignore` and `.gitignore`
@@ -320,6 +327,7 @@ Copy some files, and link others:
         package = env!("CARGO_PKG_NAME"),
         highlight = ui::Color::maybe_color(ui::color::HIGHLIGHT),
         attenuate = ui::Color::maybe_color(ui::color::ATTENUATE),
+        underline = ui::Color::maybe_color(ui::color::UNDERLINE),
         in_sync = ui::Color::in_sync("S"),
         modified = ui::Color::modified("M"),
         missing = ui::Color::missing("!"),
