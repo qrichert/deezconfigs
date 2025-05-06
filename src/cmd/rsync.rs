@@ -57,7 +57,7 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         // would not yield it.
 
         if destination.is_symlink()
-            && match does_symlink_point_to_file(&destination, &source) {
+            && match does_symlink_point_to_file(&home, &destination, &source) {
                 Ok(points_to_source) => points_to_source,
                 Err(err) => {
                     nb_errors.fetch_add(1, Ordering::Relaxed);
@@ -66,7 +66,7 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 }
             }
         {
-            // No-op.
+            // No-op: The config file is `link`ed, and so is up-to-date.
             //
             // If a symlink in Home links to a file in configs, copying
             // it back to configs (i.e, `cp B A` where `B@ -> A`) would
@@ -133,9 +133,22 @@ pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
     if nb_errors > 0 { Err(1) } else { Ok(()) }
 }
 
-fn does_symlink_point_to_file(symlink: &Path, file: &Path) -> Result<bool, String> {
+/// Determine if symlink in Home points to file in Configs.
+///
+/// I.e., check if a config file is `link`ed, and not `sync`ed.
+fn does_symlink_point_to_file(home: &Path, symlink: &Path, file: &Path) -> Result<bool, String> {
     let symlink_target = match fs::read_link(symlink) {
-        Ok(target) => target,
+        Ok(target) => {
+            if target.is_relative() {
+                // If the symlink contains a _relative_ path to the
+                // target, we make it "canonicalizable" by making it
+                // absolute. Since the link lives in Home, we know the
+                // path it contains is relative to Home.
+                home.join(target)
+            } else {
+                target
+            }
+        }
         Err(err) => {
             return Err(format!(
                 "{error}: Symbolic link is broken '{}': {err}",
@@ -149,7 +162,7 @@ fn does_symlink_point_to_file(symlink: &Path, file: &Path) -> Result<bool, Strin
         Ok(target) => target,
         Err(err) => {
             return Err(format!(
-                "{error}: Could not resolve '{}': {err}",
+                "{error}: Could not canonicalize symlink target '{}': {err}",
                 symlink_target.display(),
                 error = ui::Color::error("error"),
             ));
@@ -159,7 +172,7 @@ fn does_symlink_point_to_file(symlink: &Path, file: &Path) -> Result<bool, Strin
         Ok(file) => file,
         Err(err) => {
             return Err(format!(
-                "{error}: Could not resolve '{}': {err}",
+                "{error}: Could not canonicalize config file '{}': {err}",
                 file.display(),
                 error = ui::Color::error("error"),
             ));
