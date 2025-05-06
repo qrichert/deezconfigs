@@ -44,7 +44,8 @@ pub enum Action {
 impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Sync | Self::RSync => write!(f, "Synced"),
+            Self::Sync => write!(f, "Synced"),
+            Self::RSync => write!(f, "rSynced"),
             Self::Link => write!(f, "Linked"),
             Self::Clean => write!(f, "Removed"),
         }

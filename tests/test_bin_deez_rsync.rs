@@ -77,7 +77,7 @@ fn rsync_output() {
     assert_eq!(
         output.stdout,
         "\
-Synced 4 files.
+rSynced 4 files.
 Ran 2 hooks.
 "
     );
@@ -114,7 +114,7 @@ hook: pre-rsync.sh
 .config/nvim/init.lua
 .gitconfig
 hook: post-rsync.sh
-Synced 4 files.
+rSynced 4 files.
 Ran 2 hooks.
 "
     );
