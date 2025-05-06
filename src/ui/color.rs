@@ -41,6 +41,7 @@ pub const RESET: &str = "\x1b[0m";
 
 pub const HIGHLIGHT: &str = GREEN;
 pub const ATTENUATE: &str = "\x1b[0;90m";
+pub const ITALIC: &str = "\x1b[3m";
 pub const UNDERLINE: &str = "\x1b[4m";
 
 pub struct Color;

@@ -113,9 +113,9 @@ What does {package} do?
   {package} is very un-opinionated by default. It tries to do its job
   well (syncing config files), while avoiding to do what other tools do
   better. For instance, there is no automatic versioning, no embedded
-  text editor, and no templating. You absolutely _can_ do all of the
-  above, but it's not something that's forced on you. It's _your_
-  processes, _your_ tools. All the extensibility power lies in hooks
+  text editor, and no templating. You absolutely {i}can{rt} do all of the
+  above, but it's not something that's forced on you. It's {i}your{rt}
+  processes, {i}your{rt} tools. All the extensibility power lies in hooks
   (read further below).
 
 Copying vs. Linking:
@@ -131,7 +131,7 @@ The Config Root:
   As mentioned before, the config root is any directory whose structure
   you want to replicate in the Home directory.
 
-  That said, you _should_, but are not required to, create a `.deez`
+  That said, you {i}should{rt}, but are not required to, create a `.deez`
   file in the root. This lets {package} know it is safe to use. If
   {package} doesn't find a `.deez` file, it will ask you confirmation
   before modifying you file system. This is a security feature to
@@ -152,41 +152,41 @@ Home:
   Using a different Home is not natively supported by an argumment, but
   you can override the environment variable to achieve what you want.
 
-      {highlight}${reset} HOME=/home/other {bin} sync
+      {highlight}${rt} HOME=/home/other {bin} sync
 
 Sync:
   Syncing in {package} replicates the file structure from the config
   root inside the Home directory (minus ignored files).
 
-      {attenuate}# Sync current config root.{reset}
-      {highlight}${reset} {bin} sync
+      {attenuate}# Sync current config root.{rt}
+      {highlight}${rt} {bin} sync
 
-      {attenuate}# Sync given config root, verbosely.{reset}
-      {highlight}${reset} {bin} --verbose sync ~/configs
+      {attenuate}# Sync given config root, verbosely.{rt}
+      {highlight}${rt} {bin} --verbose sync ~/configs
 
-      {attenuate}# Sync from remote.{reset}
-      {highlight}${reset} {bin} sync https://github.com/qrichert/configs
+      {attenuate}# Sync from remote.{rt}
+      {highlight}${rt} {bin} sync https://github.com/qrichert/configs
 
 rSync:
   Reverse-syncing is the complimentary opposite of syncing: it updates
   your config files in the root with the current content from Home.
 
-      {attenuate}# 1. Sync your config file to your Home.{reset}
-      {highlight}${reset} {bin} sync
+      {attenuate}# 1. Sync your config file to your Home.{rt}
+      {highlight}${rt} {bin} sync
 
-      {attenuate}# 2. Make some changes.{reset}
-      {highlight}${reset} vim ~/.gitconfig
+      {attenuate}# 2. Make some changes.{rt}
+      {highlight}${rt} vim ~/.gitconfig
 
-      {attenuate}# 3. rSync the changes back into your root.{reset}
-      {highlight}${reset} {bin} rsync
+      {attenuate}# 3. rSync the changes back into your root.{rt}
+      {highlight}${rt} {bin} rsync
 
 Link:
   Linking is the same as syncing, but it creates symbolic links in the
   Home instead of copying files. Linking has no `rsync` equivalent
   because linked files are always up-to-date.
 
-      {attenuate}# Symlink current config root.{reset}
-      {highlight}${reset} {bin} link
+      {attenuate}# Symlink current config root.{rt}
+      {highlight}${rt} {bin} link
 
 Status:
   Status prints the list of configuration files with their respective
@@ -206,18 +206,18 @@ Diff:
 Clean:
   Cleaning is removing all the files and symlinks from the Home.
 
-      {attenuate}# 1. Link your files to your Home.{reset}
-      {highlight}${reset} {bin} link
+      {attenuate}# 1. Link your files to your Home.{rt}
+      {highlight}${rt} {bin} link
 
-      {attenuate}# 2. Now remove all the links you've just created.{reset}
-      {highlight}${reset} {bin} clean
+      {attenuate}# 2. Now remove all the links you've just created.{rt}
+      {highlight}${rt} {bin} clean
 
 Shortcuts:
   Each command has a shortcut:
 
-      sync   {underline}s{reset}     status  {underline}st{reset}
-      rsync  {underline}rs{reset}    diff    {underline}df{reset}
-      link   {underline}l{reset}     clean   {underline}c{reset}
+      sync   {u}s{rt}     status  {u}st{rt}
+      rsync  {u}rs{rt}    diff    {u}df{rt}
+      link   {u}l{rt}     clean   {u}c{rt}
 
 Ignore some files:
   By default, {package} ignores all the hook files (at the root) the
@@ -239,8 +239,8 @@ Git:
 
   To expand on a previous example:
 
-      {attenuate}# Sync from remote.{reset}
-      {highlight}${reset} {bin} sync https://github.com/qrichert/configs
+      {attenuate}# Sync from remote.{rt}
+      {highlight}${rt} {bin} sync https://github.com/qrichert/configs
 
   This will clone the repository to a temporary directory behind the
   scenes, and update your Home with its contents. This is useful in
@@ -272,9 +272,9 @@ Hooks:
 
   Hooks are executed through `sh`. It is roughly equivalent to:
 
-      {highlight}${reset} cd <root>
-      {highlight}${reset} export DEEZ_...  {attenuate}# {bin} envionrment variables.{reset}
-      {highlight}${reset} sh -c \"<root>/<hook>\"
+      {highlight}${rt} cd <root>
+      {highlight}${rt} export DEEZ_...  {attenuate}# {bin} envionrment variables.{rt}
+      {highlight}${rt} sh -c \"<root>/<hook>\"
 
   Note that you'll likely want the scripts to start with a shebang
   (e.g., `#!/usr/bin/env python3`).
@@ -283,12 +283,12 @@ Hooks:
   set and unset Git's email address in the `.gitconfig` file when you
   `sync` and `rsync` it:
 
-      {highlight}${reset} cat post-sync.sh
+      {highlight}${rt} cat post-sync.sh
       #!/usr/bin/env bash
       [[ -n $DEEZ_VERBOSE ]] && echo \"Set global Git email address.\"
       git config --global user.email you@example.com
 
-      {highlight}${reset} cat post-rsync.sh
+      {highlight}${rt} cat post-rsync.sh
       #!/usr/bin/env bash
       [[ -n $DEEZ_VERBOSE ]] && echo \"Unset Git email address.\"
       git config --file ./.gitconfig user.email '<>'
@@ -327,11 +327,12 @@ Copy some files, and link others:
         package = env!("CARGO_PKG_NAME"),
         highlight = ui::Color::maybe_color(ui::color::HIGHLIGHT),
         attenuate = ui::Color::maybe_color(ui::color::ATTENUATE),
-        underline = ui::Color::maybe_color(ui::color::UNDERLINE),
+        i = ui::Color::maybe_color(ui::color::ITALIC),
+        u = ui::Color::maybe_color(ui::color::UNDERLINE),
         in_sync = ui::Color::in_sync("S"),
         modified = ui::Color::modified("M"),
         missing = ui::Color::missing("!"),
-        reset = ui::Color::maybe_color(ui::color::RESET),
+        rt = ui::Color::maybe_color(ui::color::RESET),
     ));
 }
 
