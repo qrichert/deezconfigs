@@ -165,6 +165,16 @@ $ deez link
 $ deez clean
 ```
 
+### Shortcuts
+
+Each command has a shortcut:
+
+```
+sync   s     status  st
+rsync  rs    diff    df
+link   l     clean   c
+```
+
 ### Ignore some files
 
 By default, deezconfigs ignores all the hook files (at the root) the
