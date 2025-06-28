@@ -51,7 +51,7 @@ impl Ord for Diff {
 ///
 /// 1. Collect all files in `configs`.
 /// 2. Diff with files in `$HOME`.
-pub fn diff(root: Option<&String>, verbose: bool) -> Result<(), i32> {
+pub fn diff(root: Option<&String>, verbose: bool, reversed: bool) -> Result<(), i32> {
     let root = if is_git_remote_uri(root) {
         get_config_root_from_git(root.expect("not empty, contains a `git:` prefix"), verbose)?
     } else {
@@ -77,7 +77,12 @@ pub fn diff(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         let destination = home.join(p);
 
         let diff = if destination.is_file() {
-            let diff = match diff_files(&source, &destination) {
+            let diff = if reversed {
+                diff_files(&destination, &source)
+            } else {
+                diff_files(&source, &destination)
+            };
+            let diff = match diff {
                 Ok(diff) => diff,
                 Err(err) => {
                     nb_errors.fetch_add(1, Ordering::Relaxed);

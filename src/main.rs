@@ -50,7 +50,7 @@ fn main() {
             cli::Command::RSync => cmd::rsync(root, verbose),
             cli::Command::Link => cmd::link(root, verbose),
             cli::Command::Status => cmd::status(root, verbose),
-            cli::Command::Diff => cmd::diff(root, verbose),
+            cli::Command::Diff => cmd::diff(root, verbose, args.reversed_diff),
             cli::Command::Clean => cmd::clean(root, verbose),
             cli::Command::Nuts => {
                 println!("Ha! Got 'em!");
@@ -87,6 +87,7 @@ Commands:
 
   status [<root>|<git>]  List files and their status
   diff [<root>|<git>]    Show what has changed
+    -r, --reversed
   clean [<root>|<git>]   Remove all configs from Home
 
 Options:
@@ -200,8 +201,26 @@ Status:
 
 Diff:
   Diffing prints the line-diff between your config root and your Home.
-  This shows you exactly what has changed and where. There is not merge
+  This shows you exactly what has changed and where. There is no merge
   feature however, as merging is best done by your VCS.
+
+  By default, `diff` uses the config root as the {i}before{rt}, and the
+  Home as the {i}after{rt}. This assumes you make changes in the Home
+  directly, and want to see what would change in your root if you
+  `rsync`ed the updates back.
+
+      {attenuate}# Compare the config root (old) to the Home (new).
+      {highlight}${rt} {bin} diff
+
+  If you make changes inside the config root however, it is more natural
+  to use the Home as the {i}before{rt}, and the root as the {i}after{rt}.
+  In other words, you want to see what would change in your Home if you
+  `sync`ed the updates to it.
+
+  To do this, use the `--reversed` flag:
+
+      {attenuate}# Compare the Home (old) to the config root (new).
+      {highlight}${rt} {bin} diff -r
 
 Clean:
   Cleaning is removing all the files and symlinks from the Home.

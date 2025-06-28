@@ -151,8 +151,30 @@ M  Modified
 ### Diff
 
 Diffing prints the line-diff between your config root and your Home.
-This shows you exactly what has changed and where. There is not merge
+This shows you exactly what has changed and where. There is no merge
 feature however, as merging is best done by your VCS.
+
+By default, `diff` uses the config root as the _before_, and the Home as
+the _after_. This assumes you make changes in the Home directly, and
+want to see what would change in your root if you `rsync`ed the updates
+back.
+
+```console
+# Compare the config root (old) to the Home (new).
+$ deez diff
+```
+
+If you make changes inside the config root however, it is more natural
+to use the Home as the _before_, and the root as the _after_. In other
+words, you want to see what would change in your Home if you `sync`ed
+the updates to it.
+
+To do this, use the `--reversed` flag:
+
+```console
+# Compare the Home (old) to the config root (new).
+$ deez diff -r
+```
 
 ### Clean
 

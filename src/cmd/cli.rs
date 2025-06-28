@@ -29,6 +29,7 @@ pub enum Command {
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct Args {
     pub command: Option<Command>,
+    pub reversed_diff: bool,
     pub root: Option<String>,
     pub short_help: bool,
     pub long_help: bool,
@@ -47,12 +48,15 @@ impl Args {
             let some_command = args.command.is_some();
             let some_root = args.root.is_some();
 
+            let is_diff = args.command == Some(Command::Diff);
+
             match arg.as_ref() {
                 "sync" | "s" if !some_command => args.command = Some(Command::Sync),
                 "rsync" | "rs" if !some_command => args.command = Some(Command::RSync),
                 "link" | "l" if !some_command => args.command = Some(Command::Link),
                 "status" | "st" if !some_command => args.command = Some(Command::Status),
                 "diff" | "df" if !some_command => args.command = Some(Command::Diff),
+                "-r" | "--reversed" if is_diff => args.reversed_diff = true,
                 "clean" | "c" if !some_command => args.command = Some(Command::Clean),
                 "nuts" if !some_command => args.command = Some(Command::Nuts),
                 "-h" => args.short_help = true,

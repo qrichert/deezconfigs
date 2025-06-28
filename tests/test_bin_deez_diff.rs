@@ -62,6 +62,48 @@ boz.txt
 }
 
 #[test]
+fn diff_reversed() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("this is foo"));
+    conf::create_file_in_configs("bar/baz.txt", Some("this is bar/baz"));
+    conf::create_symlink_in_configs("biz.txt", Some("bar/baz.txt"));
+    conf::create_symlink_in_configs("buz.txt", Some("foo.txt"));
+    conf::create_file_in_configs("boz.txt", None);
+
+    conf::create_file_in_home("foo.txt", Some("this is foo")); // Equal.
+    conf::create_file_in_home("bar/baz.txt", Some("not equal")); // Different.
+    conf::create_symlink_in_home("biz.txt", Some("bar/baz.txt")); // Symlink to different.
+    conf::create_symlink_in_home("buz.txt", Some("foo.txt")); // Symlink to equal.
+    // conf::create_file_in_home("boz.txt", None); // Missing.
+
+    let output = run(&["--verbose", "diff", &conf::root(), "--reversed"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert_eq!(
+        output.stdout,
+        "\
+bar/baz.txt
+@@ -1,1 +1,1 @@
+-not equal
++this is bar/baz
+
+biz.txt
+@@ -1,1 +1,1 @@
+-not equal
++this is bar/baz
+
+boz.txt
+! File does not exist in Home.
+! Skipping...
+"
+    );
+}
+
+#[test]
 fn diff_with_hooks() {
     conf::init();
 
