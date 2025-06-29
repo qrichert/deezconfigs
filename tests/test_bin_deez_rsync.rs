@@ -18,6 +18,9 @@
 
 mod utils;
 
+use std::env;
+use std::path::Path;
+
 use utils::conf::{self, CONFIGS, HOME};
 use utils::files;
 use utils::run::{run, run_in_dir};
@@ -288,6 +291,31 @@ fn rsync_looks_for_root_in_direct_parent() {
     conf::create_file_in_home("foo/bar.txt", Some("new"));
 
     let output = run_in_dir(&["--verbose", "rsync"], file.parent().unwrap());
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert_eq!(files::read(&file), "new");
+}
+
+#[test]
+fn rsync_uses_deez_root_variable_if_no_root_specified() {
+    conf::init();
+
+    let file = conf::create_file_in_configs("bar.txt", Some("old"));
+
+    conf::create_file_in_home("bar.txt", Some("new"));
+
+    unsafe {
+        env::set_var("DEEZ_ROOT", file.parent().unwrap());
+    }
+
+    // Run outside of any root. It should use `DEEZ_ROOT`.
+    let output = run_in_dir(
+        &["--verbose", "rsync"],
+        Path::new(&conf::root()).parent().unwrap(),
+    );
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 

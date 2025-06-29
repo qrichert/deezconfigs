@@ -148,6 +148,15 @@ The Config Root:
   search for a root in parent directories before warning you that the
   current directory is not a root.
 
+  If you always use the same config root (common case), you can point
+  the `DEEZ_ROOT` environment variable to it. In this case, {package}
+  will default to that instead of the current working directory. This
+  lets you run `{bin}` from anywhere with much less typing.
+
+      {attenuate}# Will status `/home/deez/root` wherever you are.{rt}
+      {highlight}${rt} export DEEZ_ROOT=/home/deez/root
+      {highlight}${rt} deez status
+
 Home:
   This is the directory where config files are copied or symlinked to.
   On Unix, this is read from the `HOME` environment variable, and on

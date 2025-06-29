@@ -39,6 +39,9 @@ pub fn init() {
         env::set_var("HOME", HOME);
         #[cfg(windows)]
         env::set_var("USERPROFILE", HOME);
+
+        // Can't test defaults if `DEEZ_ROOT` is set.
+        env::remove_var("DEEZ_ROOT");
     }
 
     // Clean new config dir.

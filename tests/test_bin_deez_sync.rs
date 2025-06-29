@@ -16,7 +16,8 @@
 
 mod utils;
 
-use std::path::PathBuf;
+use std::env;
+use std::path::{Path, PathBuf};
 
 use utils::conf::{self, CONFIGS, HOME};
 use utils::files;
@@ -322,6 +323,29 @@ fn sync_looks_for_root_in_direct_parent() {
     assert_eq!(output.exit_code, 0);
 
     assert!(files::file_exists_in_home("foo/bar.txt"));
+}
+
+#[test]
+fn sync_uses_deez_root_variable_if_no_root_specified() {
+    conf::init();
+
+    let file = conf::create_file_in_configs("bar.txt", None);
+
+    unsafe {
+        env::set_var("DEEZ_ROOT", file.parent().unwrap());
+    }
+
+    // Run outside of any root. It should use `DEEZ_ROOT`.
+    let output = run_in_dir(
+        &["--verbose", "sync"],
+        Path::new(&conf::root()).parent().unwrap(),
+    );
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(files::file_exists_in_home("bar.txt"));
 }
 
 #[test]

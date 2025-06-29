@@ -16,6 +16,9 @@
 
 mod utils;
 
+use std::env;
+use std::path::Path;
+
 use utils::conf::{self, CONFIGS, HOME};
 use utils::files;
 use utils::run::{run, run_in_dir};
@@ -298,6 +301,30 @@ fn clean_looks_for_root_in_direct_parent() {
     assert_eq!(output.exit_code, 0);
 
     assert!(!files::file_exists_in_home("foo/bar.txt"));
+}
+
+#[test]
+fn clean_uses_deez_root_variable_if_no_root_specified() {
+    conf::init();
+
+    let file = conf::create_file_in_configs("bar.txt", None);
+    conf::create_file_in_home("bar.txt", None);
+
+    unsafe {
+        env::set_var("DEEZ_ROOT", file.parent().unwrap());
+    }
+
+    // Run outside of any root. It should use `DEEZ_ROOT`.
+    let output = run_in_dir(
+        &["--verbose", "clean"],
+        Path::new(&conf::root()).parent().unwrap(),
+    );
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(!files::file_exists_in_home("bar.txt"));
 }
 
 #[test]

@@ -16,6 +16,9 @@
 
 mod utils;
 
+use std::env;
+use std::path::Path;
+
 use utils::conf::{self, CONFIGS, HOME};
 use utils::run::{run, run_in_dir};
 
@@ -226,6 +229,29 @@ fn diff_looks_for_root_in_direct_parent() {
     assert_eq!(output.exit_code, 0);
 
     assert!(output.stdout.contains("foo/bar.txt"));
+}
+
+#[test]
+fn diff_uses_deez_root_variable_if_no_root_specified() {
+    conf::init();
+
+    let file = conf::create_file_in_configs("bar.txt", None);
+
+    unsafe {
+        env::set_var("DEEZ_ROOT", file.parent().unwrap());
+    }
+
+    // Run outside of any root. It should use `DEEZ_ROOT`.
+    let output = run_in_dir(
+        &["--verbose", "diff"],
+        Path::new(&conf::root()).parent().unwrap(),
+    );
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains("bar.txt"));
 }
 
 #[test]

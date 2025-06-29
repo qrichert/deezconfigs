@@ -83,6 +83,17 @@ commands from anywhere in the repo, deezconfigs is smart enough to
 search for a root in parent directories before warning you that the
 current directory is not a root.
 
+If you always use the same config root (common case), you can point the
+`DEEZ_ROOT` environment variable to it. In this case, deezconfigs will
+default to that instead of the current working directory. This lets you
+run `deez` from anywhere with much less typing.
+
+```console
+# Will status `/home/deez/root` wherever you are.
+$ export DEEZ_ROOT=/home/deez/root
+$ deez status
+```
+
 ### Home
 
 This is the directory where config files are copied or symlinked to. On

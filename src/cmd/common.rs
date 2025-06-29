@@ -44,8 +44,10 @@ use deezconfigs::ui;
 /// _not_ a user-facing option. It is used internally by non-fs-altering
 /// commands that don't need it, such as `status` for instance.
 pub fn determine_config_root(root: Option<&String>, do_check: bool) -> Result<PathBuf, i32> {
-    let root = if let Some(root) = root {
-        get_config_root_from_args(root)?
+    let root = if let Some(root) = get_config_root_from_args(root) {
+        root
+    } else if let Some(root) = get_config_root_from_config() {
+        root
     } else {
         let mut default = get_default_config_root()?;
         if !is_a_config_root(&default) {
@@ -55,31 +57,31 @@ pub fn determine_config_root(root: Option<&String>, do_check: bool) -> Result<Pa
         }
         default
     };
+    ensure_root_exists(&root)?;
     if do_check {
         ensure_root_is_a_config_root(&root)?;
     }
     Ok(root)
 }
 
-fn get_config_root_from_args(root: &str) -> Result<PathBuf, i32> {
-    let root = PathBuf::from(root);
-    if !root.is_dir() {
-        eprintln!(
-            "{fatal}: Root must be a valid directory.",
-            fatal = ui::Color::error("fatal")
-        );
-        if root.is_file() {
-            eprintln!("'{}' is a file.", root.display());
-        } else if !root.exists() {
-            if root.to_str().is_some_and(str::is_empty) {
-                eprintln!("No path provided.");
-            } else {
-                eprintln!("'{}' does not exist.", root.display());
-            }
-        }
-        return Err(1);
+fn get_config_root_from_args(root: Option<&String>) -> Option<PathBuf> {
+    if let Some(root) = root
+        && !root.is_empty()
+    {
+        Some(PathBuf::from(root))
+    } else {
+        None
     }
-    Ok(root)
+}
+
+fn get_config_root_from_config() -> Option<PathBuf> {
+    if let Some(root) = env::var("DEEZ_ROOT").ok()
+        && !root.is_empty()
+    {
+        Some(PathBuf::from(root))
+    } else {
+        None
+    }
 }
 
 fn get_default_config_root() -> Result<PathBuf, i32> {
@@ -108,6 +110,30 @@ fn find_config_root_in_parents(root: &Path) -> Option<&Path> {
         }
     }
     None
+}
+
+fn ensure_root_exists(root: &Path) -> Result<(), i32> {
+    if root.is_dir() {
+        return Ok(());
+    }
+
+    eprintln!(
+        "{fatal}: Root must be a valid directory.",
+        fatal = ui::Color::error("fatal")
+    );
+
+    // Be specific.
+    if root.is_file() {
+        eprintln!("'{}' is a file.", root.display());
+    } else if !root.exists() {
+        if root.to_str().is_some_and(str::is_empty) {
+            eprintln!("No path provided.");
+        } else {
+            eprintln!("'{}' does not exist.", root.display());
+        }
+    }
+
+    Err(1)
 }
 
 /// Ensure `root` holds config and is not a random directory.
