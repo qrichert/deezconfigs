@@ -74,7 +74,7 @@ fn get_config_root_from_args(root: Option<&String>) -> Option<PathBuf> {
     }
 }
 
-fn get_config_root_from_config() -> Option<PathBuf> {
+pub fn get_config_root_from_config() -> Option<PathBuf> {
     if let Some(root) = env::var("DEEZ_ROOT").ok()
         && !root.is_empty()
     {
@@ -112,7 +112,7 @@ fn find_config_root_in_parents(root: &Path) -> Option<&Path> {
     None
 }
 
-fn ensure_root_exists(root: &Path) -> Result<(), i32> {
+pub fn ensure_root_exists(root: &Path) -> Result<(), i32> {
     if root.is_dir() {
         return Ok(());
     }

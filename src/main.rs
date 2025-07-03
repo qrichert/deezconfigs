@@ -52,6 +52,7 @@ fn main() {
             cli::Command::Status => cmd::status(root, verbose),
             cli::Command::Diff => cmd::diff(root, verbose, args.reversed_diff),
             cli::Command::Clean => cmd::clean(root, verbose),
+            cli::Command::Run => cmd::run(&args.run_args, verbose),
             cli::Command::Nuts => {
                 println!("Ha! Got 'em!");
                 Ok(())
@@ -89,6 +90,8 @@ Commands:
   diff [<root>|<git>]    Show what has changed
     -r, --reversed
   clean [<root>|<git>]   Remove all configs from Home
+
+  run                    Run command inside Root
 
 Options:
   -h, --help             Show this message and exit
@@ -243,12 +246,30 @@ Clean:
       {attenuate}# 2. Now remove all the links you've just created.{rt}
       {highlight}${rt} {bin} clean
 
+Run:
+  There is an additional `run` convenience-command which works with the
+  `DEEZ_ROOT` environment variable.
+
+  Sometimes, you just want to run a single command in the config root,
+  like a `git pull` to get the latest changes. It can be annoying to
+  `cd` into the root just for that, and that's where `run` shines:
+
+      {attenuate}# Will run in `/home/deez/root` wherever you are.{rt}
+      {highlight}${rt} export DEEZ_ROOT=/home/deez/root
+      {highlight}${rt} deez run pwd
+      /home/deez/root
+
+      {attenuate}# A common combination would be:{rt}
+      {highlight}${rt} deez run git pull
+      {highlight}${rt} deez sync
+
 Shortcuts:
   Each command has a shortcut:
 
       sync   {u}s{rt}     status  {u}st{rt}
       rsync  {u}rs{rt}    diff    {u}df{rt}
       link   {u}l{rt}     clean   {u}c{rt}
+      run    {u}r{rt}
 
 Ignore some files:
   By default, {package} ignores all the hook files (at the root), the

@@ -278,10 +278,10 @@ fn link_looks_for_root_in_direct_parent() {
 fn link_uses_deez_root_variable_if_no_root_specified() {
     conf::init();
 
-    let file = conf::create_file_in_configs("bar.txt", None);
+    conf::create_file_in_configs("bar.txt", None);
 
     unsafe {
-        env::set_var("DEEZ_ROOT", file.parent().unwrap());
+        env::set_var("DEEZ_ROOT", conf::root());
     }
 
     // Run outside of any root. It should use `DEEZ_ROOT`.

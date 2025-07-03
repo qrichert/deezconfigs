@@ -308,7 +308,7 @@ fn rsync_uses_deez_root_variable_if_no_root_specified() {
     conf::create_file_in_home("bar.txt", Some("new"));
 
     unsafe {
-        env::set_var("DEEZ_ROOT", file.parent().unwrap());
+        env::set_var("DEEZ_ROOT", conf::root());
     }
 
     // Run outside of any root. It should use `DEEZ_ROOT`.

@@ -32,6 +32,8 @@ Commands:
     -r, --reversed
   clean [<root>|<git>]   Remove all configs from Home
 
+  run                    Run command inside Root
+
 Options:
   -h, --help             Show this message and exit
   -V, --version          Show the version and exit
@@ -203,6 +205,28 @@ $ deez link
 $ deez clean
 ```
 
+### Run
+
+There is an additional `run` convenience-command which works with the
+`DEEZ_ROOT` environment variable.
+
+Sometimes, you just want to run a single command in the config root,
+like a `git pull` to get the latest changes. It can be annoying to `cd`
+into the root just for that, and that's where `run` shines:
+
+```console
+# Will run in `/home/deez/root` wherever you are.
+$ export DEEZ_ROOT=/home/deez/root
+$ deez run pwd
+/home/deez/root
+```
+
+```console
+# A common combination would be:
+$ deez run git pull
+$ deez sync
+```
+
 ### Shortcuts
 
 Each command has a shortcut:
@@ -211,6 +235,7 @@ Each command has a shortcut:
 sync   s     status  st
 rsync  rs    diff    df
 link   l     clean   c
+run    r
 ```
 
 ### Ignore some files
@@ -336,12 +361,6 @@ not the right tool for you.
 
 ## Roadmap
 
-- [x] **Command `sync`**.
-- [x] **Command `rsync`**.
-- [x] **Command `link`**.
-- [x] **Command `status`**.
-- [x] **Command `diff`**.
-- [x] **Command `clean`**.
 - [ ] Enable subroots with remotes (`git@gh.com/user/repo[sub/root]`).
 - [ ] Allow syncing a single file if root points to a file.
 - [ ] Increase test coverage (features are mostly covered, what's

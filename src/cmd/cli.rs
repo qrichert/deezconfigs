@@ -22,6 +22,7 @@ pub enum Command {
     Status,
     Diff,
     Clean,
+    Run,
     Nuts,
 }
 
@@ -30,6 +31,8 @@ pub enum Command {
 pub struct Args {
     pub command: Option<Command>,
     pub reversed_diff: bool,
+    #[allow(clippy::struct_field_names)]
+    pub run_args: Vec<String>,
     pub root: Option<String>,
     pub short_help: bool,
     pub long_help: bool,
@@ -58,6 +61,11 @@ impl Args {
                 "diff" | "df" if !some_command => args.command = Some(Command::Diff),
                 "-r" | "--reversed" if is_diff => args.reversed_diff = !args.reversed_diff,
                 "clean" | "c" if !some_command => args.command = Some(Command::Clean),
+                "run" | "r" if !some_command => {
+                    args.command = Some(Command::Run);
+                    args.run_args
+                        .extend(cli_args.by_ref().map(|arg| arg.to_string()));
+                }
                 "nuts" if !some_command => args.command = Some(Command::Nuts),
                 "-h" => args.short_help = true,
                 "--help" => args.long_help = true,
@@ -210,6 +218,31 @@ mod tests {
     fn second_command_does_not_override_clean() {
         let args = Args::build_from_args(["clean", "sync"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Clean));
+    }
+
+    #[test]
+    fn command_run_regular() {
+        let args = Args::build_from_args(["run"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Run));
+    }
+
+    #[test]
+    fn command_run_shortcut() {
+        let args = Args::build_from_args(["r"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Run));
+    }
+
+    #[test]
+    fn second_command_does_not_override_run() {
+        let args = Args::build_from_args(["run", "sync"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Run));
+    }
+
+    #[test]
+    fn command_run_drains_all_remaining_arguments() {
+        let args = Args::build_from_args(["run", "git", "pull"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Run));
+        assert_eq!(args.run_args, ["git", "pull"]);
     }
 
     #[test]
