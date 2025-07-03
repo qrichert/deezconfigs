@@ -56,7 +56,7 @@ impl Args {
                 "link" | "l" if !some_command => args.command = Some(Command::Link),
                 "status" | "st" if !some_command => args.command = Some(Command::Status),
                 "diff" | "df" if !some_command => args.command = Some(Command::Diff),
-                "-r" | "--reversed" if is_diff => args.reversed_diff = true,
+                "-r" | "--reversed" if is_diff => args.reversed_diff = !args.reversed_diff,
                 "clean" | "c" if !some_command => args.command = Some(Command::Clean),
                 "nuts" if !some_command => args.command = Some(Command::Nuts),
                 "-h" => args.short_help = true,
@@ -171,6 +171,27 @@ mod tests {
     fn second_command_does_not_override_diff() {
         let args = Args::build_from_args(["diff", "sync"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Diff));
+    }
+
+    #[test]
+    fn command_diff_reversed() {
+        let args = Args::build_from_args(["diff", "--reversed"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(args.reversed_diff);
+    }
+
+    #[test]
+    fn command_reversed_without_diff_is_noop() {
+        let args = Args::build_from_args(["status", "--reversed"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Status));
+        assert!(!args.reversed_diff);
+    }
+
+    #[test]
+    fn command_diff_reversed_multiple_cancel_each_other() {
+        let args = Args::build_from_args(["diff", "--reversed", "--reversed"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(!args.reversed_diff);
     }
 
     #[test]

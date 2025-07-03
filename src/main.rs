@@ -112,7 +112,7 @@ What does {package} do?
   to version them.
 
   {package} is very un-opinionated by default. It tries to do its job
-  well (syncing config files), while avoiding to do what other tools do
+  well (syncing config files), while avoiding doing what other tools do
   better. For instance, there is no automatic versioning, no embedded
   text editor, and no templating. You absolutely {i}can{rt} do all of the
   above, but it's not something that's forced on you. It's {i}your{rt}
@@ -123,7 +123,7 @@ Copying vs. Linking:
   {package} supports two configuration models: copying and linking.
   Both models come with different trade-offs. For instance, linking
   ensures files are always up-to-date, but on the flip-side, you can't
-  really have machine specific configuration. On the other hand, copying
+  really have machine specific configuration. On the other hand, copied
   files need to be kept up-to-date manually by `sync`ing or `rsync`ing
   all changes. But, having separate copies makes it easier to keep
   configuration generic in the root, and specific in the Home.
@@ -132,15 +132,18 @@ The Config Root:
   As mentioned before, the config root is any directory whose structure
   you want to replicate in the Home directory.
 
-  That said, you {i}should{rt}, but are not required to, create a `.deez`
-  file in the root. This lets {package} know it is safe to use. If
+  {package} will use the root you provide as argument on the CLI, or
+  default to the current working directory.
+
+  You {i}should{rt}, but are not required to, create a `.deez` file in
+  the root. This lets {package} know that it is safe to use. If
   {package} doesn't find a `.deez` file, it will ask you confirmation
-  before modifying you file system. This is a security feature to
+  before modifying your file system. This is a security feature to
   prevent you from accidentally messing up your Home if you run `{bin}`
   from the wrong directory.
 
-  Another advantage of creating a proper root is that that it lets you
-  run `{bin}` inside sub-directories as well. Just like you can run Git
+  Another advantage of creating a proper root is that it lets you run
+  `{bin}` inside sub-directories as well. Just like you can run Git
   commands from anywhere in the repo, {package} is smart enough to
   search for a root in parent directories before warning you that the
   current directory is not a root.
@@ -150,7 +153,7 @@ Home:
   On Unix, this is read from the `HOME` environment variable, and on
   Windows from `USERPROFILE`.
 
-  Using a different Home is not natively supported by an argumment, but
+  Using a different Home is not natively supported by an argument, but
   you can override the environment variable to achieve what you want.
 
       {highlight}${rt} HOME=/home/other {bin} sync
@@ -169,7 +172,7 @@ Sync:
       {highlight}${rt} {bin} sync https://github.com/qrichert/configs
 
 rSync:
-  Reverse-syncing is the complimentary opposite of syncing: it updates
+  Reverse-syncing is the complementary opposite of syncing: it updates
   your config files in the root with the current content from Home.
 
       {attenuate}# 1. Sync your config file to your Home.{rt}
@@ -209,7 +212,7 @@ Diff:
   directly, and want to see what would change in your root if you
   `rsync`ed the updates back.
 
-      {attenuate}# Compare the config root (old) to the Home (new).
+      {attenuate}# Compare the config root (old) to the Home (new).{rt}
       {highlight}${rt} {bin} diff
 
   If you make changes inside the config root however, it is more natural
@@ -219,7 +222,7 @@ Diff:
 
   To do this, use the `--reversed` flag:
 
-      {attenuate}# Compare the Home (old) to the config root (new).
+      {attenuate}# Compare the Home (old) to the config root (new).{rt}
       {highlight}${rt} {bin} diff -r
 
 Clean:
@@ -239,17 +242,17 @@ Shortcuts:
       link   {u}l{rt}     clean   {u}c{rt}
 
 Ignore some files:
-  By default, {package} ignores all the hook files (at the root) the
+  By default, {package} ignores all the hook files (at the root), the
   `.git` directory at the root (if any), all `.ignore` and `.gitignore`
   files, and all `.deez` files, wherever they are (enabling multi-root
   repos).
 
   You can extend this list by adding entries to your `.ignore` and/or
-  `.gitignore` files, they are both respected by {package}.
+  `.gitignore` files; they are both respected by {package}.
 
   If you want to both version a file in Git and have it ignored by
-  {package}, you can either add it to a `.gitignore` and `git add -f`
-  it, or you can use a generic `.ignore` file instead.
+  {package}, you can either add it to a `.gitignore` and force-add it
+  with `git add -f`, or you can use a generic `.ignore` file instead.
 
 Git:
   Git is optional, but {package} is designed to integrate nicely with
@@ -274,7 +277,7 @@ Git:
   `gh:qrichert/configs`).
 
 Hooks:
-  {package} let you run hooks before and after commands. Hooks are
+  {package} lets you run hooks before and after commands. Hooks are
   scripts or executables located at the root and whose names match the
   following pattern:
 
@@ -292,13 +295,13 @@ Hooks:
   Hooks are executed through `sh`. It is roughly equivalent to:
 
       {highlight}${rt} cd <root>
-      {highlight}${rt} export DEEZ_...  {attenuate}# {bin} envionrment variables.{rt}
+      {highlight}${rt} export DEEZ_...  {attenuate}# {bin} environment variables.{rt}
       {highlight}${rt} sh -c \"<root>/<hook>\"
 
   Note that you'll likely want the scripts to start with a shebang
   (e.g., `#!/usr/bin/env python3`).
 
-  As an example, here are two complimentary scripts that respectively
+  As an example, here are two complementary scripts that respectively
   set and unset Git's email address in the `.gitconfig` file when you
   `sync` and `rsync` it:
 
@@ -315,7 +318,7 @@ Hooks:
   They both make use of the `DEEZ_VERBOSE` environment variable to
   enrich the output of `{bin}` in verbose mode.
 
-  {package} passes a few envionrment variables to hooks to make your
+  {package} passes a few environment variables to hooks to make your
   life easier:
 
   - `DEEZ_ROOT` Absolute path to the config Root. This is equal to `pwd`
@@ -324,7 +327,7 @@ Hooks:
     `$HOME` on Unix systems.
   - `DEEZ_VERBOSE` Will be `true` if run in verbose mode, otherwise it
     will be unset (hint: use `[[ -n $DEEZ_VERBOSE ]]` to test for
-    existance).
+    existence).
   - `DEEZ_OS` Contains the name of the current operating system (e.g,
     `linux`, `macos`, `windows`, etc.). The name is a re-export of
     Rust's `std::consts::OS`.
@@ -335,10 +338,10 @@ Templating:
   commands, to something way more advanced like Jinja2 in Python.
 
 Copy some files, and link others:
-  Use mutliple roots. You can have multiple roots (subdirectories) in
+  Use multiple roots. You can have multiple roots (subdirectories) in
   one repo. Use `sync` in one, and `link` in the other.
 
-  If you need anything more advanced than that, `deezconfigs` is likely
+  If you need anything more advanced than that, `{package}` is likely
   not the right tool for you.
 ",
         help = short_help_message(),

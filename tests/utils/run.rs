@@ -20,6 +20,7 @@ use std::process::Command;
 
 const DEEZ: &str = env!("CARGO_BIN_EXE_deez");
 
+#[derive(Debug)]
 pub struct Output {
     pub exit_code: i32,
     pub stdout: String,
