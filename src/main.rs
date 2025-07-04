@@ -153,8 +153,9 @@ The Config Root:
 
   If you always use the same config root (common case), you can point
   the `DEEZ_ROOT` environment variable to it. In this case, {package}
-  will default to that instead of the current working directory. This
-  lets you run `{bin}` from anywhere with much less typing.
+  will default to it if no root is given on the CLI, and neither the
+  current directory, nor its parents are a root. This lets you run
+  `{bin}` from anywhere with much less typing.
 
       {attenuate}# Will status `/home/deez/root` wherever you are.{rt}
       {highlight}${rt} export DEEZ_ROOT=/home/deez/root

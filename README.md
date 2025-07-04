@@ -87,8 +87,9 @@ current directory is not a root.
 
 If you always use the same config root (common case), you can point the
 `DEEZ_ROOT` environment variable to it. In this case, deezconfigs will
-default to that instead of the current working directory. This lets you
-run `deez` from anywhere with much less typing.
+default to it if no root is given on the CLI, and neither the current
+directory, nor its parents are a root. This lets you run `deez` from
+anywhere with much less typing.
 
 ```console
 # Will status `/home/deez/root` wherever you are.

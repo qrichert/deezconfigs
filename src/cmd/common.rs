@@ -44,16 +44,22 @@ use deezconfigs::ui;
 /// _not_ a user-facing option. It is used internally by non-fs-altering
 /// commands that don't need it, such as `status` for instance.
 pub fn determine_config_root(root: Option<&String>, do_check: bool) -> Result<PathBuf, i32> {
+    // Given.
     let root = if let Some(root) = get_config_root_from_args(root) {
         root
-    } else if let Some(root) = get_config_root_from_config() {
-        root
+    // Not given.
     } else {
+        // Try current dir.
         let mut default = get_default_config_root()?;
+        // If not, look inside parents.
         if !is_a_config_root(&default) {
             if let Some(parent) = find_config_root_in_parents(&default) {
                 default = parent.to_path_buf();
+            // If not, try `DEEZ_ROOT`.
+            } else if let Some(root) = get_config_root_from_config() {
+                default = root;
             }
+            // Else, let current dir fail.
         }
         default
     };
