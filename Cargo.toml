@@ -24,6 +24,8 @@ strip = true
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [dependencies]
+# Checksums.
+blake3 = "1.8.2"
 # Match pathspec globs.
 globset = "0.4.20"
 # Find files recursively, respecting ignore patterns.
