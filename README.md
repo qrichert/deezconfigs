@@ -372,6 +372,7 @@ not the right tool for you.
 
 ## Roadmap
 
+- [ ] Show number of files updated `Synced 10 files. Updated 2.`.
 - [ ] Allow syncing a single file if root points to a file.
 - [ ] Increase test coverage (features are mostly covered, what's
       missing are tests for the error cases).
