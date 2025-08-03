@@ -362,6 +362,7 @@ not the right tool for you.
 
 ## Roadmap
 
+- [ ] Show number of files updated `Synced 10 files. Updated 2.`.
 - [ ] Enable subroots with remotes (`git@gh.com/user/repo[sub/root]`).
 - [ ] Allow syncing a single file if root points to a file.
 - [ ] Increase test coverage (features are mostly covered, what's
