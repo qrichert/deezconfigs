@@ -24,9 +24,11 @@ strip = true
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [dependencies]
+# Checksums.
+blake3 = "1.8.2"
 # Find files recursively, respecting ignore patterns.
 ignore = "0.4.23"
 # Diff files.
 imara-diff = "0.1.8"
 # Output text through a pager.
-lessify = "0.4.0"
+lessify = "0.5.0"

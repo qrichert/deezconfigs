@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::fs;
+use std::io::Read;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -49,6 +50,7 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
     // we issue are a bigger bottleneck anyway).
     let files = Arc::new(Mutex::new(Vec::with_capacity(20)));
     let nb_files_synced = AtomicUsize::new(0);
+    let nb_files_updated = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
 
     walk::find_files_recursively(&root, |p| {
@@ -56,6 +58,8 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
 
         let source = root.join(p);
         let destination = home.join(p);
+
+        let hash_before = checksum(&destination);
 
         if destination.is_dir() {
             // If destination exists and is a directory, try to `rmdir`
@@ -152,7 +156,7 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 }
             }
 
-            if let Err(err) = fs::copy(source, destination) {
+            if let Err(err) = fs::copy(source, &destination) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
                     "{error}: Could not copy '{}' to Home: {err}",
@@ -174,6 +178,12 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
                 // just silently fall back to printing directly.
                 println!("{}", p.display());
             }
+        }
+
+        let hash_after = checksum(&destination);
+
+        if hash_before != hash_after {
+            nb_files_updated.fetch_add(1, Ordering::Relaxed);
         }
 
         nb_files_synced.fetch_add(1, Ordering::Relaxed);
@@ -203,5 +213,24 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
         nb_hooks_ran,
     );
 
+    println!("Updated: {}", nb_files_updated.into_inner());
+
     if nb_errors > 0 { Err(1) } else { Ok(()) }
+}
+
+fn checksum(path: &std::path::Path) -> Vec<u8> {
+    let file = std::fs::File::open(path).unwrap();
+    let mut reader = std::io::BufReader::new(&file);
+
+    let mut hasher = blake3::Hasher::new();
+    let mut buffer = [0u8; 8192];
+    loop {
+        let n = reader.read(&mut buffer).unwrap();
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buffer[..n]);
+    }
+    let hash = hasher.finalize();
+    hash.as_bytes().into()
 }
