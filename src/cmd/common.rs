@@ -311,7 +311,7 @@ installed on your machine.
 ///
 /// Sub-roots evaluate to `None` if empty.
 fn extract_sub_root(uri: &str) -> (&str, Option<&str>) {
-    if let Some((uri, sub_root)) = uri.split_once('[')
+    if let Some((uri, sub_root)) = uri.rsplit_once('[')
         && sub_root.ends_with(']')
     {
         let sub_root = sub_root
@@ -400,8 +400,8 @@ mod tests {
             ("~/Developer/configs", Some("foo/bar"))
         );
         assert_eq!(
-            extract_sub_root("ssh://misc/home/misc/configs[ /foo/bar ]"),
-            ("ssh://misc/home/misc/configs", Some("foo/bar"))
+            extract_sub_root("ssh://misc/home/[misc]/configs[ /foo/bar ]"),
+            ("ssh://misc/home/[misc]/configs", Some("foo/bar"))
         );
         assert_eq!(
             extract_sub_root("git@github.com:qrichert/configs.git"),
