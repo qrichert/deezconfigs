@@ -212,6 +212,10 @@ pub fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<PathBuf, i32
         uri.to_string()
     };
 
+    // Extract potential sub root.
+    // git@github.com/qrichert/configs[sub/root]
+    let (uri, sub_root) = extract_sub_root(&uri);
+
     // Yes, I know. Not a solid UUID, I should use a crate, etc.
     let uuid = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -240,7 +244,7 @@ The target directory already exists and could not be deleted.
         .arg("--single-branch")
         .arg("--depth=1")
         .arg("--no-tags")
-        .arg(&uri)
+        .arg(uri)
         .arg(&clone_path);
 
     let status = if verbose {
@@ -275,7 +279,55 @@ installed on your machine.
 
     println!("Done.");
 
-    Ok(clone_path)
+    if let Some(sub_root) = sub_root {
+        let clone_path = clone_path.join(sub_root);
+
+        if !clone_path.is_dir() {
+            eprintln!(
+                "{fatal}: Cannot find sub-root inside Git repository: '{sub_root}'.",
+                fatal = ui::Color::error("fatal")
+            );
+            return Err(1);
+        }
+
+        Ok(clone_path)
+    } else {
+        Ok(clone_path)
+    }
+}
+
+/// Extract sub-root from Git remote URL.
+///
+/// Sub-roots are defined by appending `[sub/root]` to the remote URL.
+/// For example: `git@github.com/qrichert/configs[sub/root]`
+///
+/// # Note
+///
+/// Sub-roots are returned without leading slashes (`/`), to force them
+/// to be relative (to the root). An absolute sub-root would replace the
+/// base path if `join()`ed; not what we want.
+///
+/// Sub-roots are also returned trimmed (no whitespace around).
+///
+/// Sub-roots evaluate to `None` if empty.
+fn extract_sub_root(uri: &str) -> (&str, Option<&str>) {
+    if let Some((uri, sub_root)) = uri.split_once('[')
+        && sub_root.ends_with(']')
+    {
+        let sub_root = sub_root
+            .strip_suffix(']')
+            .expect("we checked that it ends with ']'")
+            .trim()
+            // No leading slash! It would override paths on `join()`.
+            .trim_start_matches('/');
+        if sub_root.is_empty() {
+            (uri, None)
+        } else {
+            (uri, Some(sub_root))
+        }
+    } else {
+        (uri, None)
+    }
 }
 
 /// Get the user's Home directory.
@@ -335,5 +387,37 @@ mod tests {
         assert!(is_git_uri("https://github.com/qrichert/configs.git"));
         assert!(is_git_uri("http://github.com/qrichert/configs.git"));
         assert!(is_git_uri("gh:qrichert/configs.git"));
+    }
+
+    #[test]
+    fn test_extract_sub_root() {
+        assert_eq!(
+            extract_sub_root("../configs[foo/bar]"),
+            ("../configs", Some("foo/bar"))
+        );
+        assert_eq!(
+            extract_sub_root("~/Developer/configs[/foo/bar]"),
+            ("~/Developer/configs", Some("foo/bar"))
+        );
+        assert_eq!(
+            extract_sub_root("ssh://misc/home/misc/configs[ /foo/bar ]"),
+            ("ssh://misc/home/misc/configs", Some("foo/bar"))
+        );
+        assert_eq!(
+            extract_sub_root("git@github.com:qrichert/configs.git"),
+            ("git@github.com:qrichert/configs.git", None)
+        );
+        assert_eq!(
+            extract_sub_root("https://github.com/qrichert/configs.git[]"),
+            ("https://github.com/qrichert/configs.git", None)
+        );
+        assert_eq!(
+            extract_sub_root("http://github.com/qrichert/configs.git[ ]"),
+            ("http://github.com/qrichert/configs.git", None)
+        );
+        assert_eq!(
+            extract_sub_root("qrichert/configs.git[ / ]"),
+            ("qrichert/configs.git", None)
+        );
     }
 }

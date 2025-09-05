@@ -278,6 +278,16 @@ you can use to force a path to be considered a Git root.
 In addition, `gh:` will be replaced with `git@github.com:`, (e.g.,
 `gh:qrichert/configs`).
 
+You can also specify a sub-root:
+
+```console
+# Sync sub-root.
+$ sync gh:qrichert/configs[sub/directory]
+```
+
+Instead of assuming the root to be at the repository root, this allows
+using a sub-direcory as the root.
+
 ### Hooks
 
 deezconfigs lets you run hooks before and after commands. Hooks are
@@ -354,7 +364,7 @@ commands, to something way more advanced like Jinja2 in Python.
 
 ### Copy some files, and link others
 
-Use multiple roots. You can have multiple roots (subdirectories) in one
+Use multiple roots. You can have multiple roots (sub-directories) in one
 repo. Use `sync` in one, and `link` in the other.
 
 If you need anything more advanced than that, `deezconfigs` is likely
@@ -362,7 +372,6 @@ not the right tool for you.
 
 ## Roadmap
 
-- [ ] Enable subroots with remotes (`git@gh.com/user/repo[sub/root]`).
 - [ ] Allow syncing a single file if root points to a file.
 - [ ] Increase test coverage (features are mostly covered, what's
       missing are tests for the error cases).

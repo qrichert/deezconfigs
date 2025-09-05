@@ -1,6 +1,6 @@
 [package]
 name = "deezconfigs"
-version = "0.14.0"
+version = "0.15.0"
 edition = "2024"
 authors = ["Quentin Richert <noreply@richert.co>"]
 description = "Manage deez config files."
@@ -27,6 +27,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 # Find files recursively, respecting ignore patterns.
 ignore = "0.4.23"
 # Diff files.
+# TODO: See <https://github.com/helix-editor/helix/pull/13722/files> for `0.2.0`.
 imara-diff = "0.1.8"
 # Output text through a pager.
 lessify = "0.4.0"

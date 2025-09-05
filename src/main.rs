@@ -307,6 +307,14 @@ Git:
   In addition, `gh:` will be replaced with `git@github.com:`, (e.g.,
   `gh:qrichert/configs`).
 
+  You can also specify a sub-root:
+
+      {attenuate}# Sync sub-root.{rt}
+      {highlight}${rt} {bin} sync gh:qrichert/configs[sub/directory]
+
+  Instead of assuming the root to be at the repository root, this allows
+  using a sub-direcory as the root.
+
 Hooks:
   {package} lets you run hooks before and after commands. Hooks are
   scripts or executables located at the root and whose names match the
@@ -369,7 +377,7 @@ Templating:
   commands, to something way more advanced like Jinja2 in Python.
 
 Copy some files, and link others:
-  Use multiple roots. You can have multiple roots (subdirectories) in
+  Use multiple roots. You can have multiple roots (sub-directories) in
   one repo. Use `sync` in one, and `link` in the other.
 
   If you need anything more advanced than that, `{package}` is likely
