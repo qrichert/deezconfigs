@@ -370,22 +370,22 @@ impl<'a> Hooks<'a> {
                     // (i.e., did the hook exit 1, or did `sh` exit 1?).
                     // The main reason `sh` can fail is if the hook is
                     // not executable. That's what we check here, and if
-                    // it's the case we provide a more useful error
+                    // it's the case, we provide a more useful error
                     // message than "Execution aborted by '<hook>'".
                     #[cfg(unix)]
                     {
                         use std::fs::File;
                         use std::os::unix::fs::PermissionsExt;
 
-                        if let Ok(metadata) = File::open(&hook_file).and_then(|f| f.metadata()) {
-                            if metadata.permissions().mode() & 0o111 == 0 {
-                                return Err(format!(
-                                    "{error}: '{}' is not executable.\nConsider running 'chmod +x {}'.",
-                                    hook.display(),
-                                    hook.display(),
-                                    error = ui::Color::error("error")
-                                ));
-                            }
+                        if let Ok(metadata) = File::open(&hook_file).and_then(|f| f.metadata())
+                            && metadata.permissions().mode() & 0o111 == 0
+                        {
+                            return Err(format!(
+                                "{error}: '{}' is not executable.\nConsider running 'chmod +x {}'.",
+                                hook.display(),
+                                hook.display(),
+                                error = ui::Color::error("error")
+                            ));
                         }
                         // Else don't bother. We're in bonus territory.
                     }
@@ -405,7 +405,7 @@ impl<'a> Hooks<'a> {
     /// Hooks are already sorted in lexicographic order, that also
     /// determines the order of execution.
     #[must_use]
-    pub fn list(&self) -> Vec<Cow<str>> {
+    pub fn list(&self) -> Vec<Cow<'_, str>> {
         self.scripts
             .pre_sync
             .iter()

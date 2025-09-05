@@ -140,16 +140,16 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
             // If destination exists and is a symlink, we must _delete_
             // it before the copy, or else it would override the link's
             // target.
-            if destination.is_symlink() {
-                if let Err(err) = fs::remove_file(&destination) {
-                    nb_errors.fetch_add(1, Ordering::Relaxed);
-                    eprintln!(
-                        "{error}: Could not remove exising symlink '{}': {err}",
-                        destination.display(),
-                        error = ui::Color::error("error"),
-                    );
-                    return;
-                }
+            if destination.is_symlink()
+                && let Err(err) = fs::remove_file(&destination)
+            {
+                nb_errors.fetch_add(1, Ordering::Relaxed);
+                eprintln!(
+                    "{error}: Could not remove exising symlink '{}': {err}",
+                    destination.display(),
+                    error = ui::Color::error("error"),
+                );
+                return;
             }
 
             if let Err(err) = fs::copy(source, destination) {

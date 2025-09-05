@@ -50,56 +50,56 @@ impl Color {
     // Errors.
 
     #[must_use]
-    pub fn error(string: &str) -> Cow<str> {
+    pub fn error(string: &str) -> Cow<'_, str> {
         Self::color(RED, string)
     }
 
     #[must_use]
-    pub fn warning(string: &str) -> Cow<str> {
+    pub fn warning(string: &str) -> Cow<'_, str> {
         Self::color(YELLOW, string)
     }
 
     // Status.
 
     #[must_use]
-    pub fn in_sync(string: &str) -> Cow<str> {
+    pub fn in_sync(string: &str) -> Cow<'_, str> {
         Self::color(GREEN, string)
     }
 
     #[must_use]
-    pub fn modified(string: &str) -> Cow<str> {
+    pub fn modified(string: &str) -> Cow<'_, str> {
         Self::color(YELLOW, string)
     }
 
     #[must_use]
-    pub fn missing(string: &str) -> Cow<str> {
+    pub fn missing(string: &str) -> Cow<'_, str> {
         Self::color(RED, string)
     }
 
     #[must_use]
-    pub fn symlink(string: &str) -> Cow<str> {
+    pub fn symlink(string: &str) -> Cow<'_, str> {
         Self::color(BLUE, string)
     }
 
     // Diff.
 
     #[must_use]
-    pub fn file_name(string: &str) -> Cow<str> {
+    pub fn file_name(string: &str) -> Cow<'_, str> {
         Self::color(BOLD_PURPLE, string)
     }
 
     #[must_use]
-    pub fn line_range(string: &str) -> Cow<str> {
+    pub fn line_range(string: &str) -> Cow<'_, str> {
         Self::color(CYAN, string)
     }
 
     #[must_use]
-    pub fn added(string: &str) -> Cow<str> {
+    pub fn added(string: &str) -> Cow<'_, str> {
         Self::color(GREEN, string)
     }
 
     #[must_use]
-    pub fn removed(string: &str) -> Cow<str> {
+    pub fn removed(string: &str) -> Cow<'_, str> {
         Self::color(RED, string)
     }
 
@@ -128,7 +128,7 @@ impl Color {
     /// };
     /// ```
     #[must_use]
-    pub fn none(string: &str) -> Cow<str> {
+    pub fn none(string: &str) -> Cow<'_, str> {
         Cow::Borrowed(string)
     }
 
