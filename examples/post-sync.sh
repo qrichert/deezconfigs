@@ -44,6 +44,23 @@ if [[ -f ~/.deezfish.fish ]]; then
     cat ~/.deezfish.fish >> ~/.config/fish/config.fish
 fi
 
+# Trim Neovim config on low-powered machines.
+#
+# Installing, updating, and running plugins and LSPs doesn't make a dent
+# in regular desktop machines, but it can be a real bottleneck on
+# low-powered VPSs, where a full-blown editor is rarely even useful.
+#
+# Here we're detecting such machines (< 2 CPUs), and trimming Neovim's
+# config file accordingly at the `-- END OF MINIMAL CONFIG --` marker.
+# This marker has been placed strategically in the config file to
+# delimit regular Neovim configuration from plugins and LSPs.
+nb_cpu_cores=$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 0)
+if (( $nb_cpu_cores < 2 )); then
+    [[ -n $DEEZ_VERBOSE ]] && echo "Low-powered machine: trimming Neovim \`init.lua\` to minimal config."
+    sed '/-- END OF MINIMAL CONFIG --/q' ~/.config/nvim/init.lua > /tmp/init.lua
+    mv /tmp/init.lua ~/.config/nvim/init.lua
+fi
+
 # Alias SSH terminfo for Ghostty.
 #
 # At the time of writing, Ghostty is still quite new and is not
