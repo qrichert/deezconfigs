@@ -16,7 +16,7 @@
 
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process;
 
 use deezconfigs::hooks::Hooks;
@@ -280,6 +280,14 @@ installed on your machine.
     println!("Done.");
 
     if let Some(sub_root) = sub_root {
+        if !is_sub_root_safe(sub_root) {
+            eprintln!(
+                "{fatal}: Sub-root must not contain '..' components: '{sub_root}'.",
+                fatal = ui::Color::error("fatal")
+            );
+            return Err(1);
+        }
+
         let clone_path = clone_path.join(sub_root);
 
         if !clone_path.is_dir() {
@@ -294,6 +302,13 @@ installed on your machine.
     } else {
         Ok(clone_path)
     }
+}
+
+/// Whether the sub-root is safe (no `..` directory traversal).
+fn is_sub_root_safe(sub_root: &str) -> bool {
+    !Path::new(sub_root)
+        .components()
+        .any(|c| c == Component::ParentDir)
 }
 
 /// Extract sub-root from Git remote URL.
@@ -387,6 +402,32 @@ mod tests {
         assert!(is_git_uri("https://github.com/qrichert/configs.git"));
         assert!(is_git_uri("http://github.com/qrichert/configs.git"));
         assert!(is_git_uri("gh:qrichert/configs.git"));
+    }
+
+    #[test]
+    fn test_is_sub_root_safe() {
+        // Safe.
+        assert!(is_sub_root_safe("foo/bar"));
+        assert!(is_sub_root_safe("foo"));
+        assert!(is_sub_root_safe("foo/bar/baz"));
+
+        assert!(is_sub_root_safe(".hidden"));
+        assert!(is_sub_root_safe("foo/.hidden/bar"));
+        assert!(is_sub_root_safe("..tricky"));
+        assert!(is_sub_root_safe("tri..cky"));
+        assert!(is_sub_root_safe("tricky.."));
+        assert!(is_sub_root_safe("..."));
+        assert!(is_sub_root_safe("foo/..tricky/bar"));
+        assert!(is_sub_root_safe("foo/tri..cky/bar"));
+        assert!(is_sub_root_safe("foo/.../bar"));
+
+        // Unsafe.
+        assert!(!is_sub_root_safe(".."));
+        assert!(!is_sub_root_safe("../foo"));
+        assert!(!is_sub_root_safe("foo/.."));
+        assert!(!is_sub_root_safe("foo/../bar"));
+        assert!(!is_sub_root_safe("foo/../../etc"));
+        assert!(!is_sub_root_safe("../../etc/passwd"));
     }
 
     #[test]
