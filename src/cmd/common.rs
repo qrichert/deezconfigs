@@ -193,7 +193,7 @@ pub fn is_git_remote_uri(root: Option<&String>) -> bool {
 /// Clone Git repository and return its path.
 ///
 /// The repository is cloned to the system's temporary directory (e.g.,
-/// `/tmp` on Unix) under the name `deez-<uuid>`.
+/// `/tmp` on Unix) under the name `deez-<pid>-<uuid>`.
 ///
 /// # Errors
 ///
@@ -217,12 +217,12 @@ pub fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<PathBuf, i32
     let (uri, sub_root) = extract_sub_root(&uri);
 
     // Yes, I know. Not a solid UUID, I should use a crate, etc.
+    let pid = std::process::id();
     let uuid = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("current time > Unix epoch")
-        .as_millis()
-        .to_string();
-    let clone_path = env::temp_dir().join(format!("deez-{uuid}"));
+        .as_millis();
+    let clone_path = env::temp_dir().join(format!("deez-{pid}-{uuid}"));
 
     if clone_path.is_dir() && fs::remove_dir_all(&clone_path).is_err() {
         eprint!(
@@ -237,6 +237,13 @@ The target directory already exists and could not be deleted.
 
     println!("Fetching config files remotely...");
 
+    // TODO: Clones are never cleanup up. This is not a big issue since
+    // we clone into a temporary directory, but it's sloppy. We could
+    // register the path into a global "cleanup queue" that runs at the
+    // end. Side question: should we expose a `DEEZ_TMP` variable to
+    // hooks (could be cleaned up the same way). Or always have a global
+    // temporary dir available (`LazyLock`), expose it to hooks, and
+    // adapt the clone to clone into a sub-directory there.
     let mut command = process::Command::new("git");
     command
         .env("LANG", "en_US.UTF-8")
