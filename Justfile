@@ -20,7 +20,7 @@ build:
 alias l := lint
 # Run various linting tools
 lint:
-    pre-commit run --all-files
+    prek run --all-files
 
 # Most stringent checks (includes checks still in development)
 check:
@@ -35,7 +35,7 @@ check:
 alias t := test
 # Run unit tests
 test *args:
-    cargo test --all-features -- --test-threads=1 {{ args }}
+    cargo test --all-features -- --test-threads 1 {{ args }}
 
 # Build documentation
 doc:
@@ -51,7 +51,7 @@ coverage:
 alias cpc := coverage-pct
 # Ensure code coverage minimum %
 coverage-pct:
-    cargo tarpaulin --engine Llvm --timeout 120 --out Stdout --all-features --fail-under 60
+    cargo tarpaulin --engine Llvm --timeout 120 --out Stdout --all-features --fail-under 75
 
 # Install `deez`
 install:

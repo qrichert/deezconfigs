@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Full tag annotation.
 
@@ -64,9 +64,9 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      # `actions/checkout@v4` somehow transforms annotated tags into
+      # `actions/checkout@v6` somehow transforms annotated tags into
       # lightweight tags, which prevents us from reading release notes.
       # This fetches annotated tags and overrides existing mangled tags.
       - name: Fetch annotated tags
