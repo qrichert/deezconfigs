@@ -46,7 +46,7 @@ fn main() {
         let verbose = args.verbose;
 
         if let Err(code) = match command {
-            cli::Command::Sync => cmd::sync(root, verbose),
+            cli::Command::Sync => cmd::sync(root, verbose, args.pull_before_sync),
             cli::Command::RSync => cmd::rsync(root, verbose),
             cli::Command::Link => cmd::link(root, verbose),
             cli::Command::Status => cmd::status(root, verbose),
@@ -83,6 +83,7 @@ Usage: {bin} [<options>] <command> [<args>]
 
 Commands:
   sync [<root>|<git>]    Update Home from configs
+    -p, --pull
   rsync [<root>]         Update configs from Home
   link [<root>]          Symlink configs to Home
 
@@ -183,6 +184,12 @@ Sync:
 
       {attenuate}# Sync from remote.{rt}
       {highlight}${rt} {bin} sync https://github.com/qrichert/configs
+
+  If you're using Git, you can pull-and-sync in one shot with the
+  `--pull` flag:
+
+      {attenuate}# Run `git pull` in the config root, then sync.{rt}
+      {highlight}${rt} {bin} sync --pull
 
 rSync:
   Reverse-syncing is the complementary opposite of syncing: it updates

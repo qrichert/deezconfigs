@@ -30,6 +30,7 @@ pub enum Command {
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct Args {
     pub command: Option<Command>,
+    pub pull_before_sync: bool,
     pub reversed_diff: bool,
     #[allow(clippy::struct_field_names)]
     pub run_args: Vec<String>,
@@ -51,10 +52,12 @@ impl Args {
             let some_command = args.command.is_some();
             let some_root = args.root.is_some();
 
+            let is_sync = args.command == Some(Command::Sync);
             let is_diff = args.command == Some(Command::Diff);
 
             match arg.as_ref() {
                 "sync" | "s" if !some_command => args.command = Some(Command::Sync),
+                "-p" | "--pull" if is_sync => args.pull_before_sync = true,
                 "rsync" | "rs" if !some_command => args.command = Some(Command::RSync),
                 "link" | "l" if !some_command => args.command = Some(Command::Link),
                 "status" | "st" if !some_command => args.command = Some(Command::Status),
@@ -107,6 +110,13 @@ mod tests {
     fn second_command_does_not_override_sync() {
         let args = Args::build_from_args(["sync", "rsync"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Sync));
+    }
+
+    #[test]
+    fn command_sync_pull() {
+        let args = Args::build_from_args(["sync", "--pull"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Sync));
+        assert!(args.pull_before_sync);
     }
 
     #[test]

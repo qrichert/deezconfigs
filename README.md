@@ -23,6 +23,7 @@ Usage: deez [<options>] <command> [<args>]
 
 Commands:
   sync [<root>|<git>]    Update Home from configs
+    -p, --pull
   rsync [<root>]         Update configs from Home
   link [<root>]          Symlink configs to Home
 
@@ -123,6 +124,14 @@ $ deez --verbose sync ~/configs
 
 # Sync from remote.
 $ deez sync https://github.com/qrichert/configs
+```
+
+If you're using Git, you can pull-and-sync in one shot with the `--pull`
+flag:
+
+```console
+# Run `git pull` in the config root, then sync.
+$ deez sync --pull
 ```
 
 ### rSync

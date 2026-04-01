@@ -15,8 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::env;
+use std::io::Write;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 const DEEZ: &str = env!("CARGO_BIN_EXE_deez");
 
@@ -31,6 +32,10 @@ pub fn run(args: &[&str]) -> Output {
     run_in_dir(args, env::current_dir().unwrap())
 }
 
+pub fn run_with_input(args: &[&str], input: &str) -> Output {
+    run_in_dir_with_input(args, env::current_dir().unwrap(), input)
+}
+
 pub fn run_in_dir(args: &[&str], dir: impl AsRef<Path>) -> Output {
     let mut command = Command::new(DEEZ);
     command.current_dir(dir.as_ref());
@@ -42,6 +47,33 @@ pub fn run_in_dir(args: &[&str], dir: impl AsRef<Path>) -> Output {
     }
 
     let output = command.output().unwrap();
+
+    Output {
+        exit_code: output.status.code().unwrap(),
+        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+    }
+}
+
+pub fn run_in_dir_with_input(args: &[&str], dir: impl AsRef<Path>, input: &str) -> Output {
+    let mut command = Command::new(DEEZ);
+    command.current_dir(dir.as_ref());
+    command.env("NO_COLOR", "1");
+    command.env_remove("PAGER");
+    command.stdin(Stdio::piped());
+    command.stdout(Stdio::piped());
+    command.stderr(Stdio::piped());
+
+    for arg in args {
+        command.arg(arg);
+    }
+
+    let mut child = command.spawn().unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    stdin.write_all(input.as_bytes()).unwrap();
+    drop(stdin);
+
+    let output = child.wait_with_output().unwrap();
 
     Output {
         exit_code: output.status.code().unwrap(),

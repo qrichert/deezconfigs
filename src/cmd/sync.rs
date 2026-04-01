@@ -15,7 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -31,8 +32,19 @@ use super::common::{
 /// 1. Collect all files in `configs`.
 /// 2. Create or replace matching files in `$HOME`.
 #[allow(clippy::too_many_lines)] // More a procedure than a function.
-pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
-    let root = if is_git_remote_uri(root) {
+pub fn sync(root: Option<&String>, verbose: bool, pull_before_sync: bool) -> Result<(), i32> {
+    let root = if pull_before_sync {
+        if is_git_remote_uri(root) {
+            eprintln!(
+                "{fatal}: '--pull' only works with local config roots.",
+                fatal = ui::Color::error("fatal")
+            );
+            return Err(2);
+        }
+        let root = determine_config_root(root, true)?;
+        run_git_pull_in_root(&root)?;
+        root
+    } else if is_git_remote_uri(root) {
         get_config_root_from_git(root.expect("not empty, contains a `git:` prefix"), verbose)?
     } else {
         determine_config_root(root, true)?
@@ -204,4 +216,37 @@ pub fn sync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
     );
 
     if nb_errors > 0 { Err(1) } else { Ok(()) }
+}
+
+/// Run `git pull` inside config root.
+///
+/// This intentionally does not go through `cmd::run()`. `run` has
+/// different semantics; it's meant for users to run arbitrary commands
+/// from anywhere, with its own idiosyncratic logic for that.
+///
+/// Here we only want to run `git pull` inside the root already resolved
+/// by `sync`. `sync` has its own logic and evolves at different times
+/// and for different reasons than `run` (e.g., `run` needs `DEEZ_ROOT`,
+/// we don't. `run` itself asks to confirm the root if no `.deez` file
+/// is found, we do too so it would ask twice, etc.).
+fn run_git_pull_in_root(root: &Path) -> Result<(), i32> {
+    let status = process::Command::new("git")
+        .current_dir(root)
+        .arg("pull")
+        .status();
+
+    match status {
+        Ok(status) => match status.code() {
+            Some(0) => Ok(()),
+            Some(code) => Err(code),
+            None => Err(1),
+        },
+        Err(err) => {
+            eprintln!(
+                "{fatal}: Could not run 'git pull': {err}",
+                fatal = ui::Color::error("fatal")
+            );
+            Err(1)
+        }
+    }
 }
