@@ -2,7 +2,6 @@
 
 [![license: GPL v3+](https://img.shields.io/badge/license-GPLv3+-blue)](https://www.gnu.org/licenses/gpl-3.0)
 ![GitHub Tag](https://img.shields.io/github/v/tag/qrichert/deezconfigs?sort=semver&filter=*.*.*&label=release)
-[![tokei (loc)](https://tokei.rs/b1/github/qrichert/deezconfigs?label=loc&style=flat)](https://github.com/XAMPPRocky/tokei)
 [![crates.io](https://img.shields.io/crates/d/deezconfigs?logo=rust&logoColor=white&color=orange)](https://crates.io/crates/deezconfigs)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/qrichert/deezconfigs/ci.yml?label=tests)](https://github.com/qrichert/deezconfigs/actions)
 
