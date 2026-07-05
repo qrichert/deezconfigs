@@ -24,8 +24,8 @@ use std::sync::{Arc, Mutex};
 use deezconfigs::{ui, utils, walk};
 
 use super::common::{
-    determine_config_root, get_config_root_from_git, get_home_directory, get_hooks_for_command,
-    is_git_remote_uri, run_hooks,
+    get_config_root_from_git, get_home_directory, get_hooks_for_command, is_git_remote_uri,
+    resolve_and_pull_config_root, resolve_config_root, run_hooks,
 };
 
 #[derive(Debug, Eq, PartialEq)]
@@ -61,11 +61,13 @@ impl Ord for Status {
 ///    - In Sync (equal).
 ///    - Modified (not equal).
 ///    - Missing (not yet copied).
-pub fn status(root: Option<&String>, verbose: bool) -> Result<(), i32> {
-    let root = if is_git_remote_uri(root) {
+pub fn status(root: Option<&String>, verbose: bool, pull_before_command: bool) -> Result<(), i32> {
+    let root = if pull_before_command {
+        resolve_and_pull_config_root(root)?
+    } else if is_git_remote_uri(root) {
         get_config_root_from_git(root.expect("not empty, contains a `git:` prefix"), verbose)?
     } else {
-        determine_config_root(root, false)?
+        resolve_config_root(root, false)?
     };
     let home = get_home_directory()?;
     let hooks = get_hooks_for_command(&root, &home, verbose)?;

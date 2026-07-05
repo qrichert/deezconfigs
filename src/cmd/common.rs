@@ -22,7 +22,7 @@ use std::process;
 use deezconfigs::hooks::Hooks;
 use deezconfigs::ui;
 
-/// Determine config root for a given path.
+/// Resolve config root for a given path.
 ///
 /// The root is either provided by the user, or we use a heuristic to
 /// find an appropriate one to use:
@@ -43,7 +43,7 @@ use deezconfigs::ui;
 /// The check can be disabled by setting `do_check` to `false`. This is
 /// _not_ a user-facing option. It is used internally by non-fs-altering
 /// commands that don't need it, such as `status` for instance.
-pub fn determine_config_root(root: Option<&String>, do_check: bool) -> Result<PathBuf, i32> {
+pub fn resolve_config_root(root: Option<&String>, do_check: bool) -> Result<PathBuf, i32> {
     // Given.
     let root = if let Some(root) = get_config_root_from_args(root) {
         root
@@ -308,6 +308,47 @@ installed on your machine.
         Ok(clone_path)
     } else {
         Ok(clone_path)
+    }
+}
+
+/// Resolve a local config root, ask for confirmation if it has no
+/// `.deez` marker, then run `git pull`. Remote roots are rejected.
+pub fn resolve_and_pull_config_root(root: Option<&String>) -> Result<PathBuf, i32> {
+    if is_git_remote_uri(root) {
+        eprintln!(
+            "{fatal}: '--pull' only works with local config roots.",
+            fatal = ui::Color::error("fatal")
+        );
+        return Err(2);
+    }
+    let root = resolve_config_root(root, true)?;
+    run_git_pull_in_root(&root)?;
+    Ok(root)
+}
+
+/// Run `git pull` inside an already-resolved config root.
+///
+/// This calls Git directly because `cmd::run()` takes its root from
+/// `DEEZ_ROOT`; it cannot accept the path resolved for this command.
+fn run_git_pull_in_root(root: &Path) -> Result<(), i32> {
+    let status = process::Command::new("git")
+        .current_dir(root)
+        .arg("pull")
+        .status();
+
+    match status {
+        Ok(status) => match status.code() {
+            Some(0) => Ok(()),
+            Some(code) => Err(code),
+            None => Err(1),
+        },
+        Err(err) => {
+            eprintln!(
+                "{fatal}: Could not run 'git pull': {err}",
+                fatal = ui::Color::error("fatal")
+            );
+            Err(1)
+        }
     }
 }
 

@@ -24,6 +24,16 @@ use std::path::Path;
 use utils::conf::{self, CONFIGS, HOME};
 use utils::files;
 use utils::run::{run, run_in_dir};
+use utils::{mock_bin, output_file_exists, read_output_file, remove_output_file};
+
+// Warning: These tests MUST be run sequentially. Running them in
+// parallel threads may cause conflicts with environment variables,
+// as a variable may be overridden before it is used.
+//
+// `just test` already runs the suite with `--test-threads=1`. If we
+// need parallel-safe tests later, the migration path is to allocate a
+// per-test temp bin dir and thread it into process-local env setup
+// instead of mutating the global env.
 
 #[test]
 fn rsync_regular() {
@@ -121,6 +131,45 @@ rSynced 4 files.
 Ran 2 hooks.
 "
     );
+}
+
+#[test]
+fn rsync_pull_runs_git_pull() {
+    conf::init();
+
+    remove_output_file("output_args");
+    mock_bin("git", "bin_output_args_to_file");
+
+    let output = run(&["rsync", "--pull", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert_eq!(read_output_file("output_args").trim(), "pull");
+}
+
+/// `rsync` only accepts local roots. This checks that `--pull` reports a
+/// clear error for a remote URI instead of treating it as a local path.
+#[test]
+fn rsync_pull_rejects_remote_root() {
+    conf::init();
+
+    remove_output_file("output_args");
+
+    mock_bin("git", "bin_output_args_to_file");
+
+    let output = run(&["rsync", "--pull", "https://github.com/qrichert/configs"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(
+        output
+            .stderr
+            .contains("'--pull' only works with local config roots.")
+    );
+    assert!(!output_file_exists("output_args"));
 }
 
 #[test]

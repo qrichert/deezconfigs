@@ -21,15 +21,22 @@ use std::sync::{Arc, Mutex};
 
 use deezconfigs::{ui, walk};
 
-use super::common::{determine_config_root, get_home_directory, get_hooks_for_command, run_hooks};
+use super::common::{
+    get_home_directory, get_hooks_for_command, resolve_and_pull_config_root, resolve_config_root,
+    run_hooks,
+};
 
 /// Sync config from Home back into root.
 ///
 /// 1. Collect all files in `configs`.
 /// 2. Find matching files in `$HOME`.
 /// 3. Replace files in `configs` with files in `$HOME`.
-pub fn rsync(root: Option<&String>, verbose: bool) -> Result<(), i32> {
-    let root = determine_config_root(root, true)?;
+pub fn rsync(root: Option<&String>, verbose: bool, pull_before_command: bool) -> Result<(), i32> {
+    let root = if pull_before_command {
+        resolve_and_pull_config_root(root)?
+    } else {
+        resolve_config_root(root, true)?
+    };
     let home = get_home_directory()?;
     let hooks = get_hooks_for_command(&root, &home, verbose)?;
 

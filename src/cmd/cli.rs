@@ -30,7 +30,7 @@ pub enum Command {
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct Args {
     pub command: Option<Command>,
-    pub pull_before_sync: bool,
+    pub pull_before_command: bool,
     pub reversed_diff: bool,
     #[allow(clippy::struct_field_names)]
     pub run_args: Vec<String>,
@@ -52,12 +52,10 @@ impl Args {
             let some_command = args.command.is_some();
             let some_root = args.root.is_some();
 
-            let is_sync = args.command == Some(Command::Sync);
             let is_diff = args.command == Some(Command::Diff);
 
             match arg.as_ref() {
                 "sync" | "s" if !some_command => args.command = Some(Command::Sync),
-                "-p" | "--pull" if is_sync => args.pull_before_sync = true,
                 "rsync" | "rs" if !some_command => args.command = Some(Command::RSync),
                 "link" | "l" if !some_command => args.command = Some(Command::Link),
                 "status" | "st" if !some_command => args.command = Some(Command::Status),
@@ -74,6 +72,7 @@ impl Args {
                 "--help" => args.long_help = true,
                 "-V" | "--version" => args.version = true,
                 "-v" | "--verbose" => args.verbose = true,
+                "-p" | "--pull" => args.pull_before_command = true,
                 "--" if some_command && !some_root => {
                     args.root = cli_args.next().map(|root| root.to_string());
                 }
@@ -116,7 +115,51 @@ mod tests {
     fn command_sync_pull() {
         let args = Args::build_from_args(["sync", "--pull"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Sync));
-        assert!(args.pull_before_sync);
+        assert!(args.pull_before_command);
+    }
+
+    #[test]
+    fn option_pull_is_global_before_command() {
+        // `--pull` is a global flag; it works in any position, even
+        // before the command.
+        let args = Args::build_from_args(["--pull", "sync"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Sync));
+        assert!(args.pull_before_command);
+    }
+
+    #[test]
+    fn option_pull_shortcut() {
+        let args = Args::build_from_args(["-p", "sync"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Sync));
+        assert!(args.pull_before_command);
+    }
+
+    #[test]
+    fn option_pull_works_with_any_command() {
+        // No longer sync-gated.
+        let args = Args::build_from_args(["rsync", "--pull"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::RSync));
+        assert!(args.pull_before_command);
+    }
+
+    #[test]
+    fn option_pull_after_run_is_a_run_argument() {
+        // `run` drains all trailing arguments, so `--pull` goes to the
+        // child process; it is _not_ consumed as the global flag.
+        let args = Args::build_from_args(["run", "--pull"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Run));
+        assert!(!args.pull_before_command);
+        assert_eq!(args.run_args, ["--pull"]);
+    }
+
+    #[test]
+    fn option_pull_before_run_is_set_but_ignored_by_dispatch() {
+        // Parsed as the global flag (before `run` drains the rest), but
+        // `run` doesn't take `pull_before_command`, so dispatch ignores it.
+        let args = Args::build_from_args(["--pull", "run"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Run));
+        assert!(args.pull_before_command);
+        assert!(args.run_args.is_empty());
     }
 
     #[test]

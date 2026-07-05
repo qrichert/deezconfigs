@@ -46,12 +46,14 @@ fn main() {
         let verbose = args.verbose;
 
         if let Err(code) = match command {
-            cli::Command::Sync => cmd::sync(root, verbose, args.pull_before_sync),
-            cli::Command::RSync => cmd::rsync(root, verbose),
-            cli::Command::Link => cmd::link(root, verbose),
-            cli::Command::Status => cmd::status(root, verbose),
-            cli::Command::Diff => cmd::diff(root, verbose, args.reversed_diff),
-            cli::Command::Clean => cmd::clean(root, verbose),
+            cli::Command::Sync => cmd::sync(root, verbose, args.pull_before_command),
+            cli::Command::RSync => cmd::rsync(root, verbose, args.pull_before_command),
+            cli::Command::Link => cmd::link(root, verbose, args.pull_before_command),
+            cli::Command::Status => cmd::status(root, verbose, args.pull_before_command),
+            cli::Command::Diff => {
+                cmd::diff(root, verbose, args.pull_before_command, args.reversed_diff)
+            }
+            cli::Command::Clean => cmd::clean(root, verbose, args.pull_before_command),
             cli::Command::Run => cmd::run(&args.run_args, verbose),
             cli::Command::Nuts => {
                 println!("Ha! Got 'em!");
@@ -83,7 +85,6 @@ Usage: {bin} [<options>] <command> [<args>]
 
 Commands:
   sync [<root>|<git>]    Update Home from configs
-    -p, --pull
   rsync [<root>]         Update configs from Home
   link [<root>]          Symlink configs to Home
 
@@ -92,12 +93,14 @@ Commands:
     -r, --reversed
   clean [<root>|<git>]   Remove all configs from Home
 
-  run                    Run command inside Root
+  run                    Run command inside the Root
 
 Options:
+  -p, --pull             Git-pull the Root first
+  -v, --verbose          Show files being copied
+
   -h, --help             Show this message and exit
   -V, --version          Show the version and exit
-  -v, --verbose          Show files being copied
 ",
         description = env!("CARGO_PKG_DESCRIPTION"),
         bin = env!("CARGO_BIN_NAME"),
@@ -184,12 +187,6 @@ Sync:
 
       {attenuate}# Sync from remote.{rt}
       {highlight}${rt} {bin} sync https://github.com/qrichert/configs
-
-  If you're using Git, you can pull-and-sync in one shot with the
-  `--pull` flag:
-
-      {attenuate}# Run `git pull` in the config root, then sync.{rt}
-      {highlight}${rt} {bin} sync --pull
 
 rSync:
   Reverse-syncing is the complementary opposite of syncing: it updates
@@ -314,13 +311,21 @@ Git:
   In addition, `gh:` will be replaced with `git@github.com:`, (e.g.,
   `gh:qrichert/configs`).
 
-  You can also specify a sub-root:
+  Furthermore, you can specify a sub-root like this:
 
       {attenuate}# Sync sub-root.{rt}
       {highlight}${rt} {bin} sync gh:qrichert/configs[sub/directory]
 
   Instead of assuming the root to be at the repository root, this allows
   using a sub-direcory as the root.
+
+  If you're using Git, you can also pull and run commands in one shot
+  with the `--pull` flag:
+
+      {attenuate}# Run `git pull` in the config root, then sync.{rt}
+      {highlight}${rt} {bin} sync --pull
+
+  This flag only works with local roots; remote roots are always fresh.
 
 Hooks:
   {package} lets you run hooks before and after commands. Hooks are

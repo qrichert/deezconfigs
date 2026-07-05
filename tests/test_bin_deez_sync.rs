@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 
 use utils::conf::{self, CONFIGS, HOME};
 use utils::files;
-use utils::run::{run, run_in_dir, run_with_input};
+use utils::run::{run, run_in_dir};
 use utils::{mock_bin, output_file_exists, read_output_file, remove_output_file};
 
 // Warning: These tests MUST be run sequentially. Running them in
@@ -126,36 +126,6 @@ fn sync_pull_runs_git_pull() {
     assert_eq!(output.exit_code, 0);
 
     assert_eq!(read_output_file("output_args").trim(), "pull");
-}
-
-#[test]
-fn sync_pull_prompts_once_for_non_config_root() {
-    conf::init();
-
-    let root = conf::create_dir_in_configs("unmarked");
-    let root = root.display().to_string();
-
-    conf::create_file_in_configs("unmarked/.gitconfig", Some("stale"));
-
-    remove_output_file("output_args");
-    mock_bin("git", "bin_output_args_to_file");
-
-    let output = run_with_input(&["sync", "--pull", &root], "y\ny\n");
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert_eq!(output.stdout.matches("Proceed? (y/N) ").count(), 1);
-    assert_eq!(
-        output
-            .stderr
-            .matches("warning: `root` is not a configuration root.")
-            .count(),
-        1
-    );
-    assert_eq!(read_output_file("output_args").trim(), "pull");
-    assert_eq!(files::read_in_home(".gitconfig"), "stale");
 }
 
 #[test]

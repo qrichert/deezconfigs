@@ -23,7 +23,6 @@ Usage: deez [<options>] <command> [<args>]
 
 Commands:
   sync [<root>|<git>]    Update Home from configs
-    -p, --pull
   rsync [<root>]         Update configs from Home
   link [<root>]          Symlink configs to Home
 
@@ -32,12 +31,14 @@ Commands:
     -r, --reversed
   clean [<root>|<git>]   Remove all configs from Home
 
-  run                    Run command inside Root
+  run                    Run command inside the Root
 
 Options:
+  -p, --pull             Git-pull the Root first
+  -v, --verbose          Show files being copied
+
   -h, --help             Show this message and exit
   -V, --version          Show the version and exit
-  -v, --verbose          Show files being copied
 ```
 
 ### What does deezconfigs do?
@@ -124,14 +125,6 @@ $ deez --verbose sync ~/configs
 
 # Sync from remote.
 $ deez sync https://github.com/qrichert/configs
-```
-
-If you're using Git, you can pull-and-sync in one shot with the `--pull`
-flag:
-
-```console
-# Run `git pull` in the config root, then sync.
-$ deez sync --pull
 ```
 
 ### rSync
@@ -286,15 +279,25 @@ you can use to force a path to be considered a Git root.
 In addition, `gh:` will be replaced with `git@github.com:`, (e.g.,
 `gh:qrichert/configs`).
 
-You can also specify a sub-root:
+Furthermore, you can specify a sub-root like this:
 
 ```console
 # Sync sub-root.
-$ sync gh:qrichert/configs[sub/directory]
+$ deez sync gh:qrichert/configs[sub/directory]
 ```
 
 Instead of assuming the root to be at the repository root, this allows
 using a sub-direcory as the root.
+
+If you're using Git, you can also pull and run commands in one shot with
+the `--pull` flag:
+
+```console
+# Run `git pull` in the config root, then sync.
+$ deez sync --pull
+```
+
+This flag only works with local roots; remote roots are always fresh.
 
 ### Hooks
 
