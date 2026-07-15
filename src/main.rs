@@ -335,6 +335,15 @@ Hooks:
 
       (pre|post)-<command>[.extension]
 
+  Available hooks:
+
+      pre-sync    post-sync
+      pre-rsync   post-rsync
+      pre-link    post-link
+      pre-status  post-status
+      pre-diff    post-diff
+      pre-clean   post-clean
+
   A common example would be...
 
       post-sync.sh

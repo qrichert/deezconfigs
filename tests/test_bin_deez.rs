@@ -31,6 +31,17 @@ fn help() {
     assert!(output.stdout.contains("sync [<root>|<git>]"));
     assert!(output.stdout.contains("rsync [<root>]"));
     assert!(output.stdout.contains("link [<root>]"));
+    assert!(output.stdout.contains(
+        "\
+  Available hooks:
+
+      pre-sync    post-sync
+      pre-rsync   post-rsync
+      pre-link    post-link
+      pre-status  post-status
+      pre-diff    post-diff
+      pre-clean   post-clean"
+    ));
 }
 
 #[test]
