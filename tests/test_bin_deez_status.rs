@@ -16,10 +16,16 @@
 
 mod utils;
 
+#[path = "utils/hook_macros.rs"]
+mod hook_macros;
+
+// Generate shared hook tests for this command.
+hook_macros::hook_tests!(status);
+
 use std::env;
 use std::path::Path;
 
-use utils::conf::{self, CONFIGS, HOME};
+use utils::conf;
 use utils::run::{run, run_in_dir, run_with_input};
 use utils::{mock_bin, output_file_exists, read_output_file, remove_output_file};
 
@@ -306,127 +312,12 @@ fn status_uses_deez_root_variable_if_no_root_specified() {
 }
 
 #[test]
-fn status_hooks_are_executed() {
-    conf::init();
-
-    // (Add 'OK's to differentiate from verbose output).
-    conf::create_executable_file_in_configs("pre-status", Some("echo 'pre-status OK'"));
-    conf::create_executable_file_in_configs("pre-status.sh", Some("echo 'pre-status.sh OK'"));
-    conf::create_executable_file_in_configs("post-status.sh", Some("echo 'post-status.sh OK'"));
-
-    let output = run(&["--verbose", "status", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains("pre-status OK\n"));
-    assert!(output.stdout.contains("pre-status.sh OK\n"));
-    assert!(output.stdout.contains("post-status.sh OK\n"));
-
-    assert!(output.stdout.contains("Ran 3 hooks."));
-}
-
-#[test]
-fn status_hooks_are_executed_in_configs_dir() {
-    conf::init();
-
-    conf::create_executable_file_in_configs(
-        "post-status.sh",
-        Some(r#"echo "post-status.sh:$(pwd)""#),
-    );
-
-    let output = run(&["--verbose", "status", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(
-        output
-            .stdout
-            .contains(&format!("post-status.sh:{CONFIGS}\n"))
-    );
-}
-
-#[test]
-fn status_hooks_are_executed_in_order_of_file_name() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("post-status.sh", None);
-    conf::create_executable_file_in_configs("post-status.py", None);
-    conf::create_executable_file_in_configs("post-status.001.py", None);
-    conf::create_executable_file_in_configs("post-status.002.sh", None);
-
-    let output = run(&["--verbose", "status", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains(
-        "\
-hook: post-status.001.py
-hook: post-status.002.sh
-hook: post-status.py
-hook: post-status.sh
-"
-    ));
-}
-
-#[test]
-fn status_hooks_ignore_other_commands_hooks() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-sync.sh", None);
-    conf::create_executable_file_in_configs("post-sync.sh", None);
-    conf::create_executable_file_in_configs("pre-rsync.sh", None);
-    conf::create_executable_file_in_configs("post-rsync.sh", None);
-    conf::create_executable_file_in_configs("pre-link.sh", None);
-    conf::create_executable_file_in_configs("post-link.sh", None);
-    conf::create_executable_file_in_configs("pre-status.sh", None);
-    conf::create_executable_file_in_configs("post-status.sh", None);
-    conf::create_executable_file_in_configs("post-diff.sh", None);
-    conf::create_executable_file_in_configs("pre-diff.sh", None);
-    conf::create_executable_file_in_configs("pre-clean.sh", None);
-    conf::create_executable_file_in_configs("post-clean.sh", None);
-
-    let output = run(&["--verbose", "status", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(!output.stdout.contains("hook: pre-sync.sh"));
-    assert!(!output.stdout.contains("hook: post-sync.sh"));
-    assert!(!output.stdout.contains("hook: pre-rsync.sh"));
-    assert!(!output.stdout.contains("hook: post-rsync.sh"));
-    assert!(!output.stdout.contains("hook: pre-link.sh"));
-    assert!(!output.stdout.contains("hook: post-link.sh"));
-    assert!(output.stdout.contains("hook: pre-status.sh"));
-    assert!(output.stdout.contains("hook: post-status.sh"));
-    assert!(!output.stdout.contains("hook: pre-diff.sh"));
-    assert!(!output.stdout.contains("hook: post-diff.sh"));
-    assert!(!output.stdout.contains("hook: pre-clean.sh"));
-    assert!(!output.stdout.contains("hook: post-clean.sh"));
-}
-
-#[test]
 fn status_hooks_are_not_treated_as_config_files() {
     conf::init();
 
     conf::create_file_in_configs("foo", None);
 
-    conf::create_executable_file_in_configs("pre-sync.sh", None);
-    conf::create_executable_file_in_configs("post-sync.py", None);
-    conf::create_executable_file_in_configs("pre-rsync.sh", None);
-    conf::create_executable_file_in_configs("post-rsync.py", None);
-    conf::create_executable_file_in_configs("pre-link.sh", None);
-    conf::create_executable_file_in_configs("post-link.py", None);
-    conf::create_executable_file_in_configs("pre-status.sh", None);
-    conf::create_executable_file_in_configs("post-status.sh", None);
-    conf::create_executable_file_in_configs("pre-clean.sh", None);
-    conf::create_executable_file_in_configs("post-clean.sh", None);
+    utils::create_all_command_hooks(None);
 
     let output = run(&["--verbose", "status", &conf::root()]);
     dbg!(&output.stdout);
@@ -434,98 +325,8 @@ fn status_hooks_are_not_treated_as_config_files() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(output.stdout.contains(
-        "\
-Hooks
-  pre-sync.sh
-  post-sync.py
-  pre-rsync.sh
-  post-rsync.py
-  pre-link.sh
-  post-link.py
-  pre-status.sh
-  post-status.sh
-  pre-clean.sh
-  post-clean.sh
-"
-    ));
-}
-
-#[test]
-fn status_hooks_expose_root() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-status.sh", Some(r"echo root=$DEEZ_ROOT"));
-
-    let output = run(&["--verbose", "status", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains(&format!("\nroot={CONFIGS}\n")));
-}
-
-#[test]
-fn status_hooks_expose_home() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-status.sh", Some(r"echo home=$DEEZ_HOME"));
-
-    let output = run(&["--verbose", "status", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains(&format!("\nhome={HOME}\n")));
-}
-
-#[test]
-fn status_hooks_expose_verbose_mode() {
-    conf::init();
-
-    conf::create_executable_file_in_configs(
-        "pre-status.sh",
-        Some(r#"[ -n "$DEEZ_VERBOSE" ] && echo verbose=true || echo verbose=false"#),
-    );
-
-    // Normal run.
-    let output = run(&["status", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains("verbose=false"));
-
-    // Verbose run.
-    let output = run(&["--verbose", "status", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains("verbose=true"));
-}
-
-#[test]
-fn status_hooks_expose_os() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-status.sh", Some(r"echo os=$DEEZ_OS"));
-
-    let output = run(&["--verbose", "status", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(
-        output
-            .stdout
-            .contains(&format!("\nos={}\n", std::env::consts::OS))
-    );
+    // Hooks appear under the `Hooks` listing, not as config files.
+    utils::assert_hooks_section_listed(&output);
 }
 
 #[test]
@@ -540,12 +341,8 @@ fn status_hooks_abort_execution_if_exit_code_is_non_zero() {
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
-    assert_eq!(output.exit_code, 1);
+    utils::assert_aborted_by(&output, "pre-status.sh");
 
+    // The aborted `status` printed nothing about the configs.
     assert!(!output.stdout.contains(".gitconfig"));
-    assert!(
-        output
-            .stderr
-            .contains("abort: Execution aborted by 'pre-status.sh'.")
-    );
 }

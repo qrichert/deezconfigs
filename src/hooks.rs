@@ -424,3 +424,97 @@ impl<'a> Hooks<'a> {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::{Path, PathBuf};
+
+    fn empty_scripts() -> Scripts {
+        Scripts {
+            pre_sync: Vec::new(),
+            post_sync: Vec::new(),
+            pre_rsync: Vec::new(),
+            post_rsync: Vec::new(),
+            pre_link: Vec::new(),
+            post_link: Vec::new(),
+            pre_status: Vec::new(),
+            post_status: Vec::new(),
+            pre_diff: Vec::new(),
+            post_diff: Vec::new(),
+            pre_clean: Vec::new(),
+            post_clean: Vec::new(),
+        }
+    }
+
+    fn hooks_with(scripts: Scripts) -> Hooks<'static> {
+        Hooks {
+            root: Path::new("/root"),
+            home: Path::new("/home"),
+            is_verbose: false,
+            envs: HashMap::new(),
+            scripts,
+        }
+    }
+
+    #[test]
+    fn is_hook_detects_hooks_and_non_hooks() {
+        assert!(is_hook(Path::new("pre-sync.sh")));
+        assert!(is_hook(Path::new("post-clean")));
+        assert!(is_hook(Path::new("pre-diff.001.py")));
+
+        assert!(!is_hook(Path::new("regular.txt")));
+        assert!(!is_hook(Path::new(".gitconfig")));
+        // A path with no file prefix falls through to `false`.
+        assert!(!is_hook(Path::new("")));
+    }
+
+    #[test]
+    fn hooks_are_sorted_by_file_name() {
+        let mut scripts = empty_scripts();
+        // Deliberately out of order.
+        scripts.pre_sync = vec![
+            PathBuf::from("pre-sync.sh"),
+            PathBuf::from("pre-sync.002.sh"),
+            PathBuf::from("pre-sync.py"),
+            PathBuf::from("pre-sync.001.py"),
+        ];
+
+        let mut hooks = hooks_with(scripts);
+        Hooks::sort_hooks_scripts_by_file_name(&mut hooks);
+
+        assert_eq!(
+            hooks.scripts.pre_sync,
+            vec![
+                PathBuf::from("pre-sync.001.py"),
+                PathBuf::from("pre-sync.002.sh"),
+                PathBuf::from("pre-sync.py"),
+                PathBuf::from("pre-sync.sh"),
+            ]
+        );
+    }
+
+    #[test]
+    fn list_groups_hooks_in_execution_order() {
+        // Populate a few non-adjacent groups to prove ordering follows
+        // the `HOOKS` grouping, not insertion order.
+        let mut scripts = empty_scripts();
+        scripts.post_clean = vec![PathBuf::from("post-clean.sh")];
+        scripts.pre_sync = vec![PathBuf::from("pre-sync.sh")];
+        scripts.post_sync = vec![PathBuf::from("post-sync.sh")];
+        scripts.pre_clean = vec![PathBuf::from("pre-clean.sh")];
+
+        let hooks = hooks_with(scripts);
+        let list: Vec<String> = hooks.list().iter().map(ToString::to_string).collect();
+
+        assert_eq!(
+            list,
+            vec![
+                "pre-sync.sh".to_string(),
+                "post-sync.sh".to_string(),
+                "pre-clean.sh".to_string(),
+                "post-clean.sh".to_string(),
+            ]
+        );
+    }
+}

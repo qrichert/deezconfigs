@@ -18,10 +18,16 @@
 
 mod utils;
 
+#[path = "utils/hook_macros.rs"]
+mod hook_macros;
+
+// Generate shared hook tests for this command.
+hook_macros::hook_tests!(rsync);
+
 use std::env;
 use std::path::Path;
 
-use utils::conf::{self, CONFIGS, HOME};
+use utils::conf;
 use utils::files;
 use utils::run::{run, run_in_dir};
 use utils::{mock_bin, output_file_exists, read_output_file, remove_output_file};
@@ -374,138 +380,14 @@ fn rsync_uses_deez_root_variable_if_no_root_specified() {
 }
 
 #[test]
-fn rsync_hooks_are_executed() {
-    conf::init();
-
-    // (Add 'OK's to differentiate from verbose output).
-    conf::create_executable_file_in_configs("pre-rsync", Some("echo 'pre-rsync OK'"));
-    conf::create_executable_file_in_configs("pre-rsync.sh", Some("echo 'pre-rsync.sh OK'"));
-    conf::create_executable_file_in_configs("post-rsync.sh", Some("echo 'post-rsync.sh OK'"));
-
-    let output = run(&["--verbose", "rsync", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains("pre-rsync OK\n"));
-    assert!(output.stdout.contains("pre-rsync.sh OK\n"));
-    assert!(output.stdout.contains("post-rsync.sh OK\n"));
-
-    assert!(output.stdout.contains("Ran 3 hooks."));
-}
-
-#[test]
-fn rsync_hooks_are_executed_in_configs_dir() {
-    conf::init();
-
-    conf::create_executable_file_in_configs(
-        "post-rsync.sh",
-        Some(r#"echo "post-rsync.sh:$(pwd)""#),
-    );
-
-    let output = run(&["--verbose", "rsync", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(
-        output
-            .stdout
-            .contains(&format!("post-rsync.sh:{CONFIGS}\n"))
-    );
-}
-
-#[test]
-fn rsync_hooks_are_executed_in_order_of_file_name() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("post-rsync.sh", None);
-    conf::create_executable_file_in_configs("post-rsync.py", None);
-    conf::create_executable_file_in_configs("post-rsync.001.py", None);
-    conf::create_executable_file_in_configs("post-rsync.002.sh", None);
-
-    let output = run(&["--verbose", "rsync", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains(
-        "\
-hook: post-rsync.001.py
-hook: post-rsync.002.sh
-hook: post-rsync.py
-hook: post-rsync.sh
-"
-    ));
-}
-
-#[test]
-fn rsync_hooks_ignore_other_commands_hooks() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-sync.sh", None);
-    conf::create_executable_file_in_configs("post-sync.sh", None);
-    conf::create_executable_file_in_configs("pre-rsync.sh", None);
-    conf::create_executable_file_in_configs("post-rsync.sh", None);
-    conf::create_executable_file_in_configs("pre-link.sh", None);
-    conf::create_executable_file_in_configs("post-link.sh", None);
-    conf::create_executable_file_in_configs("pre-status.sh", None);
-    conf::create_executable_file_in_configs("post-status.sh", None);
-    conf::create_executable_file_in_configs("post-diff.sh", None);
-    conf::create_executable_file_in_configs("pre-diff.sh", None);
-    conf::create_executable_file_in_configs("pre-clean.sh", None);
-    conf::create_executable_file_in_configs("post-clean.sh", None);
-
-    let output = run(&["--verbose", "rsync", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(!output.stdout.contains("hook: pre-sync.sh"));
-    assert!(!output.stdout.contains("hook: post-sync.sh"));
-    assert!(output.stdout.contains("hook: pre-rsync.sh"));
-    assert!(output.stdout.contains("hook: post-rsync.sh"));
-    assert!(!output.stdout.contains("hook: pre-link.sh"));
-    assert!(!output.stdout.contains("hook: post-link.sh"));
-    assert!(!output.stdout.contains("hook: pre-status.sh"));
-    assert!(!output.stdout.contains("hook: post-status.sh"));
-    assert!(!output.stdout.contains("hook: pre-diff.sh"));
-    assert!(!output.stdout.contains("hook: post-diff.sh"));
-    assert!(!output.stdout.contains("hook: pre-clean.sh"));
-    assert!(!output.stdout.contains("hook: post-clean.sh"));
-}
-
-#[test]
 fn rsync_hooks_are_not_treated_as_config_files() {
     conf::init();
 
     conf::create_file_in_configs("foo", None);
 
-    let a = conf::create_executable_file_in_configs("pre-sync.sh", Some("# old"));
-    let b = conf::create_executable_file_in_configs("post-sync.py", Some("# old"));
-    let c = conf::create_executable_file_in_configs("pre-rsync.sh", Some("# old"));
-    let d = conf::create_executable_file_in_configs("post-rsync.sh", Some("# old"));
-    let e = conf::create_executable_file_in_configs("pre-link.sh", Some("# old"));
-    let f = conf::create_executable_file_in_configs("post-link.py", Some("# old"));
-    let g = conf::create_executable_file_in_configs("pre-status.sh", Some("# old"));
-    let h = conf::create_executable_file_in_configs("post-status.py", Some("# old"));
-    let i = conf::create_executable_file_in_configs("pre-clean.sh", Some("# old"));
-    let j = conf::create_executable_file_in_configs("post-clean.sh", Some("# old"));
-
-    conf::create_file_in_home("pre-sync.sh", Some("new"));
-    conf::create_file_in_home("post-sync.py", Some("new"));
-    conf::create_file_in_home("pre-rsync.sh", Some("new"));
-    conf::create_file_in_home("post-rsync.py", Some("new"));
-    conf::create_file_in_home("pre-link.sh", Some("new"));
-    conf::create_file_in_home("post-link.py", Some("new"));
-    conf::create_file_in_home("pre-status.sh", Some("new"));
-    conf::create_file_in_home("post-satus.py", Some("new"));
-    conf::create_file_in_home("pre-clean.sh", Some("new"));
-    conf::create_file_in_home("post-clean.py", Some("new"));
+    // Config-side hooks, and stale same-named files in the home.
+    utils::create_all_command_hooks(Some("# old"));
+    utils::create_all_command_hooks_in_home(Some("new"));
 
     let output = run(&["--verbose", "rsync", &conf::root()]);
     dbg!(&output.stdout);
@@ -513,93 +395,8 @@ fn rsync_hooks_are_not_treated_as_config_files() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert_eq!(files::read(&a), "# old");
-    assert_eq!(files::read(&b), "# old");
-    assert_eq!(files::read(&c), "# old");
-    assert_eq!(files::read(&d), "# old");
-    assert_eq!(files::read(&e), "# old");
-    assert_eq!(files::read(&f), "# old");
-    assert_eq!(files::read(&g), "# old");
-    assert_eq!(files::read(&h), "# old");
-    assert_eq!(files::read(&i), "# old");
-    assert_eq!(files::read(&j), "# old");
-}
-
-#[test]
-fn rsync_hooks_expose_root() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-rsync.sh", Some(r"echo root=$DEEZ_ROOT"));
-
-    let output = run(&["--verbose", "rsync", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains(&format!("\nroot={CONFIGS}\n")));
-}
-
-#[test]
-fn rsync_hooks_expose_home() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-rsync.sh", Some(r"echo home=$DEEZ_HOME"));
-
-    let output = run(&["--verbose", "rsync", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains(&format!("\nhome={HOME}\n")));
-}
-
-#[test]
-fn rsync_hooks_expose_verbose_mode() {
-    conf::init();
-
-    conf::create_executable_file_in_configs(
-        "pre-rsync.sh",
-        Some(r#"[ -n "$DEEZ_VERBOSE" ] && echo verbose=true || echo verbose=false"#),
-    );
-
-    // Normal run.
-    let output = run(&["rsync", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains("verbose=false"));
-
-    // Verbose run.
-    let output = run(&["--verbose", "rsync", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains("verbose=true"));
-}
-
-#[test]
-fn rsync_hooks_expose_os() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-rsync.sh", Some(r"echo os=$DEEZ_OS"));
-
-    let output = run(&["--verbose", "rsync", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(
-        output
-            .stdout
-            .contains(&format!("\nos={}\n", std::env::consts::OS))
-    );
+    // `rsync` must not pull the home versions over the config hooks.
+    utils::assert_config_hooks_unchanged("# old");
 }
 
 #[test]
@@ -650,13 +447,8 @@ fn rsync_hooks_abort_execution_if_exit_code_is_non_zero() {
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
-    assert_eq!(output.exit_code, 1);
+    utils::assert_aborted_by(&output, "pre-rsync.sh");
 
-    // Not updated.
+    // The aborted `rsync` did not pull the home version into configs.
     assert_eq!(files::read_in_configs(".gitconfig"), "old");
-    assert!(
-        output
-            .stderr
-            .contains("abort: Execution aborted by 'pre-rsync.sh'.")
-    );
 }

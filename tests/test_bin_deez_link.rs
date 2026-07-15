@@ -16,10 +16,16 @@
 
 mod utils;
 
+#[path = "utils/hook_macros.rs"]
+mod hook_macros;
+
+// Generate shared hook tests for this command.
+hook_macros::hook_tests!(link);
+
 use std::env;
 use std::path::Path;
 
-use utils::conf::{self, CONFIGS, HOME};
+use utils::conf;
 use utils::files;
 use utils::run::{run, run_in_dir};
 use utils::{mock_bin, output_file_exists, read_output_file, remove_output_file};
@@ -347,120 +353,12 @@ fn link_uses_deez_root_variable_if_no_root_specified() {
 }
 
 #[test]
-fn link_hooks_are_executed() {
-    conf::init();
-
-    // (Add 'OK's to differentiate from verbose output).
-    conf::create_executable_file_in_configs("pre-link", Some("echo 'pre-link OK'"));
-    conf::create_executable_file_in_configs("pre-link.sh", Some("echo 'pre-link.sh OK'"));
-    conf::create_executable_file_in_configs("post-link.sh", Some("echo 'post-link.sh OK'"));
-
-    let output = run(&["--verbose", "link", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains("pre-link OK\n"));
-    assert!(output.stdout.contains("pre-link.sh OK\n"));
-    assert!(output.stdout.contains("post-link.sh OK\n"));
-
-    assert!(output.stdout.contains("Ran 3 hooks."));
-}
-
-#[test]
-fn link_hooks_are_executed_in_configs_dir() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("post-link.sh", Some(r#"echo "post-link.sh:$(pwd)""#));
-
-    let output = run(&["--verbose", "link", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains(&format!("post-link.sh:{CONFIGS}\n")));
-}
-
-#[test]
-fn link_hooks_are_executed_in_order_of_file_name() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("post-link.sh", None);
-    conf::create_executable_file_in_configs("post-link.py", None);
-    conf::create_executable_file_in_configs("post-link.001.py", None);
-    conf::create_executable_file_in_configs("post-link.002.sh", None);
-
-    let output = run(&["--verbose", "link", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains(
-        "\
-hook: post-link.001.py
-hook: post-link.002.sh
-hook: post-link.py
-hook: post-link.sh
-"
-    ));
-}
-
-#[test]
-fn link_hooks_ignore_other_commands_hooks() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-sync.sh", None);
-    conf::create_executable_file_in_configs("post-sync.sh", None);
-    conf::create_executable_file_in_configs("pre-rsync.sh", None);
-    conf::create_executable_file_in_configs("post-rsync.sh", None);
-    conf::create_executable_file_in_configs("pre-link.sh", None);
-    conf::create_executable_file_in_configs("post-link.sh", None);
-    conf::create_executable_file_in_configs("pre-status.sh", None);
-    conf::create_executable_file_in_configs("post-status.sh", None);
-    conf::create_executable_file_in_configs("post-diff.sh", None);
-    conf::create_executable_file_in_configs("pre-diff.sh", None);
-    conf::create_executable_file_in_configs("pre-clean.sh", None);
-    conf::create_executable_file_in_configs("post-clean.sh", None);
-
-    let output = run(&["--verbose", "link", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(!output.stdout.contains("hook: pre-sync.sh"));
-    assert!(!output.stdout.contains("hook: post-sync.sh"));
-    assert!(!output.stdout.contains("hook: pre-rsync.sh"));
-    assert!(!output.stdout.contains("hook: post-rsync.sh"));
-    assert!(output.stdout.contains("hook: pre-link.sh"));
-    assert!(output.stdout.contains("hook: post-link.sh"));
-    assert!(!output.stdout.contains("hook: pre-status.sh"));
-    assert!(!output.stdout.contains("hook: post-status.sh"));
-    assert!(!output.stdout.contains("hook: pre-diff.sh"));
-    assert!(!output.stdout.contains("hook: post-diff.sh"));
-    assert!(!output.stdout.contains("hook: pre-clean.sh"));
-    assert!(!output.stdout.contains("hook: post-clean.sh"));
-}
-
-#[test]
 fn link_hooks_are_not_treated_as_config_files() {
     conf::init();
 
     conf::create_file_in_configs("foo", None);
 
-    conf::create_executable_file_in_configs("pre-sync.sh", None);
-    conf::create_executable_file_in_configs("post-sync.py", None);
-    conf::create_executable_file_in_configs("pre-rsync.sh", None);
-    conf::create_executable_file_in_configs("post-rsync.py", None);
-    conf::create_executable_file_in_configs("pre-link.sh", None);
-    conf::create_executable_file_in_configs("post-link.py", None);
-    conf::create_executable_file_in_configs("pre-status.sh", None);
-    conf::create_executable_file_in_configs("post-status.sh", None);
-    conf::create_executable_file_in_configs("pre-clean.sh", None);
-    conf::create_executable_file_in_configs("post-clean.sh", None);
+    utils::create_all_command_hooks(None);
 
     let output = run(&["--verbose", "link", &conf::root()]);
     dbg!(&output.stdout);
@@ -468,93 +366,8 @@ fn link_hooks_are_not_treated_as_config_files() {
 
     assert_eq!(output.exit_code, 0);
 
-    assert!(!files::file_exists_in_home("pre-sync.sh"));
-    assert!(!files::file_exists_in_home("post-sync.py"));
-    assert!(!files::file_exists_in_home("pre-rsync.sh"));
-    assert!(!files::file_exists_in_home("post-rsync.py"));
-    assert!(!files::file_exists_in_home("pre-link.sh"));
-    assert!(!files::file_exists_in_home("post-link.py"));
-    assert!(!files::file_exists_in_home("pre-status.sh"));
-    assert!(!files::file_exists_in_home("post-status.py"));
-    assert!(!files::file_exists_in_home("pre-clean.sh"));
-    assert!(!files::file_exists_in_home("post-clean.sh"));
-}
-
-#[test]
-fn link_hooks_expose_root() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-link.sh", Some(r"echo root=$DEEZ_ROOT"));
-
-    let output = run(&["--verbose", "link", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains(&format!("\nroot={CONFIGS}\n")));
-}
-
-#[test]
-fn link_hooks_expose_home() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-link.sh", Some(r"echo home=$DEEZ_HOME"));
-
-    let output = run(&["--verbose", "link", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains(&format!("\nhome={HOME}\n")));
-}
-
-#[test]
-fn link_hooks_expose_verbose_mode() {
-    conf::init();
-
-    conf::create_executable_file_in_configs(
-        "pre-link.sh",
-        Some(r#"[ -n "$DEEZ_VERBOSE" ] && echo verbose=true || echo verbose=false"#),
-    );
-
-    // Normal run.
-    let output = run(&["link", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains("verbose=false"));
-
-    // Verbose run.
-    let output = run(&["--verbose", "link", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(output.stdout.contains("verbose=true"));
-}
-
-#[test]
-fn link_hooks_expose_os() {
-    conf::init();
-
-    conf::create_executable_file_in_configs("pre-link.sh", Some(r"echo os=$DEEZ_OS"));
-
-    let output = run(&["--verbose", "link", &conf::root()]);
-    dbg!(&output.stdout);
-    dbg!(&output.stderr);
-
-    assert_eq!(output.exit_code, 0);
-
-    assert!(
-        output
-            .stdout
-            .contains(&format!("\nos={}\n", std::env::consts::OS))
-    );
+    // Hooks are never linked into the home.
+    utils::assert_no_command_hooks_in_home();
 }
 
 #[test]
@@ -596,12 +409,8 @@ fn link_hooks_abort_execution_if_exit_code_is_non_zero() {
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
-    assert_eq!(output.exit_code, 1);
+    utils::assert_aborted_by(&output, "pre-link.sh");
 
+    // The aborted `link` did not symlink anything into the home.
     assert!(!files::symlink_exists_in_home(".gitconfig"));
-    assert!(
-        output
-            .stderr
-            .contains("abort: Execution aborted by 'pre-link.sh'.")
-    );
 }
