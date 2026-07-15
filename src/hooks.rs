@@ -38,7 +38,7 @@ const HOOKS: [&str; 12] = [
 ];
 
 pub fn is_hook(path: &Path) -> bool {
-    if let Some(file_prefix) = crate::utils::file_prefix(path) {
+    if let Some(file_prefix) = path.file_prefix() {
         return HOOKS.map(OsStr::new).contains(&file_prefix);
     }
     false
@@ -129,7 +129,7 @@ impl<'a> Hooks<'a> {
                 unreachable!("we are inside `root`");
             };
 
-            let Some(file_prefix) = crate::utils::file_prefix(entry) else {
+            let Some(file_prefix) = entry.file_prefix() else {
                 continue;
             };
 
