@@ -117,6 +117,30 @@ boz.txt
 }
 
 #[test]
+fn diff_detects_missing_trailing_newline() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("same content"));
+    conf::create_file_in_home("foo.txt", Some("same content\n"));
+
+    let output = run(&["diff", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert_eq!(
+        output.stdout,
+        "\
+foo.txt
+@@ -1,1 +1,1 @@
+-same content
++same content
+"
+    );
+}
+
+#[test]
 fn diff_pull_runs_git_pull() {
     conf::init();
 

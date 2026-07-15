@@ -164,8 +164,7 @@ pub fn diff(
 }
 
 fn diff_files(before: &Path, after: &Path) -> Result<Option<String>, std::io::Error> {
-    use imara_diff::intern::InternedInput;
-    use imara_diff::{Algorithm, UnifiedDiffBuilder, diff};
+    use imara_diff::{Algorithm, BasicLineDiffPrinter, Diff, InternedInput, UnifiedDiffConfig};
 
     thread_local! {
         static BUFFERS: RefCell<(String, String)> = RefCell::new(
@@ -179,15 +178,20 @@ fn diff_files(before: &Path, after: &Path) -> Result<Option<String>, std::io::Er
         utils::read_to_string_buffer(after_buf, after)?;
 
         let input = InternedInput::new(before_buf.as_str(), after_buf.as_str());
-        let diff = diff(
-            Algorithm::Histogram,
-            &input,
-            UnifiedDiffBuilder::new(&input),
-        );
+        let mut diff = Diff::compute(Algorithm::Histogram, &input);
+        diff.postprocess_lines(&input);
 
-        if diff.is_empty() {
+        if diff.hunks().next().is_none() {
             return Ok(None);
         }
+
+        let diff = diff
+            .unified_diff(
+                &BasicLineDiffPrinter(&input.interner),
+                UnifiedDiffConfig::default(),
+                &input,
+            )
+            .to_string();
 
         Ok(Some(diff))
     })
