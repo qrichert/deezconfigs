@@ -264,6 +264,12 @@ Run:
       {highlight}${rt} deez run pwd
       /home/deez/root
 
+      {attenuate}# Run your editor inside the root.{rt}
+      {highlight}${rt} deez run $EDITOR
+
+      {attenuate}# Start an interactive shell inside the root.{rt}
+      {highlight}${rt} deez run $SHELL
+
       {attenuate}# A common combination would be:{rt}
       {highlight}${rt} deez run git pull
       {highlight}${rt} deez sync
