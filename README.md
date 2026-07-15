@@ -48,7 +48,7 @@ directory (i.e., the config root), inside the Home. The main purpose of
 this is to keep all the config files in one place, making it easy to
 version them.
 
-deezconfigs is very un-opinionated by default. It tries to do its job
+deezconfigs is very unopinionated by default. It tries to do its job
 well (syncing config files), while avoiding doing what other tools do
 better. For instance, there is no automatic versioning, no embedded text
 editor, and no templating. You absolutely _can_ do all of the above, but
@@ -60,7 +60,7 @@ tools. All the extensibility power lies in hooks (read further below).
 deezconfigs supports two configuration models: copying and linking. Both
 models come with different trade-offs. For instance, linking ensures
 files are always up-to-date, but on the flip-side, you can't really have
-machine specific configuration. On the other hand, copied files need to
+machine-specific configuration. On the other hand, copied files need to
 be kept up-to-date manually by `sync`ing or `rsync`ing all changes. But,
 having separate copies makes it easier to keep configuration generic in
 the root, and specific in the Home.
@@ -70,12 +70,12 @@ the root, and specific in the Home.
 As mentioned before, the config root is any directory whose structure
 you want to replicate in the Home directory.
 
-deezconfigs will use the root you provide as argument on the CLI, or
+deezconfigs will use the root you provide as an argument on the CLI, or
 default to the current working directory.
 
 You _should_, but are not required to, create a `.deez` file in the
 root. This lets deezconfigs know that it is safe to use. If deezconfigs
-doesn't find a `.deez` file, it will ask you confirmation before
+doesn't find a `.deez` file, it will ask for confirmation before
 modifying your file system. This is a security feature to prevent you
 from accidentally messing up your Home if you run `deez` from the wrong
 directory.
@@ -129,8 +129,8 @@ $ deez sync https://github.com/qrichert/configs
 
 ### rSync
 
-Reverse-syncing is the complementary opposite of syncing: it updates
-your config files in the root with the current content from Home.
+Reverse-syncing reverses the direction of syncing: it updates your
+config files in the root with the current content from Home.
 
 ```console
 # 1. Sync your config file to your Home.
@@ -171,7 +171,7 @@ M  Modified
 
 Diffing prints the line-diff between your config root and your Home.
 This shows you exactly what has changed and where. There is no merge
-feature however, as merging is best done by your VCS.
+feature, however, as merging is best done by your VCS.
 
 By default, `diff` uses the config root as the _before_, and the Home as
 the _after_. This assumes you make changes in the Home directly, and
@@ -183,7 +183,7 @@ back.
 $ deez diff
 ```
 
-If you make changes inside the config root however, it is more natural
+If you make changes inside the config root, however, it is more natural
 to use the Home as the _before_, and the root as the _after_. In other
 words, you want to see what would change in your Home if you `sync`ed
 the updates to it.
@@ -276,7 +276,7 @@ deezconfigs considers a Git root any root starting with either `git:`,
 `ssh://`, `git@`, `https://`, or `http://`. `git:` is a special label
 you can use to force a path to be considered a Git root.
 
-In addition, `gh:` will be replaced with `git@github.com:`, (e.g.,
+In addition, `gh:` will be replaced with `git@github.com:` (e.g.,
 `gh:qrichert/configs`).
 
 Furthermore, you can specify a sub-root like this:
@@ -287,17 +287,18 @@ $ deez sync gh:qrichert/configs[sub/directory]
 ```
 
 Instead of assuming the root to be at the repository root, this allows
-using a sub-direcory as the root.
+using a sub-directory as the root.
 
-If you're using Git, you can also pull and run commands in one shot with
-the `--pull` flag:
+If you're using Git, you can also pull and run a command in one shot
+with the `--pull` flag:
 
 ```console
 # Run `git pull` in the config root, then sync.
 $ deez sync --pull
 ```
 
-This flag only works with local roots; remote roots are always fresh.
+This flag only works with local roots; remote roots are always freshly
+cloned.
 
 ### Hooks
 
@@ -360,7 +361,7 @@ life easier:
 - `DEEZ_VERBOSE` Will be `true` if run in verbose mode, otherwise it
   will be unset (hint: use `[[ -n $DEEZ_VERBOSE ]]` to test for
   existence).
-- `DEEZ_OS` Contains the name of the current operating system (e.g,
+- `DEEZ_OS` Contains the name of the current operating system (e.g.,
   `linux`, `macos`, `windows`, etc.). The name is a re-export of Rust's
   [`std::consts::OS`].
 
@@ -369,9 +370,9 @@ life easier:
 
 ### Templating
 
-There is no built-in templating in deezconfigs, but you can implement
-simple to very tailored templating with hooks. From simple `sed`
-commands, to something way more advanced like Jinja2 in Python.
+There is no built-in templating in deezconfigs, but hooks let you
+implement anything from simple `sed` commands to more advanced
+templating with Jinja2 in Python.
 
 ### Copy some files, and link others
 
