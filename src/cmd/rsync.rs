@@ -26,7 +26,7 @@ use super::common::{
     run_hooks,
 };
 
-/// Sync config from Home back into root.
+/// Sync config from home back into root.
 ///
 /// 1. Collect all files in `configs`.
 /// 2. Find matching files in `$HOME`.
@@ -75,7 +75,7 @@ pub fn rsync(root: Option<&String>, verbose: bool, pull_before_command: bool) ->
         {
             // No-op: The config file is `link`ed, and so is up-to-date.
             //
-            // If a symlink in Home links to a file in configs, copying
+            // If a symlink in home links to a file in configs, copying
             // it back to configs (i.e, `cp B A` where `B@ -> A`) would
             // (likely) truncate the file. This behaviour is documented
             // in `std::fs::copy()` (Rust 1.86) and observed at least on
@@ -89,7 +89,7 @@ pub fn rsync(root: Option<&String>, verbose: bool, pull_before_command: bool) ->
             if let Err(err) = fs::copy(destination, source) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error}: Could not copy '{}' from Home: {err}",
+                    "{error}: Could not copy '{}' from home: {err}",
                     p.display(),
                     error = ui::Color::error("error"),
                 );
@@ -140,7 +140,7 @@ pub fn rsync(root: Option<&String>, verbose: bool, pull_before_command: bool) ->
     if nb_errors > 0 { Err(1) } else { Ok(()) }
 }
 
-/// Determine if symlink in Home points to file in Configs.
+/// Determine if symlink in home points to file in Configs.
 ///
 /// I.e., check if a config file is `link`ed, and not `sync`ed.
 fn does_symlink_point_to_file(home: &Path, symlink: &Path, file: &Path) -> Result<bool, String> {
@@ -149,8 +149,8 @@ fn does_symlink_point_to_file(home: &Path, symlink: &Path, file: &Path) -> Resul
             if target.is_relative() {
                 // If the symlink contains a _relative_ path to the
                 // target, we make it "canonicalizable" by making it
-                // absolute. Since the link lives in Home, we know the
-                // path it contains is relative to Home.
+                // absolute. Since the link lives in home, we know the
+                // path it contains is relative to home.
                 home.join(target)
             } else {
                 target

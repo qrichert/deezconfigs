@@ -84,19 +84,19 @@ fn short_help_message() -> String {
 Usage: {bin} [<options>] <command> [<args>]
 
 Commands:
-  sync [<root>|<git>]    Update Home from configs
-  rsync [<root>]         Update configs from Home
-  link [<root>]          Symlink configs to Home
+  sync [<root>|<git>]    Update home from configs
+  rsync [<root>]         Update configs from home
+  link [<root>]          Symlink configs to home
 
   status [<root>|<git>]  List files and their status
   diff [<root>|<git>]    Show what has changed
     -r, --reversed
-  clean [<root>|<git>]   Remove all configs from Home
+  clean [<root>|<git>]   Remove all configs from home
 
-  run                    Run command inside the Root
+  run                    Run command inside the root
 
 Options:
-  -p, --pull             Git-pull the Root first
+  -p, --pull             Git-pull the root first
   -v, --verbose          Show files being copied
 
   -h, --help             Show this message and exit
@@ -114,7 +114,7 @@ fn long_help() {
 {help}
 What does {package} do?
   The core of {package} is to replicate the file structure of a given
-  directory (i.e., the config root), inside the Home. The main purpose
+  directory (i.e., the config root), inside the home. The main purpose
   of this is to keep all the config files in one place, making it easy
   to version them.
 
@@ -133,11 +133,11 @@ Copying vs. Linking:
   really have machine-specific configuration. On the other hand, copied
   files need to be kept up-to-date manually by `sync`ing or `rsync`ing
   all changes. But, having separate copies makes it easier to keep
-  configuration generic in the root, and specific in the Home.
+  configuration generic in the root, and specific in the home.
 
 The Config Root:
   As mentioned before, the config root is any directory whose structure
-  you want to replicate in the Home directory.
+  you want to replicate in the home directory.
 
   {package} will use the root you provide as an argument on the CLI, or
   default to the current working directory.
@@ -146,7 +146,7 @@ The Config Root:
   the root. This lets {package} know that it is safe to use. If
   {package} doesn't find a `.deez` file, it will ask for confirmation
   before modifying your file system. This is a security feature to
-  prevent you from accidentally messing up your Home if you run `{bin}`
+  prevent you from accidentally messing up your home if you run `{bin}`
   from the wrong directory.
 
   Another advantage of creating a proper root is that it lets you run
@@ -170,14 +170,14 @@ Home:
   On Unix, this is read from the `HOME` environment variable, and on
   Windows from `USERPROFILE`.
 
-  Using a different Home is not natively supported by an argument, but
+  Using a different home is not natively supported by an argument, but
   you can override the environment variable to achieve what you want.
 
       {highlight}${rt} HOME=/home/other {bin} sync
 
 Sync:
   Syncing in {package} replicates the file structure from the config
-  root inside the Home directory (minus ignored files).
+  root inside the home directory (minus ignored files).
 
       {attenuate}# Sync current config root.{rt}
       {highlight}${rt} {bin} sync
@@ -190,9 +190,9 @@ Sync:
 
 rSync:
   Reverse-syncing reverses the direction of syncing: it updates your
-  config files in the root with the current content from Home.
+  config files in the root with the current content from home.
 
-      {attenuate}# 1. Sync your config file to your Home.{rt}
+      {attenuate}# 1. Sync your config file to your home.{rt}
       {highlight}${rt} {bin} sync
 
       {attenuate}# 2. Make some changes.{rt}
@@ -203,7 +203,7 @@ rSync:
 
 Link:
   Linking is the same as syncing, but it creates symbolic links in the
-  Home instead of copying files. Linking has no `rsync` equivalent
+  home instead of copying files. Linking has no `rsync` equivalent
   because linked files are always up-to-date.
 
       {attenuate}# Symlink current config root.{rt}
@@ -220,32 +220,32 @@ Status:
       {missing}  Missing
 
 Diff:
-  Diffing prints the line-diff between your config root and your Home.
+  Diffing prints the line-diff between your config root and your home.
   This shows you exactly what has changed and where. There is no merge
   feature, however, as merging is best done by your VCS.
 
   By default, `diff` uses the config root as the {i}before{rt}, and the
-  Home as the {i}after{rt}. This assumes you make changes in the Home
+  home as the {i}after{rt}. This assumes you make changes in the home
   directly, and want to see what would change in your root if you
   `rsync`ed the updates back.
 
-      {attenuate}# Compare the config root (old) to the Home (new).{rt}
+      {attenuate}# Compare the config root (old) to the home (new).{rt}
       {highlight}${rt} {bin} diff
 
   If you make changes inside the config root, however, it is more
-  natural to use the Home as the {i}before{rt}, and the root as the
+  natural to use the home as the {i}before{rt}, and the root as the
   {i}after{rt}. In other words, you want to see what would change in
-  your Home if you `sync`ed the updates to it.
+  your home if you `sync`ed the updates to it.
 
   To do this, use the `--reversed` flag:
 
-      {attenuate}# Compare the Home (old) to the config root (new).{rt}
+      {attenuate}# Compare the home (old) to the config root (new).{rt}
       {highlight}${rt} {bin} diff -r
 
 Clean:
-  Cleaning is removing all the files and symlinks from the Home.
+  Cleaning is removing all the files and symlinks from the home.
 
-      {attenuate}# 1. Link your files to your Home.{rt}
+      {attenuate}# 1. Link your files to your home.{rt}
       {highlight}${rt} {bin} link
 
       {attenuate}# 2. Now remove all the links you've just created.{rt}
@@ -300,7 +300,7 @@ Git:
       {highlight}${rt} {bin} sync https://github.com/qrichert/configs
 
   This will clone the repository to a temporary directory behind the
-  scenes, and update your Home with its contents. This is useful in
+  scenes, and update your home with its contents. This is useful in
   places where you don't want to maintain a proper clone, and always
   just want to get the latest version.
 
@@ -373,9 +373,9 @@ Hooks:
   {package} passes a few environment variables to hooks to make your
   life easier:
 
-  - `DEEZ_ROOT` Absolute path to the config Root. This is equal to `pwd`
+  - `DEEZ_ROOT` Absolute path to the config root. This is equal to `pwd`
     on Unix systems, since hooks are run in the root.
-  - `DEEZ_HOME` Absolute path to the Home directory. This is equal to
+  - `DEEZ_HOME` Absolute path to the home directory. This is equal to
     `$HOME` on Unix systems.
   - `DEEZ_VERBOSE` Will be `true` if run in verbose mode, otherwise it
     will be unset (hint: use `[[ -n $DEEZ_VERBOSE ]]` to test for

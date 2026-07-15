@@ -47,7 +47,7 @@ impl Ord for Diff {
     }
 }
 
-/// Diff files in Root and Home.
+/// Diff files in root and home.
 ///
 /// 1. Collect all files in `configs`.
 /// 2. Diff with files in `$HOME`.
@@ -113,7 +113,7 @@ pub fn diff(
         } else {
             Diff {
                 file: p.to_string_lossy().to_string(),
-                diff: String::from("! File does not exist in Home.\n! Skipping..."),
+                diff: String::from("! File does not exist in home.\n! Skipping..."),
             }
         };
 

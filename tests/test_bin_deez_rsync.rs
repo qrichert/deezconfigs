@@ -250,7 +250,7 @@ fn rsync_does_not_replace_symlink_with_file() {
     assert_eq!(files::read(&symlink_target_in_configs), "new content");
 }
 
-/// If a symlink in Home links to a file in configs, copying it back to
+/// If a symlink in home links to a file in configs, copying it back to
 /// configs (i.e, `cp B A` where `B@ -> A`) would (likely) truncate the
 /// file. This behaviour is documented in `std::fs::copy()` (Rust 1.86)
 /// and observed at least on macOS. This should be a no-op for us since

@@ -9,7 +9,7 @@
 
 # Note: We don't bother here, but you could replace all occurrences of
 # `~/` and `./` with `$DEEZ_HOME` and `$DEEZ_ROOT` respectively. This
-# would enable using a custom Home (`HOME=... deez sync`), but it would
+# would enable using a custom home (`HOME=... deez sync`), but it would
 # also make the script more bloated.
 
 # Note: All the steps here make use of the `$DEEZ_VERBOSE` environment

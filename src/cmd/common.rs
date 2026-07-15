@@ -36,7 +36,7 @@ use deezconfigs::ui;
 /// choose to use it anyway, or to abort.
 ///
 /// This check is essential to make, because otherwise the user may
-/// inadvertently mess up his Home directory by syncing the wrong root.
+/// inadvertently mess up his home directory by syncing the wrong root.
 ///
 /// # Note
 ///
@@ -95,7 +95,7 @@ fn get_default_config_root() -> Result<PathBuf, i32> {
         eprint!(
             "\
 {fatal}: Could not determine current working directory.
-Please provide a Root directory as argument.
+Please provide a root directory as argument.
 ",
             fatal = ui::Color::error("fatal")
         );
@@ -156,7 +156,7 @@ fn ensure_root_is_a_config_root(root: &Path) -> Result<(), i32> {
 {warning}: `root` is not a configuration root.
 
 To make it a configuration root, create a `.deez` file inside of it.
-This is a security feature. `{bin}` doesn't want to mess up your Home
+This is a security feature. `{bin}` doesn't want to mess up your home
 directory if you run it in the wrong root.
 
 Selected root: '{}'.
@@ -393,15 +393,15 @@ fn extract_sub_root(uri: &str) -> (&str, Option<&str>) {
     }
 }
 
-/// Get the user's Home directory.
+/// Get the user's home directory.
 ///
-/// The Home directory is read from `HOME` environment variable.
+/// The home directory is read from `HOME` environment variable.
 pub fn get_home_directory() -> Result<PathBuf, i32> {
     if let Some(home_directory) = std::env::home_dir() {
         Ok(home_directory)
     } else {
         eprintln!(
-            "{fatal}: Could not read Home directory from environment.",
+            "{fatal}: Could not read home directory from environment.",
             fatal = ui::Color::error("fatal")
         );
         Err(1)

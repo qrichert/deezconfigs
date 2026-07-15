@@ -22,19 +22,19 @@ Manage deez config files.
 Usage: deez [<options>] <command> [<args>]
 
 Commands:
-  sync [<root>|<git>]    Update Home from configs
-  rsync [<root>]         Update configs from Home
-  link [<root>]          Symlink configs to Home
+  sync [<root>|<git>]    Update home from configs
+  rsync [<root>]         Update configs from home
+  link [<root>]          Symlink configs to home
 
   status [<root>|<git>]  List files and their status
   diff [<root>|<git>]    Show what has changed
     -r, --reversed
-  clean [<root>|<git>]   Remove all configs from Home
+  clean [<root>|<git>]   Remove all configs from home
 
-  run                    Run command inside the Root
+  run                    Run command inside the root
 
 Options:
-  -p, --pull             Git-pull the Root first
+  -p, --pull             Git-pull the root first
   -v, --verbose          Show files being copied
 
   -h, --help             Show this message and exit
@@ -44,7 +44,7 @@ Options:
 ### What does deezconfigs do?
 
 The core of deezconfigs is to replicate the file structure of a given
-directory (i.e., the config root), inside the Home. The main purpose of
+directory (i.e., the config root), inside the home. The main purpose of
 this is to keep all the config files in one place, making it easy to
 version them.
 
@@ -63,12 +63,12 @@ files are always up-to-date, but on the flip-side, you can't really have
 machine-specific configuration. On the other hand, copied files need to
 be kept up-to-date manually by `sync`ing or `rsync`ing all changes. But,
 having separate copies makes it easier to keep configuration generic in
-the root, and specific in the Home.
+the root, and specific in the home.
 
 ### The Config Root
 
 As mentioned before, the config root is any directory whose structure
-you want to replicate in the Home directory.
+you want to replicate in the home directory.
 
 deezconfigs will use the root you provide as an argument on the CLI, or
 default to the current working directory.
@@ -77,7 +77,7 @@ You _should_, but are not required to, create a `.deez` file in the
 root. This lets deezconfigs know that it is safe to use. If deezconfigs
 doesn't find a `.deez` file, it will ask for confirmation before
 modifying your file system. This is a security feature to prevent you
-from accidentally messing up your Home if you run `deez` from the wrong
+from accidentally messing up your home if you run `deez` from the wrong
 directory.
 
 Another advantage of creating a proper root is that it lets you run
@@ -104,7 +104,7 @@ This is the directory where config files are copied or symlinked to. On
 Unix, this is read from the `HOME` environment variable, and on Windows
 from `USERPROFILE`.
 
-Using a different Home is not natively supported by an argument, but you
+Using a different home is not natively supported by an argument, but you
 can override the environment variable to achieve what you want.
 
 ```console
@@ -114,7 +114,7 @@ $ HOME=/home/other deez sync
 ### Sync
 
 Syncing in deezconfigs replicates the file structure from the config
-root inside the Home directory (minus ignored files).
+root inside the home directory (minus ignored files).
 
 ```console
 # Sync current config root.
@@ -130,10 +130,10 @@ $ deez sync https://github.com/qrichert/configs
 ### rSync
 
 Reverse-syncing reverses the direction of syncing: it updates your
-config files in the root with the current content from Home.
+config files in the root with the current content from home.
 
 ```console
-# 1. Sync your config file to your Home.
+# 1. Sync your config file to your home.
 $ deez sync
 
 # 2. Make some changes.
@@ -146,7 +146,7 @@ $ deez rsync
 ### Link
 
 Linking is the same as syncing, but it creates symbolic links in the
-Home instead of copying files. Linking has no `rsync` equivalent because
+home instead of copying files. Linking has no `rsync` equivalent because
 linked files are always up-to-date.
 
 ```console
@@ -169,38 +169,38 @@ M  Modified
 
 ### Diff
 
-Diffing prints the line-diff between your config root and your Home.
+Diffing prints the line-diff between your config root and your home.
 This shows you exactly what has changed and where. There is no merge
 feature, however, as merging is best done by your VCS.
 
-By default, `diff` uses the config root as the _before_, and the Home as
-the _after_. This assumes you make changes in the Home directly, and
+By default, `diff` uses the config root as the _before_, and the home as
+the _after_. This assumes you make changes in the home directly, and
 want to see what would change in your root if you `rsync`ed the updates
 back.
 
 ```console
-# Compare the config root (old) to the Home (new).
+# Compare the config root (old) to the home (new).
 $ deez diff
 ```
 
 If you make changes inside the config root, however, it is more natural
-to use the Home as the _before_, and the root as the _after_. In other
-words, you want to see what would change in your Home if you `sync`ed
+to use the home as the _before_, and the root as the _after_. In other
+words, you want to see what would change in your home if you `sync`ed
 the updates to it.
 
 To do this, use the `--reversed` flag:
 
 ```console
-# Compare the Home (old) to the config root (new).
+# Compare the home (old) to the config root (new).
 $ deez diff -r
 ```
 
 ### Clean
 
-Cleaning is removing all the files and symlinks from the Home.
+Cleaning is removing all the files and symlinks from the home.
 
 ```console
-# 1. Link your files to your Home.
+# 1. Link your files to your home.
 $ deez link
 
 # 2. Now remove all the links you've just created.
@@ -268,7 +268,7 @@ $ deez sync https://github.com/qrichert/configs
 ```
 
 This will clone the repository to a temporary directory behind the
-scenes, and update your Home with its contents. This is useful in places
+scenes, and update your home with its contents. This is useful in places
 where you don't want to maintain a proper clone, and always just want to
 get the latest version.
 
@@ -354,9 +354,9 @@ the output of `deez` in verbose mode.
 deezconfigs passes a few environment variables to hooks to make your
 life easier:
 
-- `DEEZ_ROOT` Absolute path to the config Root. This is equal to `pwd`
+- `DEEZ_ROOT` Absolute path to the config root. This is equal to `pwd`
   on Unix systems, since hooks are run in the root.
-- `DEEZ_HOME` Absolute path to the Home directory. This is equal to
+- `DEEZ_HOME` Absolute path to the home directory. This is equal to
   `$HOME` on Unix systems.
 - `DEEZ_VERBOSE` Will be `true` if run in verbose mode, otherwise it
   will be unset (hint: use `[[ -n $DEEZ_VERBOSE ]]` to test for

@@ -68,7 +68,7 @@ biz.txt
 +not equal
 
 boz.txt
-! File does not exist in Home.
+! File does not exist in home.
 ! Skipping...
 "
     );
@@ -110,7 +110,7 @@ biz.txt
 +this is bar/baz
 
 boz.txt
-! File does not exist in Home.
+! File does not exist in home.
 ! Skipping...
 "
     );
@@ -227,7 +227,7 @@ fn diff_with_hooks() {
 hook: pre-diff.sh
 hook: post-diff.sh
 foo.txt
-! File does not exist in Home.
+! File does not exist in home.
 ! Skipping...
 Ran 2 hooks.
 "

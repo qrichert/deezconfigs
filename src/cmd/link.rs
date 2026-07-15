@@ -25,7 +25,7 @@ use super::common::{
     run_hooks,
 };
 
-/// Link config from root into Home.
+/// Link config from root into home.
 ///
 /// 1. Collect all files in `configs`.
 /// 2. Create matching symlinks to the files in `$HOME`.
@@ -78,7 +78,7 @@ pub fn link(root: Option<&String>, verbose: bool, pull_before_command: bool) -> 
         ) {
             nb_errors.fetch_add(1, Ordering::Relaxed);
             eprintln!(
-                "{error}: Could not link '{}' to Home: {err}",
+                "{error}: Could not link '{}' to home: {err}",
                 p.display(),
                 error = ui::Color::error("error"),
             );

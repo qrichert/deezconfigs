@@ -26,7 +26,7 @@ use super::common::{
     resolve_and_pull_config_root, resolve_config_root, run_hooks,
 };
 
-/// Sync config from root into Home.
+/// Sync config from root into home.
 ///
 /// 1. Collect all files in `configs`.
 /// 2. Create or replace matching files in `$HOME`.
@@ -82,7 +82,7 @@ pub fn sync(root: Option<&String>, verbose: bool, pull_before_command: bool) -> 
         ) {
             nb_errors.fetch_add(1, Ordering::Relaxed);
             eprintln!(
-                "{error}: Could not copy '{}' to Home: {err}",
+                "{error}: Could not copy '{}' to home: {err}",
                 p.display(),
                 error = ui::Color::error("error"),
             );
@@ -157,7 +157,7 @@ pub fn sync(root: Option<&String>, verbose: bool, pull_before_command: bool) -> 
             if let Err(err) = fs::copy(source, destination) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
-                    "{error}: Could not copy '{}' to Home: {err}",
+                    "{error}: Could not copy '{}' to home: {err}",
                     p.display(),
                     error = ui::Color::error("error"),
                 );

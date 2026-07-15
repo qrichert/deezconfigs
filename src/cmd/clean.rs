@@ -25,7 +25,7 @@ use super::common::{
     resolve_and_pull_config_root, resolve_config_root, run_hooks,
 };
 
-/// Remove config files from Home.
+/// Remove config files from home.
 ///
 /// 1. Collect all files in `configs`.
 /// 2. Remove matching files in `$HOME`.
@@ -84,12 +84,12 @@ pub fn clean(root: Option<&String>, verbose: bool, pull_before_command: bool) ->
                 return;
             }
 
-            // Remove all parent dirs until not empty or Home.
+            // Remove all parent dirs until not empty or home.
             #[allow(clippy::items_after_statements)]
             const DEPTH_LIMIT: usize = 20;
             // `skip()` self (file).
             for (i, dir) in destination.ancestors().skip(1).enumerate() {
-                // Don't remove Home or above.
+                // Don't remove home or above.
                 if dir == home {
                     break;
                 }
