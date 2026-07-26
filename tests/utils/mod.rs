@@ -26,6 +26,28 @@ pub mod run;
 
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/");
 const MOCK_BIN_DIR: &str = concat!(env!("CARGO_TARGET_TMPDIR"), "/mock_bin/");
+const EMPTY_BIN_DIR: &str = concat!(env!("CARGO_TARGET_TMPDIR"), "/empty_bin/");
+
+/// A directory guaranteed to contain no executables.
+///
+/// Use it as `PATH` (through
+/// [`run_with_env()`](run::run_with_env)) to test what happens when an
+/// executable cannot be found.
+///
+/// This is deliberately _not_ [`MOCK_BIN_DIR`]. Mocks are copied there
+/// and never removed, so whether a given executable is present depends
+/// on which tests ran before.
+pub fn empty_bin_dir() -> &'static str {
+    let bin_dir = Path::new(EMPTY_BIN_DIR);
+
+    assert!(
+        fs::create_dir_all(bin_dir).is_ok(),
+        "Error creating empty bin directory: '{}'.",
+        bin_dir.display()
+    );
+
+    EMPTY_BIN_DIR
+}
 
 /// "Monkey-patch" an executable.
 ///

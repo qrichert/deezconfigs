@@ -37,10 +37,30 @@ pub fn run_with_input(args: &[&str], input: &str) -> Output {
 }
 
 pub fn run_in_dir(args: &[&str], dir: impl AsRef<Path>) -> Output {
+    run_with_env(args, dir, &[])
+}
+
+/// Run `deez` with per-test environment overrides.
+///
+/// Overrides are applied _after_ the defaults, so `None` can be used to
+/// unset something this function sets (e.g., `("NO_COLOR", None)`).
+///
+/// Variables are set on the child process only. Contrary to
+/// [`mock_bin()`](super::mock_bin), this never touches the environment
+/// of the test process itself, so tests stay independent of one
+/// another.
+pub fn run_with_env(args: &[&str], dir: impl AsRef<Path>, envs: &[(&str, Option<&str>)]) -> Output {
     let mut command = Command::new(DEEZ);
     command.current_dir(dir.as_ref());
     command.env("NO_COLOR", "1");
     command.env_remove("PAGER");
+
+    for (key, value) in envs {
+        match value {
+            Some(value) => command.env(key, value),
+            None => command.env_remove(key),
+        };
+    }
 
     for arg in args {
         command.arg(arg);
