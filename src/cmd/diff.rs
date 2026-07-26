@@ -26,7 +26,8 @@ use deezconfigs::{ui, utils, walk};
 
 use super::common::{
     get_config_root_from_git, get_home_directory, get_hooks_for_command, is_git_remote_uri,
-    resolve_and_pull_config_root, resolve_config_root, run_hooks,
+    resolve_and_pull_config_root, resolve_config_root, run_git_fetch_in_root, run_hooks,
+    show_git_diff_against_upstream,
 };
 
 #[derive(Debug, Eq, PartialEq)]
@@ -161,6 +162,67 @@ pub fn diff(
     ui::print_hooks_summary(nb_hooks_ran);
 
     if nb_errors > 0 { Err(1) } else { Ok(()) }
+}
+
+/// Show incoming changes from the Git remote.
+///
+/// Fetches, then hands the patch straight to Git. Nothing is captured
+/// or re-rendered: this is a shortcut for
+/// `git fetch; git diff HEAD...@{u}`, not a comparison between the root
+/// and the home.
+///
+/// 1. `git fetch` in the config root.
+/// 2. `git diff` between `HEAD` and its upstream.
+pub fn diff_incoming(
+    root: Option<&String>,
+    verbose: bool,
+    pull_before_command: bool,
+    reversed: bool,
+) -> Result<(), i32> {
+    if is_git_remote_uri(root) {
+        eprintln!(
+            "{fatal}: '--incoming' only works with local config roots.",
+            fatal = ui::Color::error("fatal")
+        );
+        return Err(2);
+    }
+    if pull_before_command {
+        eprint!(
+            "\
+{fatal}: '--incoming' cannot be combined with '--pull'.
+`--pull` merges the incoming changes, leaving nothing to show.
+",
+            fatal = ui::Color::error("fatal")
+        );
+        return Err(2);
+    }
+
+    // Fetching only writes to `.git`, never to the home, so there is
+    // nothing for the `.deez` check to protect against here.
+    let root = resolve_config_root(root, false)?;
+
+    // Fetch before the hooks, like `--pull` does. A failure to reach
+    // the remote should not run anything.
+    run_git_fetch_in_root(&root)?;
+
+    // Only needed to build the hooks' environment.
+    let home = get_home_directory()?;
+    let hooks = get_hooks_for_command(&root, &home, verbose)?;
+
+    let mut nb_hooks_ran = 0;
+
+    nb_hooks_ran += run_hooks(|| hooks.pre_diff())?;
+
+    show_git_diff_against_upstream(&root, reversed)?;
+
+    // Contrary to `diff()`, hooks run _after_ printing here. Git pages
+    // its own output, and waits for the pager to exit before returning,
+    // so by now the user is done reading.
+    nb_hooks_ran += run_hooks(|| hooks.post_diff())?;
+
+    ui::print_hooks_summary(nb_hooks_ran);
+
+    Ok(())
 }
 
 fn diff_files(before: &Path, after: &Path) -> Result<Option<String>, std::io::Error> {

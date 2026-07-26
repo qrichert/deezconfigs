@@ -32,6 +32,7 @@ pub struct Args {
     pub command: Option<Command>,
     pub pull_before_command: bool,
     pub reversed_diff: bool,
+    pub incoming_diff: bool,
     #[allow(clippy::struct_field_names)]
     pub run_args: Vec<String>,
     pub root: Option<String>,
@@ -61,6 +62,7 @@ impl Args {
                 "status" | "st" if !some_command => args.command = Some(Command::Status),
                 "diff" | "df" if !some_command => args.command = Some(Command::Diff),
                 "-r" | "--reversed" if is_diff => args.reversed_diff = !args.reversed_diff,
+                "-i" | "--incoming" if is_diff => args.incoming_diff = !args.incoming_diff,
                 "clean" | "c" if !some_command => args.command = Some(Command::Clean),
                 "run" | "r" if !some_command => {
                     args.command = Some(Command::Run);
@@ -253,6 +255,42 @@ mod tests {
         let args = Args::build_from_args(["diff", "--reversed", "--reversed"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Diff));
         assert!(!args.reversed_diff);
+    }
+
+    #[test]
+    fn command_diff_incoming() {
+        let args = Args::build_from_args(["diff", "--incoming"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(args.incoming_diff);
+    }
+
+    #[test]
+    fn command_diff_incoming_shortcut() {
+        let args = Args::build_from_args(["diff", "-i"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(args.incoming_diff);
+    }
+
+    #[test]
+    fn command_incoming_without_diff_is_noop() {
+        let args = Args::build_from_args(["status", "--incoming"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Status));
+        assert!(!args.incoming_diff);
+    }
+
+    #[test]
+    fn command_diff_incoming_multiple_cancel_each_other() {
+        let args = Args::build_from_args(["diff", "--incoming", "--incoming"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(!args.incoming_diff);
+    }
+
+    #[test]
+    fn command_diff_incoming_and_reversed() {
+        let args = Args::build_from_args(["diff", "-i", "-r"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(args.incoming_diff);
+        assert!(args.reversed_diff);
     }
 
     #[test]

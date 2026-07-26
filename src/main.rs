@@ -51,7 +51,11 @@ fn main() {
             cli::Command::Link => cmd::link(root, verbose, args.pull_before_command),
             cli::Command::Status => cmd::status(root, verbose, args.pull_before_command),
             cli::Command::Diff => {
-                cmd::diff(root, verbose, args.pull_before_command, args.reversed_diff)
+                if args.incoming_diff {
+                    cmd::diff_incoming(root, verbose, args.pull_before_command, args.reversed_diff)
+                } else {
+                    cmd::diff(root, verbose, args.pull_before_command, args.reversed_diff)
+                }
             }
             cli::Command::Clean => cmd::clean(root, verbose, args.pull_before_command),
             cli::Command::Run => cmd::run(&args.run_args, verbose),
@@ -91,6 +95,7 @@ Commands:
   status [<root>|<git>]  List files and their status
   diff [<root>|<git>]    Show what has changed
     -r, --reversed
+    -i, --incoming
   clean [<root>|<git>]   Remove all configs from home
 
   run                    Run command inside the root
@@ -242,6 +247,19 @@ Diff:
       {attenuate}# Compare the home (old) to the config root (new).{rt}
       {highlight}${rt} {bin} diff -r
 
+  Finally, `--incoming` shows what your Git remote has that you don't.
+  It is roughly equivalent to running `git fetch` inside the config
+  root, followed by `git diff HEAD...<upstream>`:
+
+      {attenuate}# See what a `git pull` would bring in.{rt}
+      {highlight}${rt} {bin} diff -i
+
+  Combined with `--reversed`, it shows the opposite: what you have that
+  the upstream doesn't.
+
+      {attenuate}# See what you haven't shared yet.{rt}
+      {highlight}${rt} {bin} diff -i -r
+
 Clean:
   Cleaning is removing all the files and symlinks from the home.
 
@@ -333,6 +351,14 @@ Git:
 
   This flag only works with local roots; remote roots are always freshly
   cloned.
+
+  And if you only want to {i}see{rt} what a pull would bring in, without
+  pulling anything, use `diff --incoming` (`diff` only):
+
+      {attenuate}# Fetch, then show the incoming patch.{rt}
+      {highlight}${rt} {bin} diff --incoming
+
+  Like `--pull`, this only works with local roots.
 
 Hooks:
   {package} lets you run hooks before and after commands. Hooks are

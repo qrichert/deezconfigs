@@ -26,8 +26,8 @@ use std::env;
 use std::path::Path;
 
 use utils::conf;
-use utils::run::{run, run_in_dir, run_with_input};
-use utils::{mock_bin, output_file_exists, read_output_file, remove_output_file};
+use utils::run::{run, run_in_dir, run_with_env, run_with_input};
+use utils::{empty_bin_dir, mock_bin, output_file_exists, read_output_file, remove_output_file};
 
 // Warning: These tests MUST be run sequentially. Running them in
 // parallel threads may cause conflicts with environment variables,
@@ -142,6 +142,245 @@ foo.txt
 @@ -1,1 +1,1 @@
 -same content
 +same content
+"
+    );
+}
+
+#[test]
+fn diff_incoming_shows_git_output_verbatim() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_incoming");
+
+    let output = run(&["diff", "--incoming", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    // Git's output is passed through untouched.
+    assert_eq!(
+        output.stdout,
+        "\
+diff --git a/.gitconfig b/.gitconfig
+index 1111111..2222222 100644
+--- a/.gitconfig
++++ b/.gitconfig
+@@ -1,2 +1,2 @@
+ [user]
+-	name = Old Name
++	name = New Name
+"
+    );
+
+    let args = read_output_file("output_git_args");
+    let mut args = args.lines();
+
+    assert_eq!(args.next(), Some("fetch"));
+    assert_eq!(args.next(), Some("diff --no-color HEAD...@{u} --"));
+    assert_eq!(args.next(), None);
+}
+
+#[test]
+fn diff_incoming_shortcut() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_incoming");
+
+    let output = run(&["df", "-i", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(read_output_file("output_git_args").contains("HEAD...@{u}"));
+}
+
+/// `--reversed` swaps the endpoints, as it does for a regular `diff`.
+/// For `--incoming`, that means showing outgoing changes instead.
+#[test]
+fn diff_incoming_reversed_shows_outgoing() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_incoming");
+
+    let output = run(&["diff", "-i", "-r", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    let args = read_output_file("output_git_args");
+    let mut args = args.lines();
+
+    assert_eq!(args.next(), Some("fetch"));
+    assert_eq!(args.next(), Some("diff --no-color @{u}...HEAD --"));
+}
+
+/// Git has no `NO_COLOR` support, it only knows about `color.ui` and
+/// friends. `deez` forwards the user's preference for it.
+#[test]
+fn diff_incoming_forwards_no_color() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_incoming");
+
+    // `run()` sets `NO_COLOR` for us.
+    let output = run(&["diff", "-i", &conf::root()]);
+    dbg!(&output.stdout);
+    assert_eq!(output.exit_code, 0);
+    assert!(read_output_file("output_git_args").contains("diff --no-color"));
+
+    remove_output_file("output_git_args");
+
+    let output = run_with_env(
+        &["diff", "-i", &conf::root()],
+        conf::root(),
+        &[("NO_COLOR", None)],
+    );
+    dbg!(&output.stdout);
+    assert_eq!(output.exit_code, 0);
+    assert!(!read_output_file("output_git_args").contains("--no-color"));
+}
+
+#[test]
+fn diff_incoming_propagates_fetch_failure() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_fetch_fails");
+
+    conf::create_executable_file_in_configs("pre-diff.sh", None);
+    conf::create_executable_file_in_configs("post-diff.sh", None);
+
+    let output = run(&["--verbose", "diff", "-i", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 128);
+
+    // Git explains itself; `deez` doesn't add to it.
+    assert!(output.stderr.contains("fatal: unable to access"));
+
+    // `diff` is never reached, and no hook runs.
+    let args = read_output_file("output_git_args");
+    assert!(!args.contains("diff"));
+    assert!(!output.stdout.contains("hook: "));
+}
+
+/// Contrary to a fetch failure, a `diff` failure happens _after_
+/// `pre-diff` has run.
+#[test]
+fn diff_incoming_propagates_diff_failure() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_diff_fails");
+
+    conf::create_executable_file_in_configs("pre-diff.sh", None);
+    conf::create_executable_file_in_configs("post-diff.sh", None);
+
+    let output = run(&["--verbose", "diff", "-i", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 128);
+    assert!(output.stderr.contains("fatal: no upstream configured"));
+
+    assert!(output.stdout.contains("hook: pre-diff.sh"));
+    assert!(!output.stdout.contains("hook: post-diff.sh"));
+}
+
+#[test]
+fn diff_incoming_runs_diff_hooks() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_incoming");
+
+    conf::create_executable_file_in_configs("pre-diff.sh", None);
+    conf::create_executable_file_in_configs("post-diff.sh", None);
+
+    let output = run(&["--verbose", "diff", "-i", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(output.stdout.contains("Ran 2 hooks."));
+
+    // Contrary to a regular `diff`, `post-diff` runs _after_ the
+    // output, because Git waits for its own pager.
+    let patch = output.stdout.find("@@ -1,2 +1,2 @@").unwrap();
+    let post_diff = output.stdout.find("hook: post-diff.sh").unwrap();
+    assert!(post_diff > patch);
+}
+
+#[test]
+fn diff_incoming_rejects_pull() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_incoming");
+
+    let output = run(&["diff", "-i", "--pull", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(
+        output
+            .stderr
+            .contains("'--incoming' cannot be combined with '--pull'.")
+    );
+
+    // Above all, no pull happened.
+    assert!(!output_file_exists("output_git_args"));
+}
+
+#[test]
+fn diff_incoming_rejects_remote_root() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_incoming");
+
+    let output = run(&["diff", "-i", "https://github.com/qrichert/configs"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(
+        output
+            .stderr
+            .contains("'--incoming' only works with local config roots.")
+    );
+    assert!(!output_file_exists("output_git_args"));
+}
+
+/// Every other error is Git's to report, so this is the only message
+/// `deez` writes itself on this code path.
+#[test]
+fn diff_incoming_without_git_installed() {
+    conf::init();
+
+    let output = run_with_env(
+        &["diff", "-i", &conf::root()],
+        conf::root(),
+        &[("PATH", Some(empty_bin_dir()))],
+    );
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 1);
+    assert_eq!(
+        output.stderr,
+        "\
+fatal: Could not run 'git fetch'.
+Did not find the 'git' executable. Please ensure Git is properly
+installed on your machine.
 "
     );
 }

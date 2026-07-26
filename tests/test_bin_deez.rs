@@ -31,6 +31,8 @@ fn help() {
     assert!(output.stdout.contains("sync [<root>|<git>]"));
     assert!(output.stdout.contains("rsync [<root>]"));
     assert!(output.stdout.contains("link [<root>]"));
+    assert!(output.stdout.contains("-r, --reversed"));
+    assert!(output.stdout.contains("-i, --incoming"));
     assert!(output.stdout.contains(
         "\
   Available hooks:

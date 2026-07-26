@@ -29,6 +29,7 @@ Commands:
   status [<root>|<git>]  List files and their status
   diff [<root>|<git>]    Show what has changed
     -r, --reversed
+    -i, --incoming
   clean [<root>|<git>]   Remove all configs from home
 
   run                    Run command inside the root
@@ -195,6 +196,23 @@ To do this, use the `--reversed` flag:
 $ deez diff -r
 ```
 
+Finally, `--incoming` shows what your Git remote has that you don't. It
+is roughly equivalent to running `git fetch` inside the config root,
+followed by `git diff HEAD...<upstream>`:
+
+```console
+# See what a `git pull` would bring in.
+$ deez diff -i
+```
+
+Combined with `--reversed`, it shows the opposite: what you have that
+the upstream doesn't.
+
+```console
+# See what you haven't shared yet.
+$ deez diff -i -r
+```
+
 ### Clean
 
 Cleaning is removing all the files and symlinks from the home.
@@ -305,6 +323,16 @@ $ deez sync --pull
 
 This flag only works with local roots; remote roots are always freshly
 cloned.
+
+And if you only want to _see_ what a pull would bring in, without
+pulling anything, use `diff --incoming` (`diff` only):
+
+```console
+# Fetch, then show the incoming patch.
+$ deez diff --incoming
+```
+
+Like `--pull`, this only works with local roots.
 
 ### Hooks
 

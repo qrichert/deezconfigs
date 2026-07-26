@@ -25,7 +25,7 @@ pub mod status;
 pub mod sync;
 
 pub use clean::clean;
-pub use diff::diff;
+pub use diff::{diff, diff_incoming};
 pub use link::link;
 pub use rsync::rsync;
 pub use run::run;

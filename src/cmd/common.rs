@@ -336,15 +336,95 @@ fn run_git_pull_in_root(root: &Path) -> Result<(), i32> {
         .arg("pull")
         .status();
 
+    propagate_git_status(status, "pull")
+}
+
+/// Run `git fetch` inside an already-resolved config root.
+///
+/// Nothing is passed to Git, and nothing is captured from it. Progress
+/// and errors go straight to the user, in Git's own words.
+///
+/// # Errors
+///
+/// Errors if Git cannot be run, or with Git's own exit code if the
+/// fetch itself fails (e.g., no network, no such remote).
+pub fn run_git_fetch_in_root(root: &Path) -> Result<(), i32> {
+    let status = process::Command::new("git")
+        .current_dir(root)
+        .arg("fetch")
+        .status();
+
+    propagate_git_status(status, "fetch")
+}
+
+/// Show the changes between `HEAD` and its upstream branch.
+///
+/// By default, this shows the _incoming_ changes: what the upstream has
+/// that `HEAD` doesn't. `reversed` shows the _outgoing_ ones instead.
+///
+/// Both ranges use three dots, so they start at the merge base. This is
+/// what makes `--incoming` leave out your own local commits.
+///
+/// Output is left entirely to Git: its own colors, its own pager, and
+/// its own error messages (e.g., if there is no upstream branch, or if
+/// the root is not a Git repository).
+///
+/// # Errors
+///
+/// Errors if Git cannot be run, or with Git's own exit code if the diff
+/// itself fails.
+pub fn show_git_diff_against_upstream(root: &Path, reversed: bool) -> Result<(), i32> {
+    let range = if reversed {
+        "@{u}...HEAD"
+    } else {
+        "HEAD...@{u}"
+    };
+
+    let mut command = process::Command::new("git");
+    command.current_dir(root).arg("diff");
+
+    // Git does not support `NO_COLOR`, it only knows about `color.ui`
+    // and friends. But `deez` does support it, everywhere else. So we
+    // forward the user's preference, rather than silently dropping it.
+    if *ui::color::NO_COLOR {
+        command.arg("--no-color");
+    }
+
+    // `--` so that Git doesn't mistake the range for a path.
+    command.arg(range).arg("--");
+
+    propagate_git_status(command.status(), "diff")
+}
+
+/// Turn the result of a `git` invocation into a `deez` exit code.
+///
+/// Git's exit code is propagated as-is, because Git will have explained
+/// itself already. The one case Git cannot report is not being there at
+/// all.
+fn propagate_git_status(
+    status: Result<process::ExitStatus, std::io::Error>,
+    command: &str,
+) -> Result<(), i32> {
     match status {
         Ok(status) => match status.code() {
             Some(0) => Ok(()),
             Some(code) => Err(code),
             None => Err(1),
         },
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            eprint!(
+                "\
+{fatal}: Could not run 'git {command}'.
+Did not find the 'git' executable. Please ensure Git is properly
+installed on your machine.
+",
+                fatal = ui::Color::error("fatal")
+            );
+            Err(1)
+        }
         Err(err) => {
             eprintln!(
-                "{fatal}: Could not run 'git pull': {err}",
+                "{fatal}: Could not run 'git {command}': {err}",
                 fatal = ui::Color::error("fatal")
             );
             Err(1)
