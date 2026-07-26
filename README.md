@@ -174,27 +174,31 @@ Diffing prints the line-diff between your config root and your home.
 This shows you exactly what has changed and where. There is no merge
 feature, however, as merging is best done by your VCS.
 
-By default, `diff` uses the config root as the _before_, and the home as
-the _after_. This assumes you make changes in the home directly, and
-want to see what would change in your root if you `rsync`ed the updates
-back.
+By default, `diff` uses the home as the _before_, and the config root as
+the _after_. This assumes you make changes inside the config root, and
+want to see what would change in your home if you `sync`ed the updates
+to it.
 
 ```console
-# Compare the config root (old) to the home (new).
+# Compare the home (old) to the config root (new).
 $ deez diff
 ```
 
-If you make changes inside the config root, however, it is more natural
-to use the home as the _before_, and the root as the _after_. In other
-words, you want to see what would change in your home if you `sync`ed
-the updates to it.
+If you make changes in the home directly, however, it is more natural to
+use the config root as the _before_, and the home as the _after_. In
+other words, you want to see what would change in your root if you
+`rsync`ed the updates back.
 
 To do this, use the `--reversed` flag:
 
 ```console
-# Compare the home (old) to the config root (new).
+# Compare the config root (old) to the home (new).
 $ deez diff -r
 ```
+
+Note that a config that exists in the root but not in the home is
+reported as missing, not shown as a whole new file, even though `sync`
+would create it.
 
 Finally, `--incoming` shows what your Git remote has that you don't. It
 is roughly equivalent to running `git fetch` inside the config root,

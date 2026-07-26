@@ -65,13 +65,13 @@ fn diff_regular() {
         "\
 bar/baz.txt
 @@ -1,1 +1,1 @@
--this is bar/baz
-+not equal
+-not equal
++this is bar/baz
 
 biz.txt
 @@ -1,1 +1,1 @@
--this is bar/baz
-+not equal
+-not equal
++this is bar/baz
 
 boz.txt
 ! File does not exist in home.
@@ -107,13 +107,13 @@ fn diff_reversed() {
         "\
 bar/baz.txt
 @@ -1,1 +1,1 @@
--not equal
-+this is bar/baz
+-this is bar/baz
++not equal
 
 biz.txt
 @@ -1,1 +1,1 @@
--not equal
-+this is bar/baz
+-this is bar/baz
++not equal
 
 boz.txt
 ! File does not exist in home.

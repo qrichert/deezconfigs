@@ -33,6 +33,20 @@ fn help() {
     assert!(output.stdout.contains("link [<root>]"));
     assert!(output.stdout.contains("-r, --reversed"));
     assert!(output.stdout.contains("-i, --incoming"));
+    // Pin the direction of `diff`, not just the flag's existence. Both
+    // comments exist either way; only their pairing with the example
+    // command tells the two directions apart. The trailing newline
+    // matters: `$ deez diff` is a prefix of `$ deez diff -r`.
+    assert!(
+        output
+            .stdout
+            .contains("# Compare the home (old) to the config root (new).\n      $ deez diff\n")
+    );
+    assert!(
+        output
+            .stdout
+            .contains("# Compare the config root (old) to the home (new).\n      $ deez diff -r\n")
+    );
     assert!(output.stdout.contains(
         "\
   Available hooks:

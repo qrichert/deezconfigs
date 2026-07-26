@@ -86,9 +86,9 @@ pub fn diff(
 
         let diff = if destination.is_file() {
             let diff = if reversed {
-                diff_files(&destination, &source)
-            } else {
                 diff_files(&source, &destination)
+            } else {
+                diff_files(&destination, &source)
             };
             let diff = match diff {
                 Ok(diff) => diff,
