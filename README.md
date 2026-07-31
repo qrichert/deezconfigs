@@ -437,3 +437,21 @@ not the right tool for you.
 - [ ] Increase test coverage (features are mostly covered, what's
       missing are tests for the error cases).
 - [ ] Perf refactorings for bottlenecks (or for fun).
+
+## Installation
+
+Install the `deez` command from [crates.io] with Cargo:
+
+```shell
+cargo install deezconfigs
+```
+
+Pre-built binaries for Linux and macOS are available on the [latest
+GitHub release].
+
+[Documentation] is available on docs.rs.
+
+[crates.io]: https://crates.io/crates/deezconfigs
+[latest GitHub release]:
+  https://github.com/qrichert/deezconfigs/releases/latest
+[Documentation]: https://docs.rs/deezconfigs

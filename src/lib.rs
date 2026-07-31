@@ -14,6 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//! Dotfiles management library behind the `deez` CLI.
+//!
+//! Copy, sync, or symlink configuration files into the user's home
+//! directory.
+
 pub mod hooks;
 pub mod ui;
 pub mod utils;
