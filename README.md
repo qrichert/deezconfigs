@@ -1,6 +1,6 @@
 # deezconfigs
 
-[![license: GPL v3+](https://img.shields.io/badge/license-GPLv3+-blue)](https://www.gnu.org/licenses/gpl-3.0)
+![Crates.io License](https://img.shields.io/crates/l/deezconfigs)
 ![GitHub Tag](https://img.shields.io/github/v/tag/qrichert/deezconfigs?sort=semver&filter=*.*.*&label=release)
 [![crates.io](https://img.shields.io/crates/d/deezconfigs?logo=rust&logoColor=white&color=orange)](https://crates.io/crates/deezconfigs)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/qrichert/deezconfigs/ci.yml?label=tests)](https://github.com/qrichert/deezconfigs/actions)
