@@ -17,11 +17,11 @@ use super::common::{
 #[allow(clippy::too_many_lines)] // More a procedure than a function.
 pub fn sync(root: Option<&String>, verbose: bool, pull_before_command: bool) -> Result<(), i32> {
     let root = if pull_before_command {
-        resolve_and_pull_config_root(root)?
+        resolve_and_pull_config_root(root)?.into()
     } else if is_git_remote_uri(root) {
         get_config_root_from_git(root.expect("not empty, contains a `git:` prefix"), verbose)?
     } else {
-        resolve_config_root(root, true)?
+        resolve_config_root(root, true)?.into()
     };
     let root: &Path = root.as_ref();
     let home = get_home_directory()?;

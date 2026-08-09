@@ -155,6 +155,40 @@ fn clean_pull_rejects_remote_root() {
 }
 
 #[test]
+fn clean_cleans_up_remote_clone() {
+    conf::init();
+
+    remove_output_file("output_clone_path");
+    mock_bin("git", "bin_git_clone");
+
+    let output = run(&["--verbose", "clean", "git:success[sub/root]"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    let clone_path = read_output_file("output_clone_path");
+    assert!(!Path::new(clone_path.trim()).exists());
+}
+
+#[test]
+fn clean_cleans_up_partial_clone_after_git_failure() {
+    conf::init();
+
+    remove_output_file("output_clone_path");
+    mock_bin("git", "bin_git_clone");
+
+    let output = run(&["--verbose", "clean", "git:fail"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 1);
+
+    let clone_path = read_output_file("output_clone_path");
+    assert!(!Path::new(clone_path.trim()).exists());
+}
+
+#[test]
 fn clean_cleans_up_directories_left_empty() {
     conf::init();
 

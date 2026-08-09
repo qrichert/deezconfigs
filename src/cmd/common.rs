@@ -6,6 +6,51 @@ use std::process;
 use deezconfigs::hooks::Hooks;
 use deezconfigs::ui;
 
+/// A resolved config root: a local path, or a temporary clone.
+pub enum ConfigRoot {
+    Local(PathBuf),
+    Temporary(TempClone),
+}
+
+/// A config root cloned from a remote; its clone is deleted on drop.
+///
+/// `clone_dir` and `path` differ only when the remote URL asks for a
+/// sub-root (e.g. `.../configs[nvim]`). `Drop` always removes
+/// `clone_dir`, the whole clone, so the temp directory is fully
+/// cleaned up even when commands run against a sub-directory of it.
+///
+/// The fields are private, so only this module can build a `TempClone`,
+/// which is the safety boundary: `Drop` can only ever delete a clone we
+/// made here, never a path passed in from elsewhere.
+pub struct TempClone {
+    /// The whole clone (a `deez-…` dir under the system temp dir),
+    /// removed on drop.
+    clone_dir: PathBuf,
+    /// What commands operate on: `clone_dir`, or a sub-root inside it.
+    path: PathBuf,
+}
+
+impl From<PathBuf> for ConfigRoot {
+    fn from(path: PathBuf) -> Self {
+        Self::Local(path)
+    }
+}
+
+impl AsRef<Path> for ConfigRoot {
+    fn as_ref(&self) -> &Path {
+        match self {
+            Self::Local(path) => path,
+            Self::Temporary(clone) => &clone.path,
+        }
+    }
+}
+
+impl Drop for TempClone {
+    fn drop(&mut self) {
+        _ = fs::remove_dir_all(&self.clone_dir);
+    }
+}
+
 /// Resolve config root for a given path.
 ///
 /// The root is either provided by the user, or we use a heuristic to
@@ -187,7 +232,7 @@ pub fn is_git_remote_uri(root: Option<&String>) -> bool {
 /// `git clone` can fail either because the Git binary cannot be found,
 /// or because the command itself fails (e.g., due to network issues,
 /// access rights, etc.).
-pub fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<PathBuf, i32> {
+pub fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<ConfigRoot, i32> {
     let uri = if let Some(uri) = uri.strip_prefix("git:") {
         uri.to_string()
     } else if let Some(uri) = uri.strip_prefix("gh:") {
@@ -206,9 +251,9 @@ pub fn get_config_root_from_git(uri: &str, verbose: bool) -> Result<PathBuf, i32
         .duration_since(std::time::UNIX_EPOCH)
         .expect("current time > Unix epoch")
         .as_millis();
-    let clone_path = env::temp_dir().join(format!("deez-{pid}-{uuid}"));
+    let clone_dir = env::temp_dir().join(format!("deez-{pid}-{uuid}"));
 
-    if clone_path.is_dir() && fs::remove_dir_all(&clone_path).is_err() {
+    if clone_dir.is_dir() && fs::remove_dir_all(&clone_dir).is_err() {
         eprint!(
             "\
 {fatal}: Could not clone the configuration repository.
@@ -221,13 +266,7 @@ The target directory already exists and could not be deleted.
 
     println!("Fetching config files remotely...");
 
-    // TODO: Clones are never cleanup up. This is not a big issue since
-    // we clone into a temporary directory, but it's sloppy. We could
-    // register the path into a global "cleanup queue" that runs at the
-    // end. Side question: should we expose a `DEEZ_TMP` variable to
-    // hooks (could be cleaned up the same way). Or always have a global
-    // temporary dir available (`LazyLock`), expose it to hooks, and
-    // adapt the clone to clone into a sub-directory there.
+    // TODO: Should we expose a `DEEZ_TMP` variable to hooks?
     let mut command = process::Command::new("git");
     command
         .env("LANG", "en_US.UTF-8")
@@ -236,7 +275,14 @@ The target directory already exists and could not be deleted.
         .arg("--depth=1")
         .arg("--no-tags")
         .arg(uri)
-        .arg(&clone_path);
+        .arg(&clone_dir);
+
+    // Own the clone before running Git, so any early return below
+    // (including a failed or partial clone) removes it on drop.
+    let mut root = ConfigRoot::Temporary(TempClone {
+        clone_dir: clone_dir.clone(),
+        path: clone_dir,
+    });
 
     let status = if verbose {
         command.status().ok()
@@ -279,20 +325,23 @@ installed on your machine.
             return Err(1);
         }
 
-        let clone_path = clone_path.join(sub_root);
+        // We just created it, can't be anything else.
+        let ConfigRoot::Temporary(TempClone { clone_dir, path }) = &mut root else {
+            unreachable!("`root` was just constructed as `Temporary`");
+        };
 
-        if !clone_path.is_dir() {
+        *path = clone_dir.join(sub_root);
+
+        if !path.is_dir() {
             eprintln!(
                 "{fatal}: Cannot find sub-root inside Git repository: '{sub_root}'.",
                 fatal = ui::Color::error("fatal")
             );
             return Err(1);
         }
-
-        Ok(clone_path)
-    } else {
-        Ok(clone_path)
     }
+
+    Ok(root)
 }
 
 /// Resolve a local config root, ask for confirmation if it has no

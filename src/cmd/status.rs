@@ -47,11 +47,11 @@ impl Ord for Status {
 ///    - Missing (not yet copied).
 pub fn status(root: Option<&String>, verbose: bool, pull_before_command: bool) -> Result<(), i32> {
     let root = if pull_before_command {
-        resolve_and_pull_config_root(root)?
+        resolve_and_pull_config_root(root)?.into()
     } else if is_git_remote_uri(root) {
         get_config_root_from_git(root.expect("not empty, contains a `git:` prefix"), verbose)?
     } else {
-        resolve_config_root(root, false)?
+        resolve_config_root(root, false)?.into()
     };
     let root: &Path = root.as_ref();
     let home = get_home_directory()?;

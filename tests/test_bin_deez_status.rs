@@ -141,6 +141,40 @@ fn status_pull_rejects_remote_root() {
 }
 
 #[test]
+fn status_cleans_up_remote_clone() {
+    conf::init();
+
+    remove_output_file("output_clone_path");
+    mock_bin("git", "bin_git_clone");
+
+    let output = run(&["--verbose", "status", "git:success[sub/root]"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    let clone_path = read_output_file("output_clone_path");
+    assert!(!Path::new(clone_path.trim()).exists());
+}
+
+#[test]
+fn status_cleans_up_partial_clone_after_git_failure() {
+    conf::init();
+
+    remove_output_file("output_clone_path");
+    mock_bin("git", "bin_git_clone");
+
+    let output = run(&["--verbose", "status", "git:fail"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 1);
+
+    let clone_path = read_output_file("output_clone_path");
+    assert!(!Path::new(clone_path.trim()).exists());
+}
+
+#[test]
 fn status_with_hooks() {
     conf::init();
 
