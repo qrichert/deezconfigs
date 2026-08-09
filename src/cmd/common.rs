@@ -474,11 +474,11 @@ pub fn get_home_directory() -> Result<PathBuf, i32> {
 
 /// Helper function to instantiate [`Hooks`] from a command, or error.
 pub fn get_hooks_for_command<'a>(
-    root: &'a Path,
-    home: &'a Path,
+    root: &'a impl AsRef<Path>,
+    home: &'a impl AsRef<Path>,
     verbose: bool,
 ) -> Result<Hooks<'a>, i32> {
-    match Hooks::for_command(root, home, verbose) {
+    match Hooks::for_command(root.as_ref(), home.as_ref(), verbose) {
         Ok(hooks) => Ok(hooks),
         Err(err) => {
             eprintln!("{err}");

@@ -49,6 +49,7 @@ pub fn diff(
     } else {
         resolve_config_root(root, false)?
     };
+    let root: &Path = root.as_ref();
     let home = get_home_directory()?;
     let hooks = get_hooks_for_command(&root, &home, verbose)?;
 
@@ -62,7 +63,7 @@ pub fn diff(
     let diffs = Arc::new(Mutex::new(Vec::with_capacity(20)));
     let nb_errors = AtomicUsize::new(0);
 
-    walk::find_files_recursively(&root, |p| {
+    walk::find_files_recursively(root, |p| {
         debug_assert!(!p.is_dir());
 
         let source = root.join(p);

@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -23,6 +23,7 @@ pub fn sync(root: Option<&String>, verbose: bool, pull_before_command: bool) -> 
     } else {
         resolve_config_root(root, true)?
     };
+    let root: &Path = root.as_ref();
     let home = get_home_directory()?;
     let hooks = get_hooks_for_command(&root, &home, verbose)?;
 
@@ -37,7 +38,7 @@ pub fn sync(root: Option<&String>, verbose: bool, pull_before_command: bool) -> 
     let nb_files_synced = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
 
-    walk::find_files_recursively(&root, |p| {
+    walk::find_files_recursively(root, |p| {
         debug_assert!(!p.is_dir());
 
         let source = root.join(p);
@@ -183,7 +184,7 @@ pub fn sync(root: Option<&String>, verbose: bool, pull_before_command: bool) -> 
 
     ui::print_summary(
         ui::Action::Sync,
-        &root,
+        root,
         nb_files_synced,
         nb_errors,
         nb_hooks_ran,

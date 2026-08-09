@@ -45,7 +45,7 @@ pub fn print_files(files: &[String]) {
 
 pub fn print_summary(
     action: Action,
-    root: &Path,
+    root: impl AsRef<Path>,
     nb_files: usize,
     nb_errors: usize,
     nb_hooks_ran: usize,
@@ -54,7 +54,14 @@ pub fn print_summary(
     print_hooks_summary(nb_hooks_ran);
 }
 
-pub fn print_files_summary(action: Action, root: &Path, nb_files: usize, nb_errors: usize) {
+pub fn print_files_summary(
+    action: Action,
+    root: impl AsRef<Path>,
+    nb_files: usize,
+    nb_errors: usize,
+) {
+    let root = root.as_ref();
+
     if nb_files + nb_errors == 0 {
         println!("No config files found in '{}'.", root.display());
     }
