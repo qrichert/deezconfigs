@@ -171,6 +171,31 @@ fn diff_with_negation_excludes_matching_files() {
 }
 
 #[test]
+fn diff_with_glob_pathspecs_includes_and_excludes_matching_files() {
+    conf::init();
+
+    conf::create_file_in_configs("root.toml", Some("root config"));
+    conf::create_file_in_configs("nested/keep.toml", Some("kept config"));
+    conf::create_file_in_configs("nested/skip.toml", Some("skipped config"));
+    conf::create_file_in_configs("nested/other.txt", Some("other config"));
+
+    conf::create_file_in_home("root.toml", Some("changed root"));
+    conf::create_file_in_home("nested/keep.toml", Some("changed keep"));
+    conf::create_file_in_home("nested/skip.toml", Some("changed skip"));
+    conf::create_file_in_home("nested/other.txt", Some("changed other"));
+
+    let output = run(&["diff", &conf::root(), "--", "**/*.toml", ":!**/skip.*"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(output.stdout.contains("root.toml"));
+    assert!(output.stdout.contains("nested/keep.toml"));
+    assert!(!output.stdout.contains("nested/skip.toml"));
+    assert!(!output.stdout.contains("nested/other.txt"));
+}
+
+#[test]
 fn diff_with_invalid_pathspec_errors() {
     conf::init();
 

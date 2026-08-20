@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn double_dash_drains_everything_after_it_as_pathspecs() {
-        // Flag-like tokens after `--` are pathspecs, not options.
+        // Flag-like arguments after `--` are pathspecs, not options.
         let args = Args::build_from_args(["sync", "--", "--verbose"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Sync));
         assert!(args.root.is_none());
@@ -449,8 +449,8 @@ mod tests {
     }
 
     #[test]
-    fn double_dash_collects_negation_tokens_verbatim() {
-        // The parser only collects strings; `pathspec` validates them.
+    fn double_dash_collects_exclusive_pathspecs_verbatim() {
+        // The parser only collects raw strings; `pathspec` validates them.
         let args = Args::build_from_args(["diff", "--", ":!foo", ":^bar"].iter()).unwrap();
         assert_eq!(args.pathspecs, [":!foo", ":^bar"]);
     }

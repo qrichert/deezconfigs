@@ -96,6 +96,31 @@ fn rsync_with_negation_excludes_matching_files() {
 }
 
 #[test]
+fn rsync_with_glob_pathspecs_includes_and_excludes_matching_files() {
+    conf::init();
+
+    let root_toml = conf::create_file_in_configs("root.toml", Some("old"));
+    let keep = conf::create_file_in_configs("nested/keep.toml", Some("old"));
+    let skip = conf::create_file_in_configs("nested/skip.toml", Some("old"));
+    let other = conf::create_file_in_configs("nested/other.txt", Some("old"));
+
+    conf::create_file_in_home("root.toml", Some("new"));
+    conf::create_file_in_home("nested/keep.toml", Some("new"));
+    conf::create_file_in_home("nested/skip.toml", Some("new"));
+    conf::create_file_in_home("nested/other.txt", Some("new"));
+
+    let output = run(&["rsync", &conf::root(), "--", "**/*.toml", ":!**/skip.*"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(files::read(&root_toml), "new");
+    assert_eq!(files::read(&keep), "new");
+    assert_eq!(files::read(&skip), "old");
+    assert_eq!(files::read(&other), "old");
+}
+
+#[test]
 fn rsync_with_invalid_pathspec_errors_and_rsyncs_nothing() {
     conf::init();
 

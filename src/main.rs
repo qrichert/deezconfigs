@@ -41,7 +41,7 @@ fn main() {
             cli::Command::Status => cmd::status(root, verbose, args.pull_before_command, &pathspec()),
             cli::Command::Diff => {
                 if args.incoming_diff {
-                    // `diff -i` forwards raw tokens to Git, no parsing needed.
+                    // `diff -i` forwards raw pathspecs to Git, no parsing needed.
                     cmd::diff_incoming(root, verbose, args.pull_before_command, args.reversed_diff, &args.pathspecs)
                 } else {
                     cmd::diff(root, verbose, args.pull_before_command, args.reversed_diff, &pathspec())
@@ -168,7 +168,7 @@ The Config Root:
 
       {attenuate}# Will status `/home/deez/root` wherever you are.{rt}
       {highlight}${rt} export DEEZ_ROOT=/home/deez/root
-      {highlight}${rt} deez status
+      {highlight}${rt} {bin} status
 
 Home:
   This is the directory where config files are copied or symlinked to.
@@ -287,8 +287,15 @@ Filtering:
       {attenuate}# Diff everything except `.gitconfig` (`:!` and `:^` exclude).{rt}
       {highlight}${rt} {bin} diff -- :!.gitconfig
 
-      {attenuate}# rSync everything in Neovim's config, except the lockfile.{rt}
-      {highlight}${rt} {bin} rsync -- .config/nvim :!.config/nvim/lazy-lock.json
+      {attenuate}# rSync everything in Neovim's config, except JSON files.{rt}
+      {highlight}${rt} {bin} rsync -- .config/nvim ':!**/*.json'
+
+  Syntax: `?` matches any single character. `*` matches zero or more
+  characters. `**` matches zero or more directories. `{{a,b}}` matches
+  pattern `a` or pattern `b`. `[ab]` matches character `a` or character
+  `b`. `[!ab]` matches any character except for `a` and `b`. To escape a
+  metacharacter, prefix it with a `\\`, or put it a in a character class
+  like this: `[*]`{windows_glob_escape}.
 
   With `diff --incoming`, pathspecs are handed straight to Git.
 
@@ -302,18 +309,18 @@ Run:
 
       {attenuate}# Will run in `/home/deez/root` wherever you are.{rt}
       {highlight}${rt} export DEEZ_ROOT=/home/deez/root
-      {highlight}${rt} deez run pwd
+      {highlight}${rt} {bin} run pwd
       /home/deez/root
 
       {attenuate}# Run your editor inside the root.{rt}
-      {highlight}${rt} deez run $EDITOR
+      {highlight}${rt} {bin} run $EDITOR
 
       {attenuate}# Start an interactive shell inside the root.{rt}
-      {highlight}${rt} deez run $SHELL
+      {highlight}${rt} {bin} run $SHELL
 
       {attenuate}# A common combination would be:{rt}
-      {highlight}${rt} deez run git pull
-      {highlight}${rt} deez sync
+      {highlight}${rt} {bin} run git pull
+      {highlight}${rt} {bin} sync
 
 Shortcuts:
   Each command has a shortcut:
@@ -471,6 +478,13 @@ Copy some files, and link others:
         modified = ui::Color::modified("M"),
         missing = ui::Color::missing("!"),
         rt = ui::Color::maybe_color(ui::color::RESET),
+        windows_glob_escape = {
+            if cfg!(windows) {
+                " (only the latter will work on Windows)"
+            } else {
+                ""
+            }
+        },
     ));
 }
 

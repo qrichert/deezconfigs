@@ -176,6 +176,13 @@ fn are_files_equal(a: &Path, b: &Path) -> Result<bool, std::io::Error> {
 }
 
 fn print_file_statuses(statuses: &[Status]) {
+    // The `Files` section is always printed because it's the core of
+    // the command (unlinke `Hook`).
+    if statuses.is_empty() {
+        println!("Files\n  No files.");
+        return;
+    }
+
     let summary = statuses
         .iter()
         .map(|s| {

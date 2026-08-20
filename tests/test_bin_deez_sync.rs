@@ -84,6 +84,26 @@ fn sync_with_negation_excludes_matching_files() {
 }
 
 #[test]
+fn sync_with_glob_pathspecs_includes_and_excludes_matching_files() {
+    conf::init();
+
+    conf::create_file_in_configs("root.toml", None);
+    conf::create_file_in_configs("nested/keep.toml", None);
+    conf::create_file_in_configs("nested/skip.toml", None);
+    conf::create_file_in_configs("nested/other.txt", None);
+
+    let output = run(&["sync", &conf::root(), "--", "**/*.toml", ":!**/skip.*"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(files::file_exists_in_home("root.toml"));
+    assert!(files::file_exists_in_home("nested/keep.toml"));
+    assert!(!files::file_exists_in_home("nested/skip.toml"));
+    assert!(!files::file_exists_in_home("nested/other.txt"));
+}
+
+#[test]
 fn sync_with_invalid_pathspec_errors_and_syncs_nothing() {
     // /!\ An invalid pathspec must fail closed, NEVER fall back to
     // removing everything.

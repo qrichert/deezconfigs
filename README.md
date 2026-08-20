@@ -245,9 +245,16 @@ $ deez sync -- .config/fish/
 # Diff everything except `.gitconfig` (`:!` and `:^` exclude).
 $ deez diff -- :!.gitconfig
 
-# rSync everything in Neovim's config, except the lockfile.
-$ deez rsync -- .config/nvim :!.config/nvim/lazy-lock.json
+# rSync everything in Neovim's config, except JSON files.
+$ deez rsync -- .config/nvim ':!**/*.json'
 ```
+
+Syntax: `?` matches any single character. `*` matches zero or more
+characters. `**` matches zero or more directories. `{a,b}` matches
+pattern `a` or pattern `b`. `[ab]` matches character `a` or character
+`b`. `[!ab]` matches any character except for `a` and `b`. To escape a
+metacharacter, prefix it with a `\`, or put it a in a character class
+like this: `[*]` (only the latter will work on Windows).
 
 With `diff --incoming`, pathspecs are handed straight to Git.
 

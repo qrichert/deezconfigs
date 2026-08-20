@@ -111,6 +111,55 @@ Files
 }
 
 #[test]
+fn status_with_pathspec_matching_nothing_shows_placeholder() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("this is foo"));
+    conf::create_file_in_home("foo.txt", Some("this is foo"));
+
+    let output = run(&["status", &conf::root(), "--", "does-not-exist"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert_eq!(
+        output.stdout,
+        "\
+Files
+  No files.
+0 in sync, 0 modified, 0 missing.
+"
+    );
+}
+
+#[test]
+fn status_with_glob_pathspecs_includes_and_excludes_matching_files() {
+    conf::init();
+
+    conf::create_file_in_configs("root.toml", Some("same"));
+    conf::create_file_in_configs("nested/keep.toml", Some("same"));
+    conf::create_file_in_configs("nested/skip.toml", Some("same"));
+    conf::create_file_in_configs("nested/other.txt", Some("same"));
+
+    conf::create_file_in_home("root.toml", Some("same"));
+    conf::create_file_in_home("nested/keep.toml", Some("same"));
+    conf::create_file_in_home("nested/skip.toml", Some("same"));
+    conf::create_file_in_home("nested/other.txt", Some("same"));
+
+    let output = run(&["status", &conf::root(), "--", "**/*.toml", ":!**/skip.*"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(output.stdout.contains("root.toml"));
+    assert!(output.stdout.contains("nested/keep.toml"));
+    assert!(!output.stdout.contains("nested/skip.toml"));
+    assert!(!output.stdout.contains("nested/other.txt"));
+    assert!(output.stdout.contains("2 in sync, 0 modified, 0 missing."));
+}
+
+#[test]
 fn status_with_invalid_pathspec_errors() {
     conf::init();
 
