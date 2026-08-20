@@ -19,7 +19,7 @@ activation to operate.
 ```
 Manage deez config files.
 
-Usage: deez [<options>] <command> [<args>]
+Usage: deez [<options>] <command> [<args>] [-- <pathspec>...]
 
 Commands:
   sync [<root>|<git>]    Update home from configs
@@ -228,6 +228,28 @@ $ deez link
 # 2. Now remove all the links you've just created.
 $ deez clean
 ```
+
+### Filtering
+
+You can narrow the set of files deezconfigs works on with pathspecs.
+Pathspecs must be listed at the end of the command, after the `--`
+separator.
+
+Pathspecs either select paths for inclusion (whitelist), or exclude
+paths from the set (blacklist):
+
+```console
+# Sync only fish's config.
+$ deez sync -- .config/fish/
+
+# Diff everything except `.gitconfig` (`:!` and `:^` exclude).
+$ deez diff -- :!.gitconfig
+
+# rSync everything in Neovim's config, except the lockfile.
+$ deez rsync -- .config/nvim :!.config/nvim/lazy-lock.json
+```
+
+With `diff --incoming`, pathspecs are handed straight to Git.
 
 ### Run
 

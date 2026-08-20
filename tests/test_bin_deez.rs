@@ -17,6 +17,8 @@ fn help() {
     assert!(output.stdout.contains("link [<root>]"));
     assert!(output.stdout.contains("-r, --reversed"));
     assert!(output.stdout.contains("-i, --incoming"));
+    assert!(output.stdout.contains("[-- <pathspec>...]"));
+    assert!(output.stdout.contains("Filtering:"));
     // Pin the direction of `diff`, not just the flag's existence. Both
     // comments exist either way; only their pairing with the example
     // command tells the two directions apart. The trailing newline

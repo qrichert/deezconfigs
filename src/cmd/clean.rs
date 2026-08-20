@@ -2,6 +2,7 @@ use std::fs;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
+use deezconfigs::pathspec::PathSpec;
 use deezconfigs::{ui, walk};
 
 use super::common::{
@@ -13,7 +14,12 @@ use super::common::{
 ///
 /// 1. Collect all files in `configs`.
 /// 2. Remove matching files in `$HOME`.
-pub fn clean(root: Option<&String>, verbose: bool, pull_before_command: bool) -> Result<(), i32> {
+pub fn clean(
+    root: Option<&String>,
+    verbose: bool,
+    pull_before_command: bool,
+    pathspec: &PathSpec,
+) -> Result<(), i32> {
     let root = if pull_before_command {
         resolve_and_pull_config_root(root)?.into()
     } else if is_git_remote_uri(root) {
@@ -35,7 +41,7 @@ pub fn clean(root: Option<&String>, verbose: bool, pull_before_command: bool) ->
     let nb_files_removed = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
 
-    walk::find_files_recursively(&root, |p| {
+    walk::find_files_recursively(&root, pathspec, |p| {
         debug_assert!(!p.is_dir());
 
         let destination = home.join(p);

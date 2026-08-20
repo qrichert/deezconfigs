@@ -3,6 +3,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
+use deezconfigs::pathspec::PathSpec;
 use deezconfigs::{ui, walk};
 
 use super::common::{
@@ -15,7 +16,12 @@ use super::common::{
 /// 1. Collect all files in `configs`.
 /// 2. Find matching files in `$HOME`.
 /// 3. Replace files in `configs` with files in `$HOME`.
-pub fn rsync(root: Option<&String>, verbose: bool, pull_before_command: bool) -> Result<(), i32> {
+pub fn rsync(
+    root: Option<&String>,
+    verbose: bool,
+    pull_before_command: bool,
+    pathspec: &PathSpec,
+) -> Result<(), i32> {
     let root = if pull_before_command {
         resolve_and_pull_config_root(root)?
     } else {
@@ -35,7 +41,7 @@ pub fn rsync(root: Option<&String>, verbose: bool, pull_before_command: bool) ->
     let nb_files_rsynced = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
 
-    walk::find_files_recursively(&root, |p| {
+    walk::find_files_recursively(&root, pathspec, |p| {
         debug_assert!(!p.is_dir());
 
         // Despite `rsync` working in reverse, we keep the same

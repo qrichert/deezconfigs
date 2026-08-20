@@ -50,6 +50,64 @@ fn clean_regular() {
 }
 
 #[test]
+fn clean_with_pathspec_leaves_other_files() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_configs(".config/fish/config.fish", None);
+
+    conf::create_file_in_home(".gitconfig", None);
+    conf::create_file_in_home(".config/fish/config.fish", None);
+
+    let output = run(&["clean", &conf::root(), "--", ".config/fish"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(!files::file_exists_in_home(".config/fish/config.fish")); // Removed.
+    assert!(files::file_exists_in_home(".gitconfig")); // Left alone.
+}
+
+#[test]
+fn clean_with_negation_excludes_matching_files() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_configs(".config/fish/config.fish", None);
+
+    conf::create_file_in_home(".gitconfig", None);
+    conf::create_file_in_home(".config/fish/config.fish", None);
+
+    let output = run(&["clean", &conf::root(), "--", ":!.config/fish/config.fish"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(!files::file_exists_in_home(".gitconfig"));
+    assert!(files::file_exists_in_home(".config/fish/config.fish"));
+}
+
+#[test]
+fn clean_with_invalid_pathspec_errors_without_touching_home() {
+    // /!\ An invalid pathspec must fail closed, NEVER fall back to
+    // removing everything.
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_home(".gitconfig", None);
+
+    let output = run(&["clean", &conf::root(), "--", ".."]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(output.stderr.contains("Invalid pathspec"));
+    assert!(files::file_exists_in_home(".gitconfig")); // Untouched.
+}
+
+#[test]
 fn clean_output() {
     conf::init();
 

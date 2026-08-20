@@ -20,6 +20,7 @@ pub struct Args {
     #[allow(clippy::struct_field_names)]
     pub run_args: Vec<String>,
     pub root: Option<String>,
+    pub pathspecs: Vec<String>,
     pub short_help: bool,
     pub long_help: bool,
     pub version: bool,
@@ -59,8 +60,11 @@ impl Args {
                 "-V" | "--version" => args.version = true,
                 "-v" | "--verbose" => args.verbose = true,
                 "-p" | "--pull" => args.pull_before_command = true,
-                "--" if some_command && !some_root => {
-                    args.root = cli_args.next().map(|root| root.to_string());
+                "--" if some_command => {
+                    // Everything after `--` is a pathspec (git-style).
+                    // Root is positional and must come _before_ `--`.
+                    args.pathspecs
+                        .extend(cli_args.by_ref().map(|arg| arg.to_string()));
                 }
                 root if some_command && !some_root => args.root = Some(root.to_string()),
                 unknown => {
@@ -377,41 +381,6 @@ mod tests {
     }
 
     #[test]
-    fn double_dash_regular() {
-        let args = Args::build_from_args(["sync", "--", "~/configs"].iter()).unwrap();
-        assert!(args.command.is_some_and(|c| c == Command::Sync));
-        assert!(args.root.is_some_and(|r| r == "~/configs"));
-    }
-
-    #[test]
-    fn double_dash_not_followed_by_anything_is_noop() {
-        let args = Args::build_from_args(["sync", "--"].iter()).unwrap();
-        assert!(args.command.is_some_and(|c| c == Command::Sync));
-        assert!(args.root.is_none());
-    }
-
-    #[test]
-    fn double_dash_correctly_interprets_what_comes_next_as_root() {
-        let args = Args::build_from_args(["sync", "--", "--verbose"].iter()).unwrap();
-        assert!(args.command.is_some_and(|c| c == Command::Sync));
-        assert!(args.root.is_some_and(|r| r == "--verbose"));
-        assert!(!args.verbose);
-    }
-
-    #[test]
-    fn double_dash_not_preceded_by_command_is_error() {
-        let err = Args::build_from_args(["--", "~/configs"].iter()).unwrap_err();
-        assert!(err.contains("'--'"));
-    }
-
-    #[test]
-    fn double_dash_with_previous_root_is_error() {
-        let err =
-            Args::build_from_args(["sync", "~/other-root", "--", "~/configs"].iter()).unwrap_err();
-        assert!(err.contains("'--'"));
-    }
-
-    #[test]
     fn root_regular() {
         let args = Args::build_from_args(["sync", "~/configs"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Sync));
@@ -435,5 +404,66 @@ mod tests {
     fn root_with_previous_root_is_error() {
         let err = Args::build_from_args(["sync", "~/other-root", "~/configs"].iter()).unwrap_err();
         assert!(err.contains("'~/configs'"));
+    }
+
+    #[test]
+    fn root_before_double_dash_coexists_with_pathspecs() {
+        // Root is positional (before `--`); pathspecs follow.
+        let args =
+            Args::build_from_args(["sync", "~/other-root", "--", "~/configs"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Sync));
+        assert!(args.root.is_some_and(|r| r == "~/other-root"));
+        assert_eq!(args.pathspecs, ["~/configs"]);
+    }
+
+    #[test]
+    fn double_dash_collects_a_pathspec() {
+        let args = Args::build_from_args(["sync", "--", "~/configs"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Sync));
+        assert!(args.root.is_none());
+        assert_eq!(args.pathspecs, ["~/configs"]);
+    }
+
+    #[test]
+    fn double_dash_not_followed_by_anything_is_noop() {
+        let args = Args::build_from_args(["sync", "--"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Sync));
+        assert!(args.root.is_none());
+        assert!(args.pathspecs.is_empty());
+    }
+
+    #[test]
+    fn double_dash_drains_everything_after_it_as_pathspecs() {
+        // Flag-like tokens after `--` are pathspecs, not options.
+        let args = Args::build_from_args(["sync", "--", "--verbose"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Sync));
+        assert!(args.root.is_none());
+        assert!(!args.verbose);
+        assert_eq!(args.pathspecs, ["--verbose"]);
+    }
+
+    #[test]
+    fn double_dash_drains_multiple_pathspecs() {
+        let args = Args::build_from_args(["sync", "--", "a", "b", "c"].iter()).unwrap();
+        assert_eq!(args.pathspecs, ["a", "b", "c"]);
+    }
+
+    #[test]
+    fn double_dash_collects_negation_tokens_verbatim() {
+        // The parser only collects strings; `pathspec` validates them.
+        let args = Args::build_from_args(["diff", "--", ":!foo", ":^bar"].iter()).unwrap();
+        assert_eq!(args.pathspecs, [":!foo", ":^bar"]);
+    }
+
+    #[test]
+    fn double_dash_not_preceded_by_command_is_error() {
+        let err = Args::build_from_args(["--", "~/configs"].iter()).unwrap_err();
+        assert!(err.contains("'--'"));
+    }
+
+    #[test]
+    fn pathspecs_default_empty() {
+        let args = Args::build_from_args(["sync"].iter()).unwrap();
+        assert!(args.pathspecs.is_empty());
     }
 }

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
+use deezconfigs::pathspec::PathSpec;
 use deezconfigs::{ui, walk};
 
 use super::common::{
@@ -15,7 +16,12 @@ use super::common::{
 /// 1. Collect all files in `configs`.
 /// 2. Create or replace matching files in `$HOME`.
 #[allow(clippy::too_many_lines)] // More a procedure than a function.
-pub fn sync(root: Option<&String>, verbose: bool, pull_before_command: bool) -> Result<(), i32> {
+pub fn sync(
+    root: Option<&String>,
+    verbose: bool,
+    pull_before_command: bool,
+    pathspec: &PathSpec,
+) -> Result<(), i32> {
     let root = if pull_before_command {
         resolve_and_pull_config_root(root)?.into()
     } else if is_git_remote_uri(root) {
@@ -38,7 +44,7 @@ pub fn sync(root: Option<&String>, verbose: bool, pull_before_command: bool) -> 
     let nb_files_synced = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
 
-    walk::find_files_recursively(root, |p| {
+    walk::find_files_recursively(root, pathspec, |p| {
         debug_assert!(!p.is_dir());
 
         let source = root.join(p);

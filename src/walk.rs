@@ -4,6 +4,7 @@ use std::path::Path;
 use ignore::{self, DirEntry, WalkBuilder, WalkState};
 
 use crate::hooks;
+use crate::pathspec::PathSpec;
 
 /// Find files recursively, starting from `root` directory.
 ///
@@ -17,10 +18,18 @@ use crate::hooks;
 /// This is useful for us, because it makes it easy to join the same
 /// path back to `root`, or, back to `$HOME`, without additional logic.
 ///
+/// `pathspec` filters which files reach `f`: only files matching it are
+/// yielded. An empty `pathspec` matches everything. We only filter
+/// files, not directories.
+///
 /// # Panics
 ///
 /// This function panics if `root` is not a directory.
-pub fn find_files_recursively(root: impl AsRef<Path>, f: impl Fn(&Path) + Sync) {
+pub fn find_files_recursively(
+    root: impl AsRef<Path>,
+    pathspec: &PathSpec,
+    f: impl Fn(&Path) + Sync,
+) {
     let root = root.as_ref();
 
     let does_dir_entry_match = move |path: &Path| {
@@ -75,7 +84,7 @@ pub fn find_files_recursively(root: impl AsRef<Path>, f: impl Fn(&Path) + Sync) 
                             WalkState::Skip
                         };
                     }
-                    if does_file_entry_match(path) {
+                    if does_file_entry_match(path) && pathspec.matches(path) {
                         f(path);
                         return WalkState::Continue;
                     }

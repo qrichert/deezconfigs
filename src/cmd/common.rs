@@ -402,11 +402,19 @@ pub fn run_git_fetch_in_root(root: &Path) -> Result<(), i32> {
 /// its own error messages (e.g., if there is no upstream branch, or if
 /// the root is not a Git repository).
 ///
+/// `pathspecs` are forwarded verbatim after the `--`, so Git does its
+/// own (native, richer) pathspec matching. An empty slice diffs
+/// everything (default Git behavior).
+///
 /// # Errors
 ///
 /// Errors if Git cannot be run, or with Git's own exit code if the diff
 /// itself fails.
-pub fn show_git_diff_against_upstream(root: &Path, reversed: bool) -> Result<(), i32> {
+pub fn show_git_diff_against_upstream(
+    root: &Path,
+    reversed: bool,
+    pathspecs: &[String],
+) -> Result<(), i32> {
     let range = if reversed {
         "@{u}...HEAD"
     } else {
@@ -425,6 +433,13 @@ pub fn show_git_diff_against_upstream(root: &Path, reversed: bool) -> Result<(),
 
     // `--` so that Git doesn't mistake the range for a path.
     command.arg(range).arg("--");
+
+    // Forward pathspecs verbatim after `--`. Git parses matching and
+    // `:!` natively, and supports richer syntax than our local matcher,
+    // so `-i` delegates filtering (and its validation) entirely to Git.
+    for pathspec in pathspecs {
+        command.arg(pathspec);
+    }
 
     propagate_git_status(command.status(), "diff")
 }

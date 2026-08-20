@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use lessify::Pager;
 
+use deezconfigs::pathspec::PathSpec;
 use deezconfigs::{ui, utils, walk};
 
 use super::common::{
@@ -41,6 +42,7 @@ pub fn diff(
     verbose: bool,
     pull_before_command: bool,
     reversed: bool,
+    pathspec: &PathSpec,
 ) -> Result<(), i32> {
     let root = if pull_before_command {
         resolve_and_pull_config_root(root)?.into()
@@ -62,9 +64,12 @@ pub fn diff(
     // we issue are a bigger bottleneck anyway).
     let diffs = Arc::new(Mutex::new(Vec::with_capacity(20)));
     let nb_errors = AtomicUsize::new(0);
+    let nb_processed = AtomicUsize::new(0);
 
-    walk::find_files_recursively(root, |p| {
+    walk::find_files_recursively(root, pathspec, |p| {
         debug_assert!(!p.is_dir());
+
+        nb_processed.fetch_add(1, Ordering::Relaxed);
 
         let source = root.join(p);
         let destination = home.join(p);
@@ -135,9 +140,14 @@ pub fn diff(
     nb_hooks_ran += run_hooks(|| hooks.post_diff())?;
 
     let nb_errors = nb_errors.into_inner();
+    let nb_processed = nb_processed.into_inner();
 
     if nb_errors == 0 {
-        if diffs.is_empty() {
+        if !pathspec.is_empty() && nb_processed == 0 {
+            // A filter was given but selected nothing; "in sync" would
+            // be misleading here.
+            println!("No files matched.");
+        } else if diffs.is_empty() {
             println!("Home is in sync.");
         } else {
             print_file_diffs(&diffs);
@@ -163,6 +173,7 @@ pub fn diff_incoming(
     verbose: bool,
     pull_before_command: bool,
     reversed: bool,
+    pathspecs: &[String],
 ) -> Result<(), i32> {
     if is_git_remote_uri(root) {
         eprintln!(
@@ -198,7 +209,7 @@ pub fn diff_incoming(
 
     nb_hooks_ran += run_hooks(|| hooks.pre_diff())?;
 
-    show_git_diff_against_upstream(&root, reversed)?;
+    show_git_diff_against_upstream(&root, reversed, pathspecs)?;
 
     // Contrary to `diff()`, hooks run _after_ printing here. Git pages
     // its own output, and waits for the pager to exit before returning,

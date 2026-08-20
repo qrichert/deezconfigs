@@ -45,6 +45,62 @@ fn sync_regular() {
 }
 
 #[test]
+fn sync_with_pathspec_only_syncs_that_subtree() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_configs(".config/nvim/init.lua", None);
+    conf::create_file_in_configs(".config/fish/config.fish", None);
+
+    // Only the `.config/fish` subtree is selected.
+    let output = run(&["sync", &conf::root(), "--", ".config/fish"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(files::file_exists_in_home(".config/fish/config.fish"));
+    assert!(!files::file_exists_in_home(".gitconfig"));
+    assert!(!files::file_exists_in_home(".config/nvim/init.lua"));
+}
+
+#[test]
+fn sync_with_negation_excludes_matching_files() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_configs(".config/nvim/init.lua", None);
+    conf::create_file_in_configs(".config/fish/config.fish", None);
+
+    let output = run(&["sync", &conf::root(), "--", ":!.config/fish/config.fish"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(!files::file_exists_in_home(".config/fish/config.fish"));
+    assert!(files::file_exists_in_home(".gitconfig"));
+    assert!(files::file_exists_in_home(".config/nvim/init.lua"));
+}
+
+#[test]
+fn sync_with_invalid_pathspec_errors_and_syncs_nothing() {
+    // /!\ An invalid pathspec must fail closed, NEVER fall back to
+    // removing everything.
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+
+    let output = run(&["sync", &conf::root(), "--", ".."]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(output.stderr.contains("Invalid pathspec"));
+    assert!(!files::file_exists_in_home(".gitconfig"));
+}
+
+#[test]
 fn sync_output() {
     conf::init();
 

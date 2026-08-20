@@ -5,10 +5,12 @@ use std::process;
 
 use lessify::Pager;
 
+use deezconfigs::pathspec::PathSpec;
 use deezconfigs::ui;
 
 use cmd::cli;
 
+#[rustfmt::skip]
 fn main() {
     let args = match cli::Args::build_from_args(env::args().skip(1)) {
         Ok(args) => args,
@@ -29,19 +31,23 @@ fn main() {
         let root = args.root.as_ref();
         let verbose = args.verbose;
 
+        // Lazy, not all commands need it.
+        let pathspec = || parse_pathspecs_or_exit(&args.pathspecs);
+
         if let Err(code) = match command {
-            cli::Command::Sync => cmd::sync(root, verbose, args.pull_before_command),
-            cli::Command::RSync => cmd::rsync(root, verbose, args.pull_before_command),
-            cli::Command::Link => cmd::link(root, verbose, args.pull_before_command),
-            cli::Command::Status => cmd::status(root, verbose, args.pull_before_command),
+            cli::Command::Sync => cmd::sync(root, verbose, args.pull_before_command, &pathspec()),
+            cli::Command::RSync => cmd::rsync(root, verbose, args.pull_before_command, &pathspec()),
+            cli::Command::Link => cmd::link(root, verbose, args.pull_before_command, &pathspec()),
+            cli::Command::Status => cmd::status(root, verbose, args.pull_before_command, &pathspec()),
             cli::Command::Diff => {
                 if args.incoming_diff {
-                    cmd::diff_incoming(root, verbose, args.pull_before_command, args.reversed_diff)
+                    // `diff -i` forwards raw tokens to Git, no parsing needed.
+                    cmd::diff_incoming(root, verbose, args.pull_before_command, args.reversed_diff, &args.pathspecs)
                 } else {
-                    cmd::diff(root, verbose, args.pull_before_command, args.reversed_diff)
+                    cmd::diff(root, verbose, args.pull_before_command, args.reversed_diff, &pathspec())
                 }
             }
-            cli::Command::Clean => cmd::clean(root, verbose, args.pull_before_command),
+            cli::Command::Clean => cmd::clean(root, verbose, args.pull_before_command, &pathspec()),
             cli::Command::Run => cmd::run(&args.run_args, verbose),
             cli::Command::Nuts => {
                 println!("Ha! Got 'em!");
@@ -53,6 +59,16 @@ fn main() {
     } else {
         // No arguments.
         short_help();
+    }
+}
+
+fn parse_pathspecs_or_exit(pathspecs: &[String]) -> PathSpec {
+    match PathSpec::parse(pathspecs) {
+        Ok(pathspec) => pathspec,
+        Err(err) => {
+            eprintln!("{fatal}: {err}.", fatal = ui::Color::error("fatal"));
+            process::exit(2);
+        }
     }
 }
 
@@ -69,7 +85,7 @@ fn short_help_message() -> String {
         "\
 {description}
 
-Usage: {bin} [<options>] <command> [<args>]
+Usage: {bin} [<options>] <command> [<args>] [-- <pathspec>...]
 
 Commands:
   sync [<root>|<git>]    Update home from configs
@@ -256,6 +272,25 @@ Clean:
 
       {attenuate}# 2. Now remove all the links you've just created.{rt}
       {highlight}${rt} {bin} clean
+
+Filtering:
+  You can narrow the set of files {package} works on with pathspecs.
+  Pathspecs must be listed at the end of the command, after the `--`
+  separator.
+
+  Pathspecs either select paths for inclusion (whitelist), or exclude
+  paths from the set (blacklist):
+
+      {attenuate}# Sync only fish's config.{rt}
+      {highlight}${rt} {bin} sync -- .config/fish/
+
+      {attenuate}# Diff everything except `.gitconfig` (`:!` and `:^` exclude).{rt}
+      {highlight}${rt} {bin} diff -- :!.gitconfig
+
+      {attenuate}# rSync everything in Neovim's config, except the lockfile.{rt}
+      {highlight}${rt} {bin} rsync -- .config/nvim :!.config/nvim/lazy-lock.json
+
+  With `diff --incoming`, pathspecs are handed straight to Git.
 
 Run:
   There is an additional `run` convenience-command which works with the

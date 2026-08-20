@@ -5,6 +5,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
+use deezconfigs::pathspec::PathSpec;
 use deezconfigs::{ui, utils, walk};
 
 use super::common::{
@@ -45,7 +46,12 @@ impl Ord for Status {
 ///    - In Sync (equal).
 ///    - Modified (not equal).
 ///    - Missing (not yet copied).
-pub fn status(root: Option<&String>, verbose: bool, pull_before_command: bool) -> Result<(), i32> {
+pub fn status(
+    root: Option<&String>,
+    verbose: bool,
+    pull_before_command: bool,
+    pathspec: &PathSpec,
+) -> Result<(), i32> {
     let root = if pull_before_command {
         resolve_and_pull_config_root(root)?.into()
     } else if is_git_remote_uri(root) {
@@ -67,7 +73,7 @@ pub fn status(root: Option<&String>, verbose: bool, pull_before_command: bool) -
     let statuses = Arc::new(Mutex::new(Vec::with_capacity(20)));
     let nb_errors = AtomicUsize::new(0);
 
-    walk::find_files_recursively(root, |p| {
+    walk::find_files_recursively(root, pathspec, |p| {
         debug_assert!(!p.is_dir());
 
         let source = root.join(p);

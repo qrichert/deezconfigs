@@ -131,6 +131,123 @@ foo.txt
 }
 
 #[test]
+fn diff_with_pathspec_only_diffs_matching_files() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("this is foo"));
+    conf::create_file_in_configs("bar/baz.txt", Some("this is bar/baz"));
+
+    conf::create_file_in_home("foo.txt", Some("changed foo"));
+    conf::create_file_in_home("bar/baz.txt", Some("changed baz"));
+
+    let output = run(&["diff", &conf::root(), "--", "bar"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains("bar/baz.txt"));
+    assert!(!output.stdout.contains("foo.txt"));
+}
+
+#[test]
+fn diff_with_negation_excludes_matching_files() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("this is foo"));
+    conf::create_file_in_configs("bar/baz.txt", Some("this is bar/baz"));
+
+    conf::create_file_in_home("foo.txt", Some("changed foo"));
+    conf::create_file_in_home("bar/baz.txt", Some("changed baz"));
+
+    let output = run(&["diff", &conf::root(), "--", ":!foo.txt"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(output.stdout.contains("bar/baz.txt"));
+    assert!(!output.stdout.contains("foo.txt"));
+}
+
+#[test]
+fn diff_with_invalid_pathspec_errors() {
+    conf::init();
+
+    let config = conf::create_file_in_configs("foo.txt", Some("this is foo"));
+    let home = conf::create_file_in_home("foo.txt", Some("changed foo"));
+
+    let output = run(&["diff", &conf::root(), "--", ".."]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(output.stderr.contains("Invalid pathspec"));
+    assert!(config.is_file());
+    assert!(home.is_file());
+}
+
+#[test]
+fn diff_with_pathspec_matching_nothing_says_no_files_matched() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("this is foo"));
+    conf::create_file_in_home("foo.txt", Some("changed foo"));
+
+    let output = run(&["diff", &conf::root(), "--", "does/not/exist"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    // Distinct from "Home is in sync.": nothing was selected at all, at
+    // the pathspec level (i.e., everything was filtered out).
+    assert_eq!(output.stdout, "No files matched.\n");
+}
+
+#[test]
+fn diff_with_pathspec_matching_in_sync_file_says_home_in_sync() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("same"));
+    conf::create_file_in_configs("bar.txt", Some("root"));
+
+    conf::create_file_in_home("foo.txt", Some("same")); // In sync.
+    conf::create_file_in_home("bar.txt", Some("home")); // Different.
+
+    // The filter selects only the in-sync 'foo.txt', and ignores
+    // the modified 'bar.txt'.
+    let output = run(&["diff", &conf::root(), "--", "foo.txt"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(output.stdout, "Home is in sync.\n");
+}
+
+#[test]
+fn diff_incoming_forwards_pathspecs_to_git() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_incoming");
+
+    let output = run(&["diff", "--incoming", &conf::root(), "--", ".config/fish"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    let args = read_output_file("output_git_args");
+    let mut args = args.lines();
+    assert_eq!(args.next(), Some("fetch"));
+    // The pathspec is forwarded verbatim to Git (after `--`).
+    assert_eq!(
+        args.next(),
+        Some("diff --no-color HEAD...@{u} -- .config/fish")
+    );
+}
+
+#[test]
 fn diff_incoming_shows_git_output_verbatim() {
     conf::init();
 

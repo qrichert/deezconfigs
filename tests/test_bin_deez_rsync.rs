@@ -56,6 +56,62 @@ fn rsync_regular() {
 }
 
 #[test]
+fn rsync_with_pathspec_only_rsyncs_that_subtree() {
+    conf::init();
+
+    let git = conf::create_file_in_configs(".gitconfig", Some("old"));
+    let fish = conf::create_file_in_configs(".config/fish/config.fish", Some("old"));
+
+    conf::create_file_in_home(".gitconfig", Some("new"));
+    conf::create_file_in_home(".config/fish/config.fish", Some("new"));
+
+    let output = run(&["rsync", &conf::root(), "--", ".config/fish"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert_eq!(files::read(&fish), "new"); // Updated from home.
+    assert_eq!(files::read(&git), "old"); // Left untouched.
+}
+
+#[test]
+fn rsync_with_negation_excludes_matching_files() {
+    conf::init();
+
+    let git = conf::create_file_in_configs(".gitconfig", Some("old"));
+    let fish = conf::create_file_in_configs(".config/fish/config.fish", Some("old"));
+
+    conf::create_file_in_home(".gitconfig", Some("new"));
+    conf::create_file_in_home(".config/fish/config.fish", Some("new"));
+
+    let output = run(&["rsync", &conf::root(), "--", ":!.config/fish/config.fish"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert_eq!(files::read(&git), "new");
+    assert_eq!(files::read(&fish), "old");
+}
+
+#[test]
+fn rsync_with_invalid_pathspec_errors_and_rsyncs_nothing() {
+    conf::init();
+
+    let git = conf::create_file_in_configs(".gitconfig", Some("old"));
+    conf::create_file_in_home(".gitconfig", Some("new"));
+
+    let output = run(&["rsync", &conf::root(), "--", ".."]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(output.stderr.contains("Invalid pathspec"));
+    assert_eq!(files::read(&git), "old");
+}
+
+#[test]
 fn rsync_output() {
     conf::init();
 

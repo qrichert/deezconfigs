@@ -45,6 +45,56 @@ fn link_regular() {
 }
 
 #[test]
+fn link_with_pathspec_only_links_that_subtree() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_configs(".config/fish/config.fish", None);
+
+    let output = run(&["link", &conf::root(), "--", ".config/fish"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(files::symlink_exists_in_home(".config/fish/config.fish"));
+    assert!(!files::symlink_exists_in_home(".gitconfig"));
+}
+
+#[test]
+fn link_with_negation_excludes_matching_files() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+    conf::create_file_in_configs(".config/fish/config.fish", None);
+
+    let output = run(&["link", &conf::root(), "--", ":!.config/fish/config.fish"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    assert!(files::symlink_exists_in_home(".gitconfig"));
+    assert!(!files::symlink_exists_in_home(".config/fish/config.fish"));
+}
+
+#[test]
+fn link_with_invalid_pathspec_errors_and_links_nothing() {
+    conf::init();
+
+    conf::create_file_in_configs(".gitconfig", None);
+
+    let output = run(&["link", &conf::root(), "--", ".."]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(output.stderr.contains("Invalid pathspec"));
+    assert!(!files::symlink_exists_in_home(".gitconfig"));
+    assert!(!files::file_exists_in_home(".gitconfig"));
+}
+
+#[test]
 fn link_points_to_correct_file() {
     conf::init();
 

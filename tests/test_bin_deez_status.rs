@@ -59,6 +59,73 @@ Files
 }
 
 #[test]
+fn status_with_pathspec_only_lists_that_subtree() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("this is foo"));
+    conf::create_file_in_configs("bar/baz.txt", Some("this is bar/baz"));
+
+    conf::create_file_in_home("foo.txt", Some("this is foo"));
+    conf::create_file_in_home("bar/baz.txt", Some("this is bar/baz"));
+
+    let output = run(&["status", &conf::root(), "--", "bar"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+
+    // Only `bar/baz.txt` is listed and counted.
+    assert_eq!(
+        output.stdout,
+        "\
+Files
+  S  bar/baz.txt
+1 in sync, 0 modified, 0 missing.
+"
+    );
+}
+
+#[test]
+fn status_with_negation_excludes_matching_files() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("this is foo"));
+    conf::create_file_in_configs("bar/baz.txt", Some("this is bar/baz"));
+
+    conf::create_file_in_home("foo.txt", Some("this is foo"));
+    conf::create_file_in_home("bar/baz.txt", Some("this is bar/baz"));
+
+    let output = run(&["status", &conf::root(), "--", ":!foo.txt"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+Files
+  S  bar/baz.txt
+1 in sync, 0 modified, 0 missing.
+"
+    );
+}
+
+#[test]
+fn status_with_invalid_pathspec_errors() {
+    conf::init();
+
+    let config = conf::create_file_in_configs("foo.txt", Some("this is foo"));
+
+    let output = run(&["status", &conf::root(), "--", ".."]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 2);
+    assert!(output.stderr.contains("Invalid pathspec"));
+    assert!(config.is_file());
+}
+
+#[test]
 fn status_pull_runs_git_pull() {
     conf::init();
 
