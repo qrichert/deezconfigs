@@ -11,8 +11,8 @@ _deezconfigs_ will mirror your config files to your `$HOME` directory
 (`sync`) and synchronize them back (`rsync`). Additionally, you can
 choose to symlink the files instead (`link`).
 
-Same idea as _GNU Stow_ or _chezmoi_, but simpler, requiring less neuron
-activation to operate.
+Same idea as _GNU Stow_ or _chezmoi_, but fits my mental model better,
+requiring less neuron activation to operate.
 
 ## Get `--help`
 
