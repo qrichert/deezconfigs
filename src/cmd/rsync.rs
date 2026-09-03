@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use deezconfigs::pathspec::PathSpec;
-use deezconfigs::{ui, walk};
+use deezconfigs::{ui, utils, walk};
 
 use super::common::{
     get_home_directory, get_hooks_for_command, resolve_and_pull_config_root, resolve_config_root,
@@ -39,6 +39,7 @@ pub fn rsync(
     // we issue are a bigger bottleneck anyway).
     let files = Arc::new(Mutex::new(Vec::with_capacity(20)));
     let nb_files_rsynced = AtomicUsize::new(0);
+    let nb_files_updated = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
 
     walk::find_files_recursively(&root, pathspec, |p| {
@@ -72,6 +73,9 @@ pub fn rsync(
             // macOS. This is a no-op for us since a symlink is always
             // up-to-date.
         } else if destination.is_file() {
+            let do_source_and_destination_differ =
+                verbose && do_source_and_destination_differ(&source, &destination);
+
             // Follows symlinks.
             // `fs::copy()` follows symlinks. It will create files with
             // the contents of the symlink's target; it will not create
@@ -84,6 +88,10 @@ pub fn rsync(
                     error = ui::Color::error("error"),
                 );
                 return;
+            }
+
+            if do_source_and_destination_differ {
+                nb_files_updated.fetch_add(1, Ordering::Relaxed);
             }
         }
 
@@ -117,12 +125,14 @@ pub fn rsync(
     nb_hooks_ran += run_hooks(|| hooks.post_rsync())?;
 
     let nb_files_rsynced = nb_files_rsynced.into_inner();
+    let nb_files_updated = nb_files_updated.into_inner();
     let nb_errors = nb_errors.into_inner();
 
     ui::print_summary(
         ui::Action::RSync,
         &root,
         nb_files_rsynced,
+        verbose.then_some(nb_files_updated),
         nb_errors,
         nb_hooks_ran,
     );
@@ -177,4 +187,16 @@ fn does_symlink_point_to_file(home: &Path, symlink: &Path, file: &Path) -> Resul
     };
 
     Ok(symlink_target == file)
+}
+
+fn do_source_and_destination_differ(source: &Path, destination: &Path) -> bool {
+    if !destination.is_file() {
+        return true;
+    }
+
+    match utils::are_files_equal(source, destination) {
+        Ok(equal) => !equal,
+        // If can't compare, assume changed.
+        Err(_) => true,
+    }
 }

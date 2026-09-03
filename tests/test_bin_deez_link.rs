@@ -158,6 +158,60 @@ Ran 2 hooks.
 }
 
 #[test]
+fn link_does_not_report_updated_file_count_without_verbose() {
+    conf::init();
+
+    let unchanged = conf::create_file_in_configs("unchanged.txt", None);
+    let changed = conf::create_file_in_configs("changed.txt", None);
+    let missing = conf::create_file_in_configs("missing.txt", None);
+
+    conf::create_symlink_in_home("unchanged.txt", Some(&unchanged.to_string_lossy()));
+    conf::create_file_in_home("old-target.txt", None);
+    conf::create_symlink_in_home("changed.txt", Some("old-target.txt"));
+
+    let output = run(&["link", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(!output.stdout.contains("Updated"));
+    assert_eq!(files::read_symlink_in_home("unchanged.txt"), unchanged);
+    assert_eq!(files::read_symlink_in_home("changed.txt"), changed);
+    assert_eq!(files::read_symlink_in_home("missing.txt"), missing);
+}
+
+#[test]
+fn link_verbose_reports_updated_file_count() {
+    conf::init();
+
+    let unchanged = conf::create_file_in_configs("unchanged.txt", None);
+    let changed = conf::create_file_in_configs("changed.txt", None);
+    let missing = conf::create_file_in_configs("missing.txt", None);
+
+    conf::create_symlink_in_home("unchanged.txt", Some(&unchanged.to_string_lossy()));
+    conf::create_file_in_home("old-target.txt", None);
+    conf::create_symlink_in_home("changed.txt", Some("old-target.txt"));
+
+    let output = run(&["--verbose", "link", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+changed.txt
+missing.txt
+unchanged.txt
+Linked 3 files. Updated 2.
+"
+    );
+    assert_eq!(files::read_symlink_in_home("unchanged.txt"), unchanged);
+    assert_eq!(files::read_symlink_in_home("changed.txt"), changed);
+    assert_eq!(files::read_symlink_in_home("missing.txt"), missing);
+}
+
+#[test]
 fn link_output_verbose() {
     conf::init();
 
@@ -183,7 +237,7 @@ hook: pre-link.sh
 .config/nvim/init.lua
 .gitconfig
 hook: post-link.sh
-Linked 4 files.
+Linked 4 files. Updated 4.
 Ran 2 hooks.
 "
     );

@@ -130,6 +130,7 @@ pub fn clean(
         ui::Action::Clean,
         &root,
         nb_files_removed,
+        None,
         nb_errors,
         nb_hooks_ran,
     );

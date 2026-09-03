@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use deezconfigs::pathspec::PathSpec;
-use deezconfigs::{ui, walk};
+use deezconfigs::{ui, utils, walk};
 
 use super::common::{
     get_config_root_from_git, get_home_directory, get_hooks_for_command, is_git_remote_uri,
@@ -42,6 +42,7 @@ pub fn sync(
     // we issue are a bigger bottleneck anyway).
     let files = Arc::new(Mutex::new(Vec::with_capacity(20)));
     let nb_files_synced = AtomicUsize::new(0);
+    let nb_files_updated = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
 
     walk::find_files_recursively(root, pathspec, |p| {
@@ -49,6 +50,9 @@ pub fn sync(
 
         let source = root.join(p);
         let destination = home.join(p);
+
+        let do_source_and_destination_differ =
+            verbose && do_source_and_destination_differ(&source, &destination);
 
         if destination.is_dir() {
             // If destination exists and is a directory, try to `rmdir`
@@ -156,6 +160,10 @@ pub fn sync(
             }
         }
 
+        if do_source_and_destination_differ {
+            nb_files_updated.fetch_add(1, Ordering::Relaxed);
+        }
+
         if verbose {
             let file = p.to_string_lossy().to_string();
             if let Ok(mut files) = files.lock() {
@@ -186,15 +194,43 @@ pub fn sync(
     nb_hooks_ran += run_hooks(|| hooks.post_sync())?;
 
     let nb_files_synced = nb_files_synced.into_inner();
+    let nb_files_updated = nb_files_updated.into_inner();
     let nb_errors = nb_errors.into_inner();
 
     ui::print_summary(
         ui::Action::Sync,
         root,
         nb_files_synced,
+        verbose.then_some(nb_files_updated),
         nb_errors,
         nb_hooks_ran,
     );
 
     if nb_errors > 0 { Err(1) } else { Ok(()) }
+}
+
+fn do_source_and_destination_differ(source: &Path, destination: &Path) -> bool {
+    let is_source_symlink = source.is_symlink();
+    let is_destination_symlink = destination.is_symlink();
+
+    if is_source_symlink != is_destination_symlink {
+        return true;
+    }
+    if is_source_symlink {
+        return match (fs::read_link(source), fs::read_link(destination)) {
+            (Ok(source_target), Ok(destination_target)) => source_target != destination_target,
+            // If can't compare, assume changed.
+            _ => true,
+        };
+    }
+    if !destination.is_file() {
+        // Includes missing destination file (will be created).
+        return true;
+    }
+
+    match utils::are_files_equal(source, destination) {
+        Ok(equal) => !equal,
+        // If can't compare, assume changed.
+        Err(_) => true,
+    }
 }

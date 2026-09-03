@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -37,6 +38,7 @@ pub fn link(
     // we issue are a bigger bottleneck anyway).
     let files = Arc::new(Mutex::new(Vec::with_capacity(20)));
     let nb_files_linked = AtomicUsize::new(0);
+    let nb_files_updated = AtomicUsize::new(0);
     let nb_errors = AtomicUsize::new(0);
 
     walk::find_files_recursively(&root, pathspec, |p| {
@@ -44,6 +46,7 @@ pub fn link(
 
         let source = root.join(p);
         let destination = home.join(p);
+        let is_link_updated = does_link_target_differ(&source, &destination);
 
         if destination.is_dir() {
             // If destination exists and is a directory, try to `rmdir`
@@ -106,6 +109,10 @@ pub fn link(
             return;
         }
 
+        if is_link_updated {
+            nb_files_updated.fetch_add(1, Ordering::Relaxed);
+        }
+
         if verbose {
             let file = p.to_string_lossy().to_string();
             if let Ok(mut files) = files.lock() {
@@ -136,15 +143,26 @@ pub fn link(
     nb_hooks_ran += run_hooks(|| hooks.post_link())?;
 
     let nb_files_linked = nb_files_linked.into_inner();
+    let nb_files_updated = nb_files_updated.into_inner();
     let nb_errors = nb_errors.into_inner();
 
     ui::print_summary(
         ui::Action::Link,
         &root,
         nb_files_linked,
+        verbose.then_some(nb_files_updated),
         nb_errors,
         nb_hooks_ran,
     );
 
     if nb_errors > 0 { Err(1) } else { Ok(()) }
+}
+
+fn does_link_target_differ(source: &Path, destination: &Path) -> bool {
+    match fs::read_link(destination) {
+        Ok(target) => target != source,
+        // If can't read the link, assume changed.
+        // Includes missing destination links (will be created).
+        Err(_) => true,
+    }
 }

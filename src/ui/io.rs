@@ -47,10 +47,11 @@ pub fn print_summary(
     action: Action,
     root: impl AsRef<Path>,
     nb_files: usize,
+    nb_files_updated: Option<usize>,
     nb_errors: usize,
     nb_hooks_ran: usize,
 ) {
-    print_files_summary(action, root, nb_files, nb_errors);
+    print_files_summary(action, root, nb_files, nb_files_updated, nb_errors);
     print_hooks_summary(nb_hooks_ran);
 }
 
@@ -58,6 +59,7 @@ pub fn print_files_summary(
     action: Action,
     root: impl AsRef<Path>,
     nb_files: usize,
+    nb_files_updated: Option<usize>,
     nb_errors: usize,
 ) {
     let root = root.as_ref();
@@ -79,6 +81,9 @@ pub fn print_files_summary(
             ", {nb_errors} error{}",
             if nb_errors == 1 { "" } else { "s" }
         );
+    }
+    if let Some(nb_files_updated) = nb_files_updated {
+        _ = write!(stdout, ". Updated {nb_files_updated}");
     }
     _ = writeln!(stdout, ".");
 }
