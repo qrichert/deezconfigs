@@ -11,6 +11,11 @@ hook_macros::hook_tests!(rsync);
 use std::env;
 use std::path::Path;
 
+#[cfg(unix)]
+use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use utils::conf;
 use utils::files;
 use utils::run::{run, run_in_dir};
@@ -168,6 +173,86 @@ Ran 2 hooks.
 }
 
 #[test]
+fn rsync_does_not_report_updated_file_count_without_verbose() {
+    conf::init();
+
+    conf::create_file_in_configs("unchanged.txt", Some("same"));
+    conf::create_file_in_configs("modified.txt", Some("old"));
+    conf::create_file_in_configs("missing.txt", Some("untouched"));
+
+    conf::create_file_in_home("unchanged.txt", Some("same"));
+    conf::create_file_in_home("modified.txt", Some("new"));
+
+    let output = run(&["rsync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(!output.stdout.contains("Updated"));
+    assert_eq!(files::read_in_configs("unchanged.txt"), "same");
+    assert_eq!(files::read_in_configs("modified.txt"), "new");
+    assert_eq!(files::read_in_configs("missing.txt"), "untouched");
+}
+
+#[test]
+fn rsync_verbose_reports_updated_file_count() {
+    conf::init();
+
+    conf::create_file_in_configs("unchanged.txt", Some("same"));
+    conf::create_file_in_configs("modified.txt", Some("old"));
+    conf::create_file_in_configs("missing.txt", Some("untouched"));
+
+    conf::create_file_in_home("unchanged.txt", Some("same"));
+    conf::create_file_in_home("modified.txt", Some("new"));
+
+    let output = run(&["--verbose", "rsync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+missing.txt
+modified.txt
+unchanged.txt
+rSynced 3 files. Updated 1.
+"
+    );
+    assert_eq!(files::read_in_configs("unchanged.txt"), "same");
+    assert_eq!(files::read_in_configs("modified.txt"), "new");
+    assert_eq!(files::read_in_configs("missing.txt"), "untouched");
+}
+
+#[cfg(unix)]
+#[test]
+fn rsync_verbose_counts_permission_only_changes_as_updates() {
+    conf::init();
+
+    let destination = conf::create_file_in_configs("script.sh", Some("same"));
+    let source = conf::create_file_in_home("script.sh", Some("same"));
+    fs::set_permissions(&destination, fs::Permissions::from_mode(0o644)).unwrap();
+    fs::set_permissions(&source, fs::Permissions::from_mode(0o755)).unwrap();
+
+    let output = run(&["--verbose", "rsync", &conf::root(), "--", "script.sh"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+script.sh
+rSynced 1 file. Updated 1.
+"
+    );
+    assert_eq!(
+        fs::metadata(destination).unwrap().permissions().mode() & 0o7777,
+        0o755
+    );
+}
+
+#[test]
 fn rsync_output_verbose() {
     conf::init();
 
@@ -198,7 +283,7 @@ hook: pre-rsync.sh
 .config/nvim/init.lua
 .gitconfig
 hook: post-rsync.sh
-rSynced 4 files.
+rSynced 4 files. Updated 0.
 Ran 2 hooks.
 "
     );

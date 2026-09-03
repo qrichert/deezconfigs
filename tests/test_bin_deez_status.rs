@@ -9,6 +9,11 @@ hook_macros::hook_tests!(status);
 use std::env;
 use std::path::Path;
 
+#[cfg(unix)]
+use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use utils::conf;
 use utils::run::{run, run_in_dir, run_with_input};
 use utils::{mock_bin, output_file_exists, read_output_file, remove_output_file};
@@ -75,6 +80,31 @@ fn status_detects_different_contents_with_same_length() {
         "\
 Files
   M  foo.txt
+0 in sync, 1 modified, 0 missing.
+"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn status_detects_different_permissions() {
+    conf::init();
+
+    let config = conf::create_file_in_configs("script.sh", Some("same"));
+    let home = conf::create_file_in_home("script.sh", Some("same"));
+    fs::set_permissions(config, fs::Permissions::from_mode(0o755)).unwrap();
+    fs::set_permissions(home, fs::Permissions::from_mode(0o644)).unwrap();
+
+    let output = run(&["status", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+Files
+  M  script.sh
 0 in sync, 1 modified, 0 missing.
 "
     );

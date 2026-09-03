@@ -6,6 +6,11 @@ mod hook_macros;
 use std::env;
 use std::path::{Path, PathBuf};
 
+#[cfg(unix)]
+use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use utils::conf::{self, CONFIGS};
 use utils::files;
 use utils::run::{run, run_in_dir};
@@ -147,6 +152,188 @@ Ran 2 hooks.
 }
 
 #[test]
+fn sync_does_not_report_updated_file_count_without_verbose() {
+    conf::init();
+
+    conf::create_file_in_configs("unchanged.txt", Some("same"));
+    conf::create_file_in_configs("modified.txt", Some("new"));
+    conf::create_file_in_configs("missing.txt", Some("created"));
+
+    conf::create_file_in_home("unchanged.txt", Some("same"));
+    conf::create_file_in_home("modified.txt", Some("old"));
+
+    let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(!output.stdout.contains("Updated"));
+    assert_eq!(files::read_in_home("unchanged.txt"), "same");
+    assert_eq!(files::read_in_home("modified.txt"), "new");
+    assert_eq!(files::read_in_home("missing.txt"), "created");
+}
+
+#[test]
+fn sync_verbose_reports_updated_file_count() {
+    conf::init();
+
+    conf::create_file_in_configs("unchanged.txt", Some("same"));
+    conf::create_file_in_configs("modified.txt", Some("new"));
+    conf::create_file_in_configs("missing.txt", Some("created"));
+
+    conf::create_file_in_home("unchanged.txt", Some("same"));
+    conf::create_file_in_home("modified.txt", Some("old"));
+
+    let output = run(&["--verbose", "sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+missing.txt
+modified.txt
+unchanged.txt
+Synced 3 files. Updated 2.
+"
+    );
+    assert_eq!(files::read_in_home("unchanged.txt"), "same");
+    assert_eq!(files::read_in_home("modified.txt"), "new");
+    assert_eq!(files::read_in_home("missing.txt"), "created");
+}
+
+#[cfg(unix)]
+#[test]
+fn sync_verbose_counts_permission_only_changes_as_updates() {
+    conf::init();
+
+    let source = conf::create_file_in_configs("script.sh", Some("same"));
+    let destination = conf::create_file_in_home("script.sh", Some("same"));
+    fs::set_permissions(&source, fs::Permissions::from_mode(0o755)).unwrap();
+    fs::set_permissions(&destination, fs::Permissions::from_mode(0o644)).unwrap();
+
+    let output = run(&["--verbose", "sync", &conf::root(), "--", "script.sh"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+script.sh
+Synced 1 file. Updated 1.
+"
+    );
+    assert_eq!(
+        fs::metadata(destination).unwrap().permissions().mode() & 0o7777,
+        0o755
+    );
+}
+
+#[test]
+fn sync_verbose_counts_file_kind_changes_as_updates() {
+    conf::init();
+
+    let symlink_target = conf::create_file_in_configs("targets/symlink-target.txt", Some("same"));
+    conf::create_symlink_in_configs("symlink.conf", Some(&symlink_target.to_string_lossy()));
+    conf::create_file_in_home("symlink.conf", Some("same"));
+
+    conf::create_file_in_configs("file.conf", Some("same"));
+    conf::create_file_in_home("targets/file-target.txt", Some("same"));
+    conf::create_symlink_in_home("file.conf", Some("targets/file-target.txt"));
+
+    let output = run(&[
+        "--verbose",
+        "sync",
+        &conf::root(),
+        "--",
+        "symlink.conf",
+        "file.conf",
+    ]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+file.conf
+symlink.conf
+Synced 2 files. Updated 2.
+"
+    );
+    assert!(!PathBuf::from(conf::HOME).join("file.conf").is_symlink());
+    assert_eq!(files::read_symlink_in_home("symlink.conf"), symlink_target);
+}
+
+#[test]
+fn sync_verbose_does_not_count_unchanged_symlink_target_as_updated() {
+    conf::init();
+
+    conf::create_file_in_configs("targets/target.txt", Some("configs"));
+    conf::create_file_in_home("targets/target.txt", Some("home"));
+    create_file_symlink(
+        "targets/target.txt",
+        PathBuf::from(CONFIGS).join("config.conf"),
+    );
+    create_file_symlink(
+        "targets/target.txt",
+        PathBuf::from(conf::HOME).join("config.conf"),
+    );
+
+    let output = run(&["--verbose", "sync", &conf::root(), "--", "config.conf"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+config.conf
+Synced 1 file. Updated 0.
+"
+    );
+    assert_eq!(
+        files::read_symlink_in_home("config.conf"),
+        PathBuf::from("targets/target.txt")
+    );
+}
+
+#[test]
+fn sync_verbose_counts_changed_symlink_target_as_updated() {
+    conf::init();
+
+    conf::create_file_in_configs("targets/config-target.txt", Some("same"));
+    conf::create_file_in_home("targets/home-target.txt", Some("same"));
+    create_file_symlink(
+        "targets/config-target.txt",
+        PathBuf::from(CONFIGS).join("config.conf"),
+    );
+    create_file_symlink(
+        "targets/home-target.txt",
+        PathBuf::from(conf::HOME).join("config.conf"),
+    );
+
+    let output = run(&["--verbose", "sync", &conf::root(), "--", "config.conf"]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+config.conf
+Synced 1 file. Updated 1.
+"
+    );
+    assert_eq!(
+        files::read_symlink_in_home("config.conf"),
+        PathBuf::from("targets/config-target.txt")
+    );
+}
+
+#[test]
 fn sync_output_verbose() {
     conf::init();
 
@@ -172,7 +359,7 @@ hook: pre-sync.sh
 .config/nvim/init.lua
 .gitconfig
 hook: post-sync.sh
-Synced 4 files.
+Synced 4 files. Updated 4.
 Ran 2 hooks.
 "
     );
@@ -556,4 +743,11 @@ fn sync_hooks_abort_execution_if_exit_code_is_non_zero() {
 
     // The aborted `sync` did not touch the home.
     assert!(!files::file_exists_in_home(".gitconfig"));
+}
+
+fn create_file_symlink(target: impl AsRef<Path>, symlink: impl AsRef<Path>) {
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(target, symlink).unwrap();
+    #[cfg(windows)]
+    std::os::windows::fs::symlink_file(target, symlink).unwrap();
 }

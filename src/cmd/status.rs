@@ -1,6 +1,4 @@
 use std::borrow::Cow;
-use std::cell::RefCell;
-use std::fs;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -82,7 +80,7 @@ pub fn status(
         let status = Status {
             file: p.to_string_lossy().to_string(),
             state: if destination.is_file() {
-                match are_files_equal(&source, &destination) {
+                match utils::are_files_equal(&source, &destination) {
                     Ok(equal) => {
                         if equal {
                             State::InSync
@@ -145,34 +143,6 @@ pub fn status(
     } else {
         Ok(())
     }
-}
-
-fn are_files_equal(a: &Path, b: &Path) -> Result<bool, std::io::Error> {
-    // Possible improvements if this is a bottleneck:
-    //  - Compare _streaming_ bytes, to cater for big files.
-    //  - Compare hashes (e.g., xxHashes) if we do the streaming.
-    //    Streaming is slower because you have to jump back-and-forth
-    //    between files.
-
-    // 1. Compare by file size (quick).
-    if fs::metadata(a)?.len() != fs::metadata(b)?.len() {
-        return Ok(false);
-    }
-
-    // 2. Compare contents (slow; as raw bytes to avoid UTF-8 overhead).
-    thread_local! {
-        static BUFFERS: RefCell<(Vec<u8>, Vec<u8>)> = RefCell::new(
-            // 64 Kb should be plenty for the majority of config files.
-            (Vec::with_capacity(65_536), Vec::with_capacity(65_536))
-        );
-    }
-
-    BUFFERS.with_borrow_mut(|(a_buf, b_buf)| {
-        utils::read_to_bytes_buffer(a_buf, a)?;
-        utils::read_to_bytes_buffer(b_buf, b)?;
-
-        Ok(a_buf == b_buf)
-    })
 }
 
 fn print_file_statuses(statuses: &[Status]) {
