@@ -202,11 +202,10 @@ pub fn sync(
         ui::Action::Sync,
         root,
         nb_files_synced,
+        Some(nb_files_updated.into_inner()),
         nb_errors,
         nb_hooks_ran,
     );
-
-    println!("Updated: {}", nb_files_updated.into_inner());
 
     if nb_errors > 0 { Err(1) } else { Ok(()) }
 }

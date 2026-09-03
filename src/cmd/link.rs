@@ -142,6 +142,7 @@ pub fn link(
         ui::Action::Link,
         &root,
         nb_files_linked,
+        None,
         nb_errors,
         nb_hooks_ran,
     );
