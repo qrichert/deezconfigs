@@ -59,6 +59,28 @@ Files
 }
 
 #[test]
+fn status_detects_different_contents_with_same_length() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("old"));
+    conf::create_file_in_home("foo.txt", Some("new"));
+
+    let output = run(&["status", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+Files
+  M  foo.txt
+0 in sync, 1 modified, 0 missing.
+"
+    );
+}
+
+#[test]
 fn status_with_pathspec_only_lists_that_subtree() {
     conf::init();
 

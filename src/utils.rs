@@ -29,5 +29,5 @@ pub fn read_to_string_buffer(buffer: &mut String, path: &Path) -> io::Result<usi
 pub fn read_to_bytes_buffer(buffer: &mut Vec<u8>, path: &Path) -> io::Result<usize> {
     let mut file = File::open(path)?;
     buffer.clear();
-    file.read(buffer)
+    file.read_to_end(buffer)
 }
