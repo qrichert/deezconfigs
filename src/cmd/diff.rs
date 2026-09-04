@@ -224,6 +224,8 @@ pub fn diff_incoming(
 fn diff_files(before: &Path, after: &Path) -> Result<Option<String>, std::io::Error> {
     use imara_diff::{Algorithm, BasicLineDiffPrinter, Diff, InternedInput, UnifiedDiffConfig};
 
+    let permissions_diff = diff_permissions(before, after)?;
+
     thread_local! {
         static BUFFERS: RefCell<(String, String)> = RefCell::new(
             // 64 Kb should be plenty for the majority of config files.
@@ -231,28 +233,70 @@ fn diff_files(before: &Path, after: &Path) -> Result<Option<String>, std::io::Er
         );
     }
 
-    BUFFERS.with_borrow_mut(|(before_buf, after_buf)| {
-        utils::read_to_string_buffer(before_buf, before)?;
-        utils::read_to_string_buffer(after_buf, after)?;
+    let contents_diff = BUFFERS.with_borrow_mut(
+        |(before_buf, after_buf)| -> Result<Option<String>, std::io::Error> {
+            utils::read_to_string_buffer(before_buf, before)?;
+            utils::read_to_string_buffer(after_buf, after)?;
 
-        let input = InternedInput::new(before_buf.as_str(), after_buf.as_str());
-        let mut diff = Diff::compute(Algorithm::Histogram, &input);
-        diff.postprocess_lines(&input);
+            let input = InternedInput::new(before_buf.as_str(), after_buf.as_str());
+            let mut diff = Diff::compute(Algorithm::Histogram, &input);
+            diff.postprocess_lines(&input);
 
-        if diff.hunks().next().is_none() {
-            return Ok(None);
-        }
+            if diff.hunks().next().is_none() {
+                return Ok(None);
+            }
 
-        let diff = diff
-            .unified_diff(
-                &BasicLineDiffPrinter(&input.interner),
-                UnifiedDiffConfig::default(),
-                &input,
-            )
-            .to_string();
+            let diff = diff
+                .unified_diff(
+                    &BasicLineDiffPrinter(&input.interner),
+                    UnifiedDiffConfig::default(),
+                    &input,
+                )
+                .to_string();
 
-        Ok(Some(diff))
+            Ok(Some(diff))
+        },
+    )?;
+
+    Ok(match (permissions_diff, contents_diff) {
+        (None, None) => None,
+        (Some(permissions), None) => Some(permissions),
+        (None, Some(contents)) => Some(contents),
+        (Some(permissions), Some(contents)) => Some(format!("{permissions}\n{contents}")),
     })
+}
+
+#[cfg(unix)]
+fn diff_permissions(before: &Path, after: &Path) -> Result<Option<String>, std::io::Error> {
+    use std::os::unix::fs::PermissionsExt;
+
+    const PERMISSION_BITS: u32 = 0o7777;
+
+    let before_mode = before.metadata()?.permissions().mode() & PERMISSION_BITS;
+    let after_mode = after.metadata()?.permissions().mode() & PERMISSION_BITS;
+
+    Ok((before_mode != after_mode)
+        .then(|| format!("permissions {before_mode:04o} -> {after_mode:04o}")))
+}
+
+#[cfg(not(unix))]
+fn diff_permissions(before: &Path, after: &Path) -> Result<Option<String>, std::io::Error> {
+    let before_readonly = before.metadata()?.permissions().readonly();
+    let after_readonly = after.metadata()?.permissions().readonly();
+
+    Ok((before_readonly != after_readonly).then(|| {
+        let before = if before_readonly {
+            "read-only"
+        } else {
+            "writable"
+        };
+        let after = if after_readonly {
+            "read-only"
+        } else {
+            "writable"
+        };
+        format!("permissions {before} -> {after}")
+    }))
 }
 
 fn print_file_diffs(diffs: &[Diff]) {

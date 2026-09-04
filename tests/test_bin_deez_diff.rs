@@ -10,6 +10,7 @@ use std::env;
 use std::path::Path;
 
 use utils::conf;
+use utils::files;
 use utils::run::{run, run_in_dir, run_with_env, run_with_input};
 use utils::{empty_bin_dir, mock_bin, output_file_exists, read_output_file, remove_output_file};
 
@@ -128,6 +129,48 @@ foo.txt
 +same content
 "
     );
+}
+
+#[test]
+fn diff_reports_permission_changes_in_the_requested_direction() {
+    conf::init();
+
+    let config = conf::create_file_in_configs("script.sh", Some("same"));
+    let home = conf::create_file_in_home("script.sh", Some("same"));
+    files::make_permissions_differ(&config, &home);
+
+    let output = run(&["diff", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    let reversed_output = run(&["diff", "--reversed", &conf::root()]);
+    dbg!(&reversed_output.stdout);
+    dbg!(&reversed_output.stderr);
+
+    #[cfg(windows)]
+    files::make_writable(&[&config, &home]);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(reversed_output.exit_code, 0);
+    #[cfg(unix)]
+    {
+        assert_eq!(output.stdout, "script.sh\npermissions 0644 -> 0755\n");
+        assert_eq!(
+            reversed_output.stdout,
+            "script.sh\npermissions 0755 -> 0644\n"
+        );
+    }
+    #[cfg(windows)]
+    {
+        assert_eq!(
+            output.stdout,
+            "script.sh\npermissions writable -> read-only\n"
+        );
+        assert_eq!(
+            reversed_output.stdout,
+            "script.sh\npermissions read-only -> writable\n"
+        );
+    }
 }
 
 #[test]

@@ -6,11 +6,6 @@ mod hook_macros;
 use std::env;
 use std::path::{Path, PathBuf};
 
-#[cfg(unix)]
-use std::fs;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
-
 use utils::conf::{self, CONFIGS};
 use utils::files;
 use utils::run::{run, run_in_dir};
@@ -203,19 +198,21 @@ Synced 3 files. Updated 2.
     assert_eq!(files::read_in_home("missing.txt"), "created");
 }
 
-#[cfg(unix)]
 #[test]
 fn sync_verbose_counts_permission_only_changes_as_updates() {
     conf::init();
 
     let source = conf::create_file_in_configs("script.sh", Some("same"));
     let destination = conf::create_file_in_home("script.sh", Some("same"));
-    fs::set_permissions(&source, fs::Permissions::from_mode(0o755)).unwrap();
-    fs::set_permissions(&destination, fs::Permissions::from_mode(0o644)).unwrap();
+    files::make_permissions_differ(&source, &destination);
 
     let output = run(&["--verbose", "sync", &conf::root(), "--", "script.sh"]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
+
+    let permissions_were_copied = files::have_equal_permissions(&source, &destination);
+    #[cfg(windows)]
+    files::make_writable(&[&source, &destination]);
 
     assert_eq!(output.exit_code, 0);
     assert_eq!(
@@ -225,10 +222,39 @@ script.sh
 Synced 1 file. Updated 1.
 "
     );
+    assert!(permissions_were_copied);
+}
+
+#[cfg(unix)]
+#[test]
+fn sync_permission_updates_with_set_id_bits_converge() {
+    conf::init();
+
+    let source = conf::create_file_in_configs("script.sh", Some("same"));
+    let destination = conf::create_file_in_home("script.sh", Some("same"));
+    files::set_modes(&source, &destination, 0o4755, 0o755);
+
+    let first_output = run(&["--verbose", "sync", &conf::root(), "--", "script.sh"]);
+    dbg!(&first_output.stdout);
+    dbg!(&first_output.stderr);
+    let mode_after_first_sync = files::mode(&destination);
+
+    let second_output = run(&["--verbose", "sync", &conf::root(), "--", "script.sh"]);
+    dbg!(&second_output.stdout);
+    dbg!(&second_output.stderr);
+
+    assert_eq!(first_output.exit_code, 0);
     assert_eq!(
-        fs::metadata(destination).unwrap().permissions().mode() & 0o7777,
-        0o755
+        first_output.stdout,
+        "script.sh\nSynced 1 file. Updated 1.\n"
     );
+    assert_eq!(mode_after_first_sync, 0o4755);
+    assert_eq!(second_output.exit_code, 0);
+    assert_eq!(
+        second_output.stdout,
+        "script.sh\nSynced 1 file. Updated 0.\n"
+    );
+    assert_eq!(files::mode(&destination), 0o4755);
 }
 
 #[test]

@@ -149,7 +149,7 @@ pub fn sync(
                 return;
             }
 
-            if let Err(err) = fs::copy(source, destination) {
+            if let Err(err) = utils::copy_file(&source, &destination) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
                     "{error}: Could not copy '{}' to home: {err}",
