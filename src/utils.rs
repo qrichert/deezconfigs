@@ -3,11 +3,29 @@ use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::Path;
 
+/// Copy a file's contents and permissions.
+///
+/// On Unix, permissions are applied again after writing because writing
+/// the contents can clear set-ID bits applied by [`fs::copy()`].
+///
+/// # Errors
+///
+/// Errors if the file cannot be copied or its permissions cannot be read
+/// or applied.
+pub fn copy_file(source: &Path, destination: &Path) -> io::Result<u64> {
+    let bytes_copied = fs::copy(source, destination)?;
+
+    #[cfg(unix)]
+    fs::set_permissions(destination, fs::metadata(source)?.permissions())?;
+
+    Ok(bytes_copied)
+}
+
 /// Determine whether two files have identical contents and permissions.
 ///
-/// Compares Unix permission and special mode bits and file sizes first,
-/// then reads and compares the full contents only when those match. On
-/// other platforms, this compares sizes and contents only.
+/// Compares the portable read-only permission, Unix permission and
+/// special mode bits, and file sizes first, then reads and compares the
+/// full contents only when those match.
 ///
 /// # Errors
 ///
@@ -21,27 +39,34 @@ pub fn are_files_equal(a: &Path, b: &Path) -> io::Result<bool> {
 
     let a_metadata = fs::metadata(a)?;
     let b_metadata = fs::metadata(b)?;
+    let a_permissions = a_metadata.permissions();
+    let b_permissions = b_metadata.permissions();
 
-    // 1. Compare Unix permission and special mode bits (quick).
+    // 1. Compare the portable read-only permission (quick).
+    if a_permissions.readonly() != b_permissions.readonly() {
+        return Ok(false);
+    }
+
+    // 2. Compare Unix permission and special mode bits (quick).
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
 
         const PERMISSION_BITS: u32 = 0o7777;
 
-        let a_mode = a_metadata.permissions().mode() & PERMISSION_BITS;
-        let b_mode = b_metadata.permissions().mode() & PERMISSION_BITS;
+        let a_mode = a_permissions.mode() & PERMISSION_BITS;
+        let b_mode = b_permissions.mode() & PERMISSION_BITS;
         if a_mode != b_mode {
             return Ok(false);
         }
     }
 
-    // 2. Compare by file size (quick).
+    // 3. Compare by file size (quick).
     if a_metadata.len() != b_metadata.len() {
         return Ok(false);
     }
 
-    // 3. Compare contents (slow; as raw bytes to avoid UTF-8 overhead).
+    // 4. Compare contents (slow; as raw bytes to avoid UTF-8 overhead).
     thread_local! {
         static BUFFERS: RefCell<(Vec<u8>, Vec<u8>)> = RefCell::new(
             // 64 Kb should be plenty for the majority of config files.

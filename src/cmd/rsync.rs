@@ -80,7 +80,7 @@ pub fn rsync(
             // `fs::copy()` follows symlinks. It will create files with
             // the contents of the symlink's target; it will not create
             // a link.
-            if let Err(err) = fs::copy(destination, source) {
+            if let Err(err) = utils::copy_file(&destination, &source) {
                 nb_errors.fetch_add(1, Ordering::Relaxed);
                 eprintln!(
                     "{error}: Could not copy '{}' from home: {err}",
