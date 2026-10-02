@@ -151,14 +151,14 @@ fn link_output() {
     assert_eq!(
         output.stdout,
         "\
-Linked 4 files.
+Linked 4 files, 4 updated.
 Ran 2 hooks.
 "
     );
 }
 
 #[test]
-fn link_does_not_report_updated_file_count_without_verbose() {
+fn link_reports_nonzero_updated_file_count_without_verbose() {
     conf::init();
 
     let unchanged = conf::create_file_in_configs("unchanged.txt", None);
@@ -174,10 +174,25 @@ fn link_does_not_report_updated_file_count_without_verbose() {
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
-    assert!(!output.stdout.contains("Updated"));
+    assert_eq!(output.stdout, "Linked 3 files, 2 updated.\n");
     assert_eq!(files::read_symlink_in_home("unchanged.txt"), unchanged);
     assert_eq!(files::read_symlink_in_home("changed.txt"), changed);
     assert_eq!(files::read_symlink_in_home("missing.txt"), missing);
+}
+
+#[test]
+fn link_omits_zero_updated_file_count_without_verbose() {
+    conf::init();
+
+    let source = conf::create_file_in_configs("unchanged.txt", None);
+    conf::create_symlink_in_home("unchanged.txt", Some(&source.to_string_lossy()));
+
+    let output = run(&["link", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(output.stdout, "Linked 1 file.\n");
 }
 
 #[test]
@@ -200,10 +215,10 @@ fn link_verbose_reports_updated_file_count() {
     assert_eq!(
         output.stdout,
         "\
-changed.txt
-missing.txt
-unchanged.txt
-Linked 3 files. Updated 2.
+M changed.txt
+M missing.txt
+S unchanged.txt
+Linked 3 files, 2 updated, 0 errors.
 "
     );
     assert_eq!(files::read_symlink_in_home("unchanged.txt"), unchanged);
@@ -232,12 +247,12 @@ fn link_output_verbose() {
         output.stdout,
         "\
 hook: pre-link.sh
-.config/fish/config.fish
-.config/ghostty/config
-.config/nvim/init.lua
-.gitconfig
+M .config/fish/config.fish
+M .config/ghostty/config
+M .config/nvim/init.lua
+M .gitconfig
 hook: post-link.sh
-Linked 4 files. Updated 4.
+Linked 4 files, 4 updated, 0 errors.
 Ran 2 hooks.
 "
     );

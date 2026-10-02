@@ -54,6 +54,8 @@ pub fn rsync(
         // because it can't be. If it was, `find_files_recursively()`
         // would not yield it.
 
+        let is_file_updated;
+
         if destination.is_symlink()
             && match does_symlink_point_to_file(&home, &destination, &source) {
                 Ok(points_to_source) => points_to_source,
@@ -72,9 +74,9 @@ pub fn rsync(
             // in `std::fs::copy()` (Rust 1.86) and observed at least on
             // macOS. This is a no-op for us since a symlink is always
             // up-to-date.
+            is_file_updated = false;
         } else if destination.is_file() {
-            let do_source_and_destination_differ =
-                verbose && do_source_and_destination_differ(&source, &destination);
+            is_file_updated = do_source_and_destination_differ(&source, &destination);
 
             // Follows symlinks.
             // `fs::copy()` follows symlinks. It will create files with
@@ -90,21 +92,31 @@ pub fn rsync(
                 return;
             }
 
-            if do_source_and_destination_differ {
+            if is_file_updated {
                 nb_files_updated.fetch_add(1, Ordering::Relaxed);
             }
+        } else {
+            is_file_updated = false;
         }
 
         if verbose {
-            let file = p.to_string_lossy().to_string();
+            let file_with_status = format!(
+                "{status} {file}",
+                status = if is_file_updated {
+                    ui::Color::modified("M")
+                } else {
+                    ui::Color::in_sync("S")
+                },
+                file = p.to_string_lossy(),
+            );
             if let Ok(mut files) = files.lock() {
-                files.push(file);
+                files.push(file_with_status);
                 // Release the lock ASAP.
                 drop(files);
             } else {
                 // It's so unlikely we don't acquire the lock that we
                 // just silently fall back to printing directly.
-                println!("{}", p.display());
+                println!("{file_with_status}");
             }
         }
 
@@ -132,9 +144,10 @@ pub fn rsync(
         ui::Action::RSync,
         &root,
         nb_files_rsynced,
-        verbose.then_some(nb_files_updated),
+        Some(nb_files_updated),
         nb_errors,
         nb_hooks_ran,
+        verbose,
     );
 
     if nb_errors > 0 { Err(1) } else { Ok(()) }

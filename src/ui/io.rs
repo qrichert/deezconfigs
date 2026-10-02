@@ -50,8 +50,9 @@ pub fn print_summary(
     nb_files_updated: Option<usize>,
     nb_errors: usize,
     nb_hooks_ran: usize,
+    verbose: bool,
 ) {
-    print_files_summary(action, root, nb_files, nb_files_updated, nb_errors);
+    print_files_summary(action, root, nb_files, nb_files_updated, nb_errors, verbose);
     print_hooks_summary(nb_hooks_ran);
 }
 
@@ -61,6 +62,7 @@ pub fn print_files_summary(
     nb_files: usize,
     nb_files_updated: Option<usize>,
     nb_errors: usize,
+    verbose: bool,
 ) {
     let root = root.as_ref();
 
@@ -75,15 +77,17 @@ pub fn print_files_summary(
         "{action} {nb_files} file{}",
         if nb_files == 1 { "" } else { "s" }
     );
-    if nb_errors > 0 {
+    if let Some(nb_files_updated) = nb_files_updated
+        && (verbose || nb_files_updated > 0)
+    {
+        _ = write!(stdout, ", {nb_files_updated} updated");
+    }
+    if verbose || nb_errors > 0 {
         _ = write!(
             stdout,
             ", {nb_errors} error{}",
             if nb_errors == 1 { "" } else { "s" }
         );
-    }
-    if let Some(nb_files_updated) = nb_files_updated {
-        _ = write!(stdout, ". Updated {nb_files_updated}");
     }
     _ = writeln!(stdout, ".");
 }

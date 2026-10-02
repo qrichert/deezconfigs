@@ -194,7 +194,7 @@ hook: pre-clean.sh
 .config/nvim/init.lua
 .gitconfig
 hook: post-clean.sh
-Removed 4 files.
+Removed 4 files, 0 errors.
 Ran 2 hooks.
 "
     );

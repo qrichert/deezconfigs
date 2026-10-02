@@ -133,6 +133,7 @@ pub fn clean(
         None,
         nb_errors,
         nb_hooks_ran,
+        verbose,
     );
 
     if nb_errors > 0 { Err(1) } else { Ok(()) }

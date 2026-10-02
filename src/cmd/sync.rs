@@ -52,7 +52,7 @@ pub fn sync(
         let destination = home.join(p);
 
         let do_source_and_destination_differ =
-            verbose && do_source_and_destination_differ(&source, &destination);
+            do_source_and_destination_differ(&source, &destination);
 
         if destination.is_dir() {
             // If destination exists and is a directory, try to `rmdir`
@@ -165,15 +165,23 @@ pub fn sync(
         }
 
         if verbose {
-            let file = p.to_string_lossy().to_string();
+            let file_with_status = format!(
+                "{status} {file}",
+                status = if do_source_and_destination_differ {
+                    ui::Color::modified("M")
+                } else {
+                    ui::Color::in_sync("S")
+                },
+                file = p.to_string_lossy(),
+            );
             if let Ok(mut files) = files.lock() {
-                files.push(file);
+                files.push(file_with_status);
                 // Release the lock ASAP.
                 drop(files);
             } else {
                 // It's so unlikely we don't acquire the lock that we
                 // just silently fall back to printing directly.
-                println!("{}", p.display());
+                println!("{file_with_status}");
             }
         }
 
@@ -201,9 +209,10 @@ pub fn sync(
         ui::Action::Sync,
         root,
         nb_files_synced,
-        verbose.then_some(nb_files_updated),
+        Some(nb_files_updated),
         nb_errors,
         nb_hooks_ran,
+        verbose,
     );
 
     if nb_errors > 0 { Err(1) } else { Ok(()) }

@@ -168,7 +168,7 @@ Ran 2 hooks.
 }
 
 #[test]
-fn rsync_does_not_report_updated_file_count_without_verbose() {
+fn rsync_reports_nonzero_updated_file_count_without_verbose() {
     conf::init();
 
     conf::create_file_in_configs("unchanged.txt", Some("same"));
@@ -183,7 +183,7 @@ fn rsync_does_not_report_updated_file_count_without_verbose() {
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
-    assert!(!output.stdout.contains("Updated"));
+    assert_eq!(output.stdout, "rSynced 3 files, 1 updated.\n");
     assert_eq!(files::read_in_configs("unchanged.txt"), "same");
     assert_eq!(files::read_in_configs("modified.txt"), "new");
     assert_eq!(files::read_in_configs("missing.txt"), "untouched");
@@ -208,10 +208,10 @@ fn rsync_verbose_reports_updated_file_count() {
     assert_eq!(
         output.stdout,
         "\
-missing.txt
-modified.txt
-unchanged.txt
-rSynced 3 files. Updated 1.
+M modified.txt
+S missing.txt
+S unchanged.txt
+rSynced 3 files, 1 updated, 0 errors.
 "
     );
     assert_eq!(files::read_in_configs("unchanged.txt"), "same");
@@ -239,8 +239,8 @@ fn rsync_verbose_counts_permission_only_changes_as_updates() {
     assert_eq!(
         output.stdout,
         "\
-script.sh
-rSynced 1 file. Updated 1.
+M script.sh
+rSynced 1 file, 1 updated, 0 errors.
 "
     );
     assert!(permissions_were_copied);
@@ -267,13 +267,13 @@ fn rsync_permission_updates_with_set_id_bits_converge() {
     assert_eq!(first_output.exit_code, 0);
     assert_eq!(
         first_output.stdout,
-        "script.sh\nrSynced 1 file. Updated 1.\n"
+        "M script.sh\nrSynced 1 file, 1 updated, 0 errors.\n"
     );
     assert_eq!(mode_after_first_rsync, 0o4755);
     assert_eq!(second_output.exit_code, 0);
     assert_eq!(
         second_output.stdout,
-        "script.sh\nrSynced 1 file. Updated 0.\n"
+        "S script.sh\nrSynced 1 file, 0 updated, 0 errors.\n"
     );
     assert_eq!(files::mode(&destination), 0o4755);
 }
@@ -304,12 +304,12 @@ fn rsync_output_verbose() {
         output.stdout,
         "\
 hook: pre-rsync.sh
-.config/fish/config.fish
-.config/ghostty/config
-.config/nvim/init.lua
-.gitconfig
+S .config/fish/config.fish
+S .config/ghostty/config
+S .config/nvim/init.lua
+S .gitconfig
 hook: post-rsync.sh
-rSynced 4 files. Updated 0.
+rSynced 4 files, 0 updated, 0 errors.
 Ran 2 hooks.
 "
     );

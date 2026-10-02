@@ -140,14 +140,14 @@ fn sync_output() {
     assert_eq!(
         output.stdout,
         "\
-Synced 4 files.
+Synced 4 files, 4 updated.
 Ran 2 hooks.
 "
     );
 }
 
 #[test]
-fn sync_does_not_report_updated_file_count_without_verbose() {
+fn sync_reports_nonzero_updated_file_count_without_verbose() {
     conf::init();
 
     conf::create_file_in_configs("unchanged.txt", Some("same"));
@@ -162,10 +162,25 @@ fn sync_does_not_report_updated_file_count_without_verbose() {
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 0);
-    assert!(!output.stdout.contains("Updated"));
+    assert_eq!(output.stdout, "Synced 3 files, 2 updated.\n");
     assert_eq!(files::read_in_home("unchanged.txt"), "same");
     assert_eq!(files::read_in_home("modified.txt"), "new");
     assert_eq!(files::read_in_home("missing.txt"), "created");
+}
+
+#[test]
+fn sync_omits_zero_updated_file_count_without_verbose() {
+    conf::init();
+
+    conf::create_file_in_configs("unchanged.txt", Some("same"));
+    conf::create_file_in_home("unchanged.txt", Some("same"));
+
+    let output = run(&["sync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(output.stdout, "Synced 1 file.\n");
 }
 
 #[test]
@@ -187,10 +202,10 @@ fn sync_verbose_reports_updated_file_count() {
     assert_eq!(
         output.stdout,
         "\
-missing.txt
-modified.txt
-unchanged.txt
-Synced 3 files. Updated 2.
+M missing.txt
+M modified.txt
+S unchanged.txt
+Synced 3 files, 2 updated, 0 errors.
 "
     );
     assert_eq!(files::read_in_home("unchanged.txt"), "same");
@@ -218,8 +233,8 @@ fn sync_verbose_counts_permission_only_changes_as_updates() {
     assert_eq!(
         output.stdout,
         "\
-script.sh
-Synced 1 file. Updated 1.
+M script.sh
+Synced 1 file, 1 updated, 0 errors.
 "
     );
     assert!(permissions_were_copied);
@@ -246,13 +261,13 @@ fn sync_permission_updates_with_set_id_bits_converge() {
     assert_eq!(first_output.exit_code, 0);
     assert_eq!(
         first_output.stdout,
-        "script.sh\nSynced 1 file. Updated 1.\n"
+        "M script.sh\nSynced 1 file, 1 updated, 0 errors.\n"
     );
     assert_eq!(mode_after_first_sync, 0o4755);
     assert_eq!(second_output.exit_code, 0);
     assert_eq!(
         second_output.stdout,
-        "script.sh\nSynced 1 file. Updated 0.\n"
+        "S script.sh\nSynced 1 file, 0 updated, 0 errors.\n"
     );
     assert_eq!(files::mode(&destination), 0o4755);
 }
@@ -284,9 +299,9 @@ fn sync_verbose_counts_file_kind_changes_as_updates() {
     assert_eq!(
         output.stdout,
         "\
-file.conf
-symlink.conf
-Synced 2 files. Updated 2.
+M file.conf
+M symlink.conf
+Synced 2 files, 2 updated, 0 errors.
 "
     );
     assert!(!PathBuf::from(conf::HOME).join("file.conf").is_symlink());
@@ -316,8 +331,8 @@ fn sync_verbose_does_not_count_unchanged_symlink_target_as_updated() {
     assert_eq!(
         output.stdout,
         "\
-config.conf
-Synced 1 file. Updated 0.
+S config.conf
+Synced 1 file, 0 updated, 0 errors.
 "
     );
     assert_eq!(
@@ -349,8 +364,8 @@ fn sync_verbose_counts_changed_symlink_target_as_updated() {
     assert_eq!(
         output.stdout,
         "\
-config.conf
-Synced 1 file. Updated 1.
+M config.conf
+Synced 1 file, 1 updated, 0 errors.
 "
     );
     assert_eq!(
@@ -380,12 +395,12 @@ fn sync_output_verbose() {
         output.stdout,
         "\
 hook: pre-sync.sh
-.config/fish/config.fish
-.config/ghostty/config
-.config/nvim/init.lua
-.gitconfig
+M .config/fish/config.fish
+M .config/ghostty/config
+M .config/nvim/init.lua
+M .gitconfig
 hook: post-sync.sh
-Synced 4 files. Updated 4.
+Synced 4 files, 4 updated, 0 errors.
 Ran 2 hooks.
 "
     );
