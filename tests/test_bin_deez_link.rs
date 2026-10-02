@@ -388,6 +388,12 @@ fn link_replaces_existing_directory_only_if_empty() {
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 1);
+    assert_eq!(
+        output.stdout,
+        "E foo.txt\nLinked 0 files, 0 updated, 1 error.\n"
+    );
+    assert!(output.stderr.contains("Could not remove exising directory"));
+    assert!(output.stderr.contains("foo.txt"));
 
     assert!(files::dir_exists_in_home("foo.txt"));
     assert!(files::file_exists_in_home("foo.txt/baz.log"));

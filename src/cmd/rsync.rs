@@ -45,6 +45,21 @@ pub fn rsync(
     walk::find_files_recursively(&root, pathspec, |p| {
         debug_assert!(!p.is_dir());
 
+        let report_file = |status: &str| {
+            if verbose {
+                let file_with_status = format!("{status} {file}", file = p.to_string_lossy());
+                if let Ok(mut files) = files.lock() {
+                    files.push(file_with_status);
+                    // Release the lock ASAP.
+                    drop(files);
+                } else {
+                    // It's so unlikely we don't acquire the lock that we
+                    // just silently fall back to printing directly.
+                    println!("{file_with_status}");
+                }
+            }
+        };
+
         // Despite `rsync` working in reverse, we keep the same
         // terminology as everywhere else for consistency.
         let source = root.join(p);
@@ -62,6 +77,7 @@ pub fn rsync(
                 Err(err) => {
                     nb_errors.fetch_add(1, Ordering::Relaxed);
                     eprintln!("{err}");
+                    report_file(ui::Color::error("E").as_ref());
                     return;
                 }
             }
@@ -89,6 +105,7 @@ pub fn rsync(
                     p.display(),
                     error = ui::Color::error("error"),
                 );
+                report_file(ui::Color::error("E").as_ref());
                 return;
             }
 
@@ -100,24 +117,12 @@ pub fn rsync(
         }
 
         if verbose {
-            let file_with_status = format!(
-                "{status} {file}",
-                status = if is_file_updated {
-                    ui::Color::modified("M")
-                } else {
-                    ui::Color::in_sync("S")
-                },
-                file = p.to_string_lossy(),
-            );
-            if let Ok(mut files) = files.lock() {
-                files.push(file_with_status);
-                // Release the lock ASAP.
-                drop(files);
+            let status = if is_file_updated {
+                ui::Color::modified("M")
             } else {
-                // It's so unlikely we don't acquire the lock that we
-                // just silently fall back to printing directly.
-                println!("{file_with_status}");
-            }
+                ui::Color::in_sync("S")
+            };
+            report_file(status.as_ref());
         }
 
         nb_files_rsynced.fetch_add(1, Ordering::Relaxed);

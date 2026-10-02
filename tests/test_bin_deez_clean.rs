@@ -189,10 +189,10 @@ fn clean_output_verbose() {
         output.stdout,
         "\
 hook: pre-clean.sh
-.config/fish/config.fish
-.config/ghostty/config
-.config/nvim/init.lua
-.gitconfig
+R .config/fish/config.fish
+R .config/ghostty/config
+R .config/nvim/init.lua
+R .gitconfig
 hook: post-clean.sh
 Removed 4 files, 0 errors.
 Ran 2 hooks.
@@ -380,11 +380,30 @@ fn clean_replaces_existing_directory_only_if_empty() {
     // `foo.txt` directory is not empty.
     conf::create_file_in_home("foo.txt/baz.log", None);
 
-    let output = run(&["--verbose", "clean", &conf::root()]);
+    let verbose_output = run(&["--verbose", "clean", &conf::root()]);
+    dbg!(&verbose_output.stdout);
+    dbg!(&verbose_output.stderr);
+
+    assert_eq!(verbose_output.exit_code, 1);
+    assert_eq!(
+        verbose_output.stdout,
+        "E foo.txt\nRemoved 0 files, 1 error.\n"
+    );
+    assert!(
+        verbose_output
+            .stderr
+            .contains("Could not remove exising directory")
+    );
+    assert!(verbose_output.stderr.contains("foo.txt"));
+
+    let output = run(&["clean", &conf::root()]);
     dbg!(&output.stdout);
     dbg!(&output.stderr);
 
     assert_eq!(output.exit_code, 1);
+    assert_eq!(output.stdout, "Removed 0 files, 1 error.\n");
+    assert!(output.stderr.contains("Could not remove exising directory"));
+    assert!(output.stderr.contains("foo.txt"));
 
     assert!(files::dir_exists_in_home("foo.txt"));
     assert!(files::file_exists_in_home("foo.txt/baz.log"));

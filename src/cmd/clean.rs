@@ -44,6 +44,21 @@ pub fn clean(
     walk::find_files_recursively(&root, pathspec, |p| {
         debug_assert!(!p.is_dir());
 
+        let report_file = |status: &str| {
+            if verbose {
+                let file_with_status = format!("{status} {file}", file = p.to_string_lossy());
+                if let Ok(mut files) = files.lock() {
+                    files.push(file_with_status);
+                    // Release the lock ASAP.
+                    drop(files);
+                } else {
+                    // It's so unlikely we don't acquire the lock that we
+                    // just silently fall back to printing directly.
+                    println!("{file_with_status}");
+                }
+            }
+        };
+
         let destination = home.join(p);
 
         if destination.is_dir() {
@@ -58,6 +73,7 @@ pub fn clean(
                     destination.display(),
                     error = ui::Color::error("error"),
                 );
+                report_file(ui::Color::error("E").as_ref());
                 return;
             }
         }
@@ -71,6 +87,7 @@ pub fn clean(
                     destination.display(),
                     error = ui::Color::error("error"),
                 );
+                report_file(ui::Color::error("E").as_ref());
                 return;
             }
 
@@ -95,16 +112,7 @@ pub fn clean(
         }
 
         if verbose {
-            let file = p.to_string_lossy().to_string();
-            if let Ok(mut files) = files.lock() {
-                files.push(file);
-                // Release the lock ASAP.
-                drop(files);
-            } else {
-                // It's so unlikely we don't acquire the lock that we
-                // just silently fall back to printing directly.
-                println!("{}", p.display());
-            }
+            report_file(ui::Color::success("R").as_ref());
         }
 
         nb_files_removed.fetch_add(1, Ordering::Relaxed);

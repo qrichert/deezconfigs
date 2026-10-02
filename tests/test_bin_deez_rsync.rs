@@ -8,8 +8,8 @@ mod hook_macros;
 // Generate shared hook tests for this command.
 hook_macros::hook_tests!(rsync);
 
-use std::env;
 use std::path::Path;
+use std::{env, fs};
 
 use utils::conf;
 use utils::files;
@@ -459,6 +459,31 @@ fn rsync_errors_if_symlink_in_home_links_to_file_in_configs() {
     assert_eq!(files::read_in_home("a.txt"), "Hello from A!");
     dbg!(files::read_symlink_in_home("a.txt"));
     assert_eq!(files::read_symlink_in_home("a.txt"), file);
+}
+
+#[test]
+fn rsync_verbose_reports_broken_symlink_as_error() {
+    conf::init();
+
+    conf::create_file_in_configs("broken.txt", Some("config"));
+    let (_, target) = conf::create_symlink_in_home("broken.txt", None);
+    fs::remove_file(&target).unwrap();
+
+    let output = run(&["--verbose", "rsync", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 1);
+    assert_eq!(
+        output.stdout,
+        "E broken.txt\nrSynced 0 files, 0 updated, 1 error.\n"
+    );
+    assert!(
+        output
+            .stderr
+            .contains("Could not canonicalize symlink target")
+    );
+    assert!(output.stderr.contains(target.to_string_lossy().as_ref()));
 }
 
 #[test]

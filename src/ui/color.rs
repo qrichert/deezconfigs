@@ -89,6 +89,11 @@ impl Color {
 
     // Generic.
 
+    #[must_use]
+    pub fn success(string: &str) -> Cow<'_, str> {
+        Self::color(GREEN, string)
+    }
+
     /// Return string without adding color.
     ///
     /// The purpose of this function is uniformity.
@@ -186,6 +191,14 @@ mod tests {
         assert_eq!(
             Color::warning("this is a warning"),
             "\x1b[0;93mthis is a warning\x1b[0m"
+        );
+    }
+
+    #[test]
+    fn color_success_is_green() {
+        assert_eq!(
+            Color::success("this is a success"),
+            "\x1b[0;92mthis is a success\x1b[0m"
         );
     }
 
