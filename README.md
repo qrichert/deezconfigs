@@ -410,24 +410,27 @@ $ sh -c "<root>/<hook>"
 Note that you'll likely want the scripts to start with a shebang (e.g.,
 `#!/usr/bin/env python3`).
 
-As an example, here are two complementary scripts that respectively set
-and unset Git's email address in the `.gitconfig` file when you `sync`
-and `rsync` it:
+As an example, here is a script that provisions a local Git
+configuration file on `sync`. The idea behind it is to keep the managed
+`.gitconfig` stable (clean `deez diff`), while keeping Git's email
+address machine-specific (e.g., home vs. work):
 
 ```console
 $ cat post-sync.sh
 #!/usr/bin/env bash
-[[ -n $DEEZ_VERBOSE ]] && echo "Set global Git email address."
-git config --global user.email you@example.com
 
-$ cat post-rsync.sh
-#!/usr/bin/env bash
-[[ -n $DEEZ_VERBOSE ]] && echo "Unset Git email address."
-git config --file ./.gitconfig user.email '<>'
+# Load machine-specific variables (like `$EMAIL`).
+[[ -f ~/.deezenv ]] && . ~/.deezenv
+
+# Assumes `.gitconfig` has `include.path` set to `~/.gitconfig.local`.
+if [[ ! -e ~/.gitconfig.local ]]; then
+    [[ -n $DEEZ_VERBOSE ]] && echo "Create local Git config."
+    git config --file ~/.gitconfig.local user.email "${EMAIL:-you@example.com}"
+fi
 ```
 
-They both make use of the `DEEZ_VERBOSE` environment variable to enrich
-the output of `deez` in verbose mode.
+It makes use of the `DEEZ_VERBOSE` environment variable to enrich the
+output of `deez` in verbose mode.
 
 deezconfigs passes a few environment variables to hooks to make your
 life easier:
