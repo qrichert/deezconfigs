@@ -424,22 +424,20 @@ Hooks:
   Note that you'll likely want the scripts to start with a shebang
   (e.g., `#!/usr/bin/env python3`).
 
-  As an example, here are two complementary scripts that respectively
-  set and unset Git's email address in the `.gitconfig` file when you
-  `sync` and `rsync` it:
+  As an example, here is a script that creates a machine-specific Git
+  config on `sync`, which the managed `.gitconfig` pulls in with an
+  `[include]` directive:
 
       {highlight}${rt} cat post-sync.sh
       #!/usr/bin/env bash
-      [[ -n $DEEZ_VERBOSE ]] && echo \"Set global Git email address.\"
-      git config --global user.email you@example.com
+      if [[ ! -e ~/.gitconfig.local ]]; then
+          [[ -n $DEEZ_VERBOSE ]] && echo \"Create local Git config.\"
+          git config --file ~/.gitconfig.local user.email you@example.com
+      fi
 
-      {highlight}${rt} cat post-rsync.sh
-      #!/usr/bin/env bash
-      [[ -n $DEEZ_VERBOSE ]] && echo \"Unset Git email address.\"
-      git config --file ./.gitconfig user.email '<>'
-
-  They both make use of the `DEEZ_VERBOSE` environment variable to
-  enrich the output of `{bin}` in verbose mode.
+  It never touches the managed `.gitconfig`, so the file stays in sync
+  with the repo. It also makes use of the `DEEZ_VERBOSE` environment
+  variable to enrich the output of `{bin}` in verbose mode.
 
   {package} passes a few environment variables to hooks to make your
   life easier:

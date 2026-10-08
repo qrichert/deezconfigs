@@ -18,30 +18,38 @@
 # normal mode, `$DEEZ_VERBOSE` will not be set and so the hooks will be
 # silent.
 
-# Set global Git email address.
+# Create local Git config if missing.
 #
-# You likely use a different default email address at home than at work.
-# This sets Git's email address to the value found in `~/.deezenv` or
-# falls back to a default one.
-[[ -n $DEEZ_VERBOSE ]] && echo "Set global Git email address."
-git config --global user.email ${EMAIL:-you@example.com}
+# You likely use a different email address at home than at work. The
+# managed `.gitconfig` leaves `user.email` out and instead ends with:
+#
+#     [include]
+#         path = ~/.gitconfig.local
+#
+# This creates that local file with the email address found in
+# `~/.deezenv`, or a default one. Existing files are left untouched, so
+# you can edit them freely, and the managed `.gitconfig` stays in sync
+# with the repo (no `post-rsync` cleanup needed).
+if [[ ! -e ~/.gitconfig.local ]]; then
+    [[ -n $DEEZ_VERBOSE ]] && echo "Create local Git config."
+    git config --file ~/.gitconfig.local user.email "${EMAIL:-you@example.com}"
+fi
 
-# Add local fish config.
+# Create local fish config if missing.
 #
 # Different environments often require different shell configuration.
-# The idea here is to keep the common config in the configs repo, and
-# any specific config in a `~/.deezfish.fish` file.
+# The common config lives in the repo, and ends with:
 #
-# On `sync`, we append the specific config to the generic one, starting
-# with a `# <deez>` comment, which will make removal easy for `rsync`.
+#     if test -f "$HOME/.local.fish"
+#         source "$HOME/.local.fish"
+#     end
 #
-# Another option here would have been to keep specific config files in
-# the repo, ignore them with an `.ignore` file, and conditionnaly select
-# the one to append based on `$DEEZ_OS` for instance.
-if [[ -f ~/.deezfish.fish ]]; then
-    [[ -n $DEEZ_VERBOSE ]] && echo "Add local fish config."
-    echo -e "\n# <deez>\n" >> ~/.config/fish/config.fish
-    cat ~/.deezfish.fish >> ~/.config/fish/config.fish
+# Machine-specific config goes into `~/.local.fish`. As with Git, this
+# only creates the file (empty) if missing, and never touches the
+# managed `config.fish`.
+if [[ ! -e ~/.local.fish ]]; then
+    [[ -n $DEEZ_VERBOSE ]] && echo "Create local fish config."
+    touch ~/.local.fish
 fi
 
 # Trim Neovim config on low-powered machines.
@@ -70,8 +78,8 @@ fi
 # How it works is it looks for the rule in the SSH config, and if it
 # can't find it, add the config. If it does find it, this is a no-op.
 #
-# This is a one-time configuration, so there won't be an undo in the
-# `post-rsync` hook.
+# This edits a file outside the repo, so there is nothing to undo on
+# `rsync`.
 if ! grep -qF "SetEnv TERM=xterm-256color" ~/.ssh/config; then
     [[ -n $DEEZ_VERBOSE ]] && echo "Alias SSH terminfo for Ghostty."
     echo "" >> ~/.ssh/config
