@@ -7,6 +7,7 @@ mod hook_macros;
 hook_macros::hook_tests!(diff);
 
 use std::env;
+use std::fmt::Write;
 use std::path::Path;
 
 use utils::conf;
@@ -128,6 +129,169 @@ foo.txt
 -same content
 +same content
 "
+    );
+}
+
+#[test]
+fn diff_colors_cross_file_moves_without_changing_plain_output() {
+    conf::init();
+
+    let block = "first moved setting = enabled\nsecond moved setting = disabled\n";
+    let config = conf::create_file_in_configs("a-source.txt", Some("new setting\n"));
+    let home = conf::create_file_in_home("a-source.txt", Some(&format!("{block}old setting\n")));
+    files::make_permissions_differ(&config, &home);
+    conf::create_file_in_configs("b-destination.txt", Some(&format!("destination\n{block}")));
+    conf::create_file_in_home("b-destination.txt", Some("destination\n"));
+    conf::create_file_in_configs("c-missing.txt", Some(block));
+    let permission_config = conf::create_file_in_configs("d-mode.txt", Some("same\n"));
+    let permission_home = conf::create_file_in_home("d-mode.txt", Some("same\n"));
+    files::make_permissions_differ(&permission_config, &permission_home);
+
+    let colored = run_with_env(
+        &["diff", &conf::root()],
+        conf::root(),
+        &[("NO_COLOR", None)],
+    );
+    let plain = run(&["diff", &conf::root()]);
+    let reversed = run_with_env(
+        &["diff", "--reversed", &conf::root()],
+        conf::root(),
+        &[("NO_COLOR", None)],
+    );
+    #[cfg(windows)]
+    files::make_writable(&[&config, &home, &permission_config, &permission_home]);
+
+    assert_eq!(colored.exit_code, 0);
+    assert_eq!(plain.exit_code, 0);
+    assert_eq!(reversed.exit_code, 0);
+    for line in block.lines() {
+        assert!(
+            colored
+                .stdout
+                .contains(&format!("\x1b[1;95m-{line}\x1b[0m"))
+        );
+        assert!(
+            colored
+                .stdout
+                .contains(&format!("\x1b[1;96m+{line}\x1b[0m"))
+        );
+        assert!(
+            reversed
+                .stdout
+                .contains(&format!("\x1b[1;95m-{line}\x1b[0m"))
+        );
+        assert!(
+            reversed
+                .stdout
+                .contains(&format!("\x1b[1;96m+{line}\x1b[0m"))
+        );
+    }
+    assert!(colored.stdout.contains("\x1b[0;91m-old setting\x1b[0m"));
+    assert!(colored.stdout.contains("\x1b[0;92m+new setting\x1b[0m"));
+    assert!(reversed.stdout.contains("\x1b[0;91m-new setting\x1b[0m"));
+    assert!(reversed.stdout.contains("\x1b[0;92m+old setting\x1b[0m"));
+    assert!(
+        colored
+            .stdout
+            .contains("\x1b[0;91m! File does not exist in home.\x1b[0m")
+    );
+    assert!(colored.stdout.contains("\npermissions "));
+    assert!(!plain.stdout.contains('\x1b'));
+    assert_eq!(strip_diff_colors(&colored.stdout), plain.stdout);
+}
+
+#[test]
+fn diff_colors_moves_between_distant_hunks() {
+    conf::init();
+
+    let block = "first moved setting = enabled\nsecond moved setting = disabled\n";
+    let mut context = String::new();
+    for i in 0..12 {
+        writeln!(context, "unchanged {i}").unwrap();
+    }
+    conf::create_file_in_home("foo.txt", Some(&format!("{block}{context}")));
+    conf::create_file_in_configs("foo.txt", Some(&format!("{context}{block}")));
+
+    let colored = run_with_env(
+        &["diff", &conf::root()],
+        conf::root(),
+        &[("NO_COLOR", None)],
+    );
+    let plain = run(&["diff", &conf::root()]);
+
+    assert_eq!(colored.exit_code, 0);
+    assert_eq!(plain.exit_code, 0);
+    assert_eq!(
+        plain.stdout.lines().filter(|l| l.starts_with("@@")).count(),
+        2
+    );
+    for line in block.lines() {
+        assert!(
+            colored
+                .stdout
+                .contains(&format!("\x1b[1;95m-{line}\x1b[0m"))
+        );
+        assert!(
+            colored
+                .stdout
+                .contains(&format!("\x1b[1;96m+{line}\x1b[0m"))
+        );
+    }
+    assert_eq!(strip_diff_colors(&colored.stdout), plain.stdout);
+}
+
+#[test]
+fn diff_move_detection_only_uses_selected_content() {
+    conf::init();
+
+    let block = "abcdefghijklmnopqrst\n";
+    conf::create_file_in_home("source.txt", Some(block));
+    conf::create_file_in_configs("source.txt", None);
+    conf::create_file_in_home("destination.txt", None);
+    conf::create_file_in_configs("destination.txt", Some(block));
+    conf::create_file_in_configs("missing.txt", Some(block));
+
+    for selected in ["source.txt", "destination.txt"] {
+        let output = run_with_env(
+            &["diff", &conf::root(), "--", selected, "missing.txt"],
+            conf::root(),
+            &[("NO_COLOR", None)],
+        );
+        assert_eq!(output.exit_code, 0);
+        assert!(!output.stdout.contains("\x1b[1;95m-"));
+        assert!(!output.stdout.contains("\x1b[1;96m+"));
+        let expected = if selected == "source.txt" {
+            "\x1b[0;91m-abcdefghijklmnopqrst\x1b[0m"
+        } else {
+            "\x1b[0;92m+abcdefghijklmnopqrst\x1b[0m"
+        };
+        assert!(output.stdout.contains(expected));
+    }
+}
+
+#[test]
+fn diff_colors_newline_only_changes_like_git() {
+    conf::init();
+
+    conf::create_file_in_home("foo.txt", Some("abcdefghijklmnopqrst\n"));
+    conf::create_file_in_configs("foo.txt", Some("abcdefghijklmnopqrst"));
+
+    let output = run_with_env(
+        &["diff", &conf::root()],
+        conf::root(),
+        &[("NO_COLOR", None)],
+    );
+
+    assert_eq!(output.exit_code, 0);
+    assert!(
+        output
+            .stdout
+            .contains("\x1b[1;95m-abcdefghijklmnopqrst\x1b[0m")
+    );
+    assert!(
+        output
+            .stdout
+            .contains("\x1b[1;96m+abcdefghijklmnopqrst\x1b[0m")
     );
 }
 
@@ -859,4 +1023,22 @@ fn diff_hooks_abort_execution_if_exit_code_is_non_zero() {
 
     // The aborted `diff` printed nothing about the configs.
     assert!(!output.stdout.contains(".gitconfig"));
+}
+
+fn strip_diff_colors(output: &str) -> String {
+    let mut plain = String::new();
+    let mut chars = output.chars();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            assert_eq!(chars.next(), Some('['));
+            for c in chars.by_ref() {
+                if c == 'm' {
+                    break;
+                }
+            }
+        } else {
+            plain.push(c);
+        }
+    }
+    plain
 }

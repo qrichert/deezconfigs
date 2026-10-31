@@ -21,6 +21,7 @@ pub const RED: &str = "\x1b[0;91m";
 pub const BLUE: &str = "\x1b[0;94m";
 pub const BOLD_PURPLE: &str = "\x1b[1;95m";
 pub const CYAN: &str = "\x1b[0;96m";
+pub const BOLD_CYAN: &str = "\x1b[1;96m";
 pub const RESET: &str = "\x1b[0m";
 
 pub const HIGHLIGHT: &str = GREEN;
@@ -85,6 +86,16 @@ impl Color {
     #[must_use]
     pub fn removed(string: &str) -> Cow<'_, str> {
         Self::color(RED, string)
+    }
+
+    #[must_use]
+    pub fn moved_removed(string: &str) -> Cow<'_, str> {
+        Self::color(BOLD_PURPLE, string)
+    }
+
+    #[must_use]
+    pub fn moved_added(string: &str) -> Cow<'_, str> {
+        Self::color(BOLD_CYAN, string)
     }
 
     // Generic.
