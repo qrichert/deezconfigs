@@ -46,6 +46,10 @@ impl Args {
                 "link" | "l" if !some_command => args.command = Some(Command::Link),
                 "status" | "st" if !some_command => args.command = Some(Command::Status),
                 "diff" | "df" if !some_command => args.command = Some(Command::Diff),
+                "rdiff" | "rdf" if !some_command => {
+                    args.command = Some(Command::Diff);
+                    args.reversed_diff = true;
+                }
                 "-r" | "--reversed" if is_diff => args.reversed_diff = !args.reversed_diff,
                 "-i" | "--incoming" if is_diff => args.incoming_diff = !args.incoming_diff,
                 "clean" | "c" if !some_command => args.command = Some(Command::Clean),
@@ -243,6 +247,51 @@ mod tests {
         let args = Args::build_from_args(["diff", "--reversed", "--reversed"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Diff));
         assert!(!args.reversed_diff);
+    }
+
+    #[test]
+    fn command_rdiff_regular() {
+        let args = Args::build_from_args(["rdiff"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(args.reversed_diff);
+    }
+
+    #[test]
+    fn command_rdiff_shortcut() {
+        let args = Args::build_from_args(["rdf"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(args.reversed_diff);
+    }
+
+    #[test]
+    fn second_command_does_not_override_rdiff() {
+        let args = Args::build_from_args(["rdiff", "sync"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(args.reversed_diff);
+        assert!(args.root.is_some_and(|r| r == "sync"));
+    }
+
+    #[test]
+    fn rdiff_as_second_command_is_a_root() {
+        let args = Args::build_from_args(["diff", "rdiff"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(!args.reversed_diff);
+        assert!(args.root.is_some_and(|r| r == "rdiff"));
+    }
+
+    #[test]
+    fn command_rdiff_reversed_cancel_each_other() {
+        let args = Args::build_from_args(["rdiff", "--reversed"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(!args.reversed_diff);
+    }
+
+    #[test]
+    fn command_rdiff_incoming() {
+        let args = Args::build_from_args(["rdiff", "-i"].iter()).unwrap();
+        assert!(args.command.is_some_and(|c| c == Command::Diff));
+        assert!(args.incoming_diff);
+        assert!(args.reversed_diff);
     }
 
     #[test]

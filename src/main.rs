@@ -264,6 +264,8 @@ Diff:
       {attenuate}# See what you haven't shared yet.{rt}
       {highlight}${rt} {bin} diff -i -r
 
+  Tip: `rdiff` (`rdf` for short) is an alias for `diff -r`.
+
 Clean:
   Cleaning is removing all the files and symlinks from the home.
 

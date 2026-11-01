@@ -33,6 +33,11 @@ fn help() {
             .stdout
             .contains("# Compare the config root (old) to the home (new).\n      $ deez diff -r\n")
     );
+    assert!(
+        output
+            .stdout
+            .contains("`rdiff` (`rdf` for short) is an alias for `diff -r`.")
+    );
     assert!(output.stdout.contains(
         "\
   Available hooks:
@@ -54,6 +59,7 @@ fn no_args_shows_help() {
 
     assert_eq!(output.exit_code, 0);
     assert!(output.stdout.contains("-h, --help"));
+    assert!(!output.stdout.contains("rdiff"));
 }
 
 #[test]

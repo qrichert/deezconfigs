@@ -109,6 +109,25 @@ boz.txt
 }
 
 #[test]
+fn rdiff_is_diff_reversed() {
+    conf::init();
+
+    conf::create_file_in_configs("foo.txt", Some("this is foo"));
+    conf::create_file_in_home("foo.txt", Some("not equal"));
+
+    let output = run(&["rdiff", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(output.stdout.contains("-this is foo\n+not equal\n"));
+    assert_eq!(
+        output.stdout,
+        run(&["diff", "--reversed", &conf::root()]).stdout
+    );
+}
+
+#[test]
 fn diff_detects_missing_trailing_newline() {
     conf::init();
 
@@ -550,6 +569,21 @@ fn diff_incoming_reversed_shows_outgoing() {
 
     assert_eq!(args.next(), Some("fetch"));
     assert_eq!(args.next(), Some("diff --no-color @{u}...HEAD --"));
+}
+
+#[test]
+fn rdf_incoming_shows_outgoing() {
+    conf::init();
+
+    remove_output_file("output_git_args");
+    mock_bin("git", "bin_git_incoming");
+
+    let output = run(&["rdf", "-i", &conf::root()]);
+    dbg!(&output.stdout);
+    dbg!(&output.stderr);
+
+    assert_eq!(output.exit_code, 0);
+    assert!(read_output_file("output_git_args").contains("@{u}...HEAD"));
 }
 
 /// Git has no `NO_COLOR` support, it only knows about `color.ui` and

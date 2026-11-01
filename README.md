@@ -217,6 +217,8 @@ the upstream doesn't.
 $ deez diff -i -r
 ```
 
+Tip: `rdiff` (`rdf` for short) is an alias for `diff -r`.
+
 ### Clean
 
 Cleaning is removing all the files and symlinks from the home.
