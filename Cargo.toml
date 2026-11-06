@@ -25,9 +25,9 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [dependencies]
 # Match pathspec globs.
-globset = "0.4.20"
+globset = "0.4.21"
 # Find files recursively, respecting ignore patterns.
-ignore = "0.4.33"
+ignore = "0.4.34"
 # Diff files.
 imara-diff = "0.2.0"
 # Output text through a pager.
