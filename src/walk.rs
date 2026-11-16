@@ -34,11 +34,7 @@ pub fn find_files_recursively(
 
     let does_dir_entry_match = move |path: &Path| {
         // At the root.
-        if [".git"].map(Path::new).contains(&path) {
-            return false;
-        }
-
-        true
+        ![".git"].map(Path::new).contains(&path)
     };
 
     let does_file_entry_match = move |path: &Path| {
@@ -50,14 +46,10 @@ pub fn find_files_recursively(
 
         // Anywhere.
         let file_name = path.file_name().expect("we don't have `..` here");
-        if [".deez", ".ignore", ".gitignore"]
+
+        ![".deez", ".ignore", ".gitignore"]
             .map(OsStr::new)
             .contains(&file_name)
-        {
-            return false;
-        }
-
-        true
     };
 
     // Note: We want a dir, not a file, but it's not the job of this
