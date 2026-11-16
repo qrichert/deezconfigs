@@ -60,6 +60,100 @@ Files
 }
 
 #[test]
+fn status_modified_lists_modified_and_missing_files() {
+    conf::init();
+
+    conf::create_file_in_configs("same.txt", Some("same"));
+    conf::create_file_in_configs("changed.txt", Some("original"));
+    conf::create_file_in_configs("missing.txt", None);
+    conf::create_symlink_in_configs("changed-link.txt", Some("changed.txt"));
+    conf::create_symlink_in_configs("same-link.txt", Some("same.txt"));
+
+    conf::create_file_in_home("same.txt", Some("same"));
+    conf::create_file_in_home("changed.txt", Some("changed"));
+    conf::create_symlink_in_home("changed-link.txt", Some("changed.txt"));
+    conf::create_symlink_in_home("same-link.txt", Some("same.txt"));
+
+    let output = run(&["st", "-m", &conf::root()]);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+Files
+  M  changed-link.txt@
+  M  changed.txt
+  !  missing.txt
+2 in sync, 2 modified, 1 missing.
+"
+    );
+
+    let long_output = run(&["status", &conf::root(), "--modified"]);
+    assert_eq!(long_output.exit_code, 0);
+    assert_eq!(long_output.stdout, output.stdout);
+}
+
+#[test]
+fn status_modified_with_only_in_sync_files_keeps_hooks_and_counts() {
+    conf::init();
+
+    conf::create_file_in_configs("same.txt", Some("same"));
+    conf::create_file_in_home("same.txt", Some("same"));
+    conf::create_executable_file_in_configs("pre-status.sh", None);
+    conf::create_executable_file_in_configs("post-status.sh", None);
+
+    let output = run(&["--verbose", "status", "-m", &conf::root()]);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "\
+hook: pre-status.sh
+Files
+  No modified or missing files.
+Hooks
+  pre-status.sh
+  post-status.sh
+1 in sync, 0 modified, 0 missing.
+hook: post-status.sh
+Ran 2 hooks.
+"
+    );
+}
+
+#[test]
+fn status_modified_with_no_files_keeps_empty_root_message() {
+    conf::init();
+
+    let output = run(&["status", "-m", &conf::root()]);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "Files\n  No files.\n0 in sync, 0 modified, 0 missing.\n"
+    );
+}
+
+#[test]
+fn status_modified_filters_within_pathspec() {
+    conf::init();
+
+    conf::create_file_in_configs("chosen/same.txt", Some("same"));
+    conf::create_file_in_configs("chosen/missing.txt", None);
+    conf::create_file_in_configs("other/changed.txt", Some("original"));
+    conf::create_file_in_home("chosen/same.txt", Some("same"));
+    conf::create_file_in_home("other/changed.txt", Some("changed"));
+
+    let output = run(&["status", &conf::root(), "-m", "--", "chosen"]);
+
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(
+        output.stdout,
+        "Files\n  !  chosen/missing.txt\n1 in sync, 0 modified, 1 missing.\n"
+    );
+}
+
+#[test]
 fn status_detects_different_contents_with_same_length() {
     conf::init();
 

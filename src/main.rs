@@ -38,7 +38,7 @@ fn main() {
             cli::Command::Sync => cmd::sync(root, verbose, args.pull_before_command, &pathspec()),
             cli::Command::RSync => cmd::rsync(root, verbose, args.pull_before_command, &pathspec()),
             cli::Command::Link => cmd::link(root, verbose, args.pull_before_command, &pathspec()),
-            cli::Command::Status => cmd::status(root, verbose, args.pull_before_command, &pathspec()),
+            cli::Command::Status => cmd::status(root, verbose, args.pull_before_command, args.modified_status, &pathspec()),
             cli::Command::Diff => {
                 if args.incoming_diff {
                     // `diff -i` forwards raw pathspecs to Git, no parsing needed.
@@ -93,6 +93,7 @@ Commands:
   link [<root>]          Symlink configs to home
 
   status [<root>|<git>]  List files and their status
+    -m, --modified
   diff [<root>|<git>]    Show what has changed
     -r, --reversed
     -i, --incoming

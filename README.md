@@ -27,6 +27,7 @@ Commands:
   link [<root>]          Symlink configs to home
 
   status [<root>|<git>]  List files and their status
+    -m, --modified
   diff [<root>|<git>]    Show what has changed
     -r, --reversed
     -i, --incoming

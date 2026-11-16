@@ -48,6 +48,7 @@ pub fn status(
     root: Option<&String>,
     verbose: bool,
     pull_before_command: bool,
+    modified_only: bool,
     pathspec: &PathSpec,
 ) -> Result<(), i32> {
     let root = if pull_before_command {
@@ -130,7 +131,7 @@ pub fn status(
     // as per the docs.
     statuses.sort();
 
-    print_file_statuses(&statuses);
+    print_file_statuses(&statuses, modified_only);
     print_hooks(&hooks.list());
     print_summary_line(&statuses);
 
@@ -145,7 +146,7 @@ pub fn status(
     }
 }
 
-fn print_file_statuses(statuses: &[Status]) {
+fn print_file_statuses(statuses: &[Status], modified_only: bool) {
     // The `Files` section is always printed because it's the core of
     // the command (unlinke `Hook`).
     if statuses.is_empty() {
@@ -155,6 +156,7 @@ fn print_file_statuses(statuses: &[Status]) {
 
     let summary = statuses
         .iter()
+        .filter(|s| !modified_only || s.state != State::InSync)
         .map(|s| {
             format!(
                 "  {}  {}{}",
@@ -173,6 +175,11 @@ fn print_file_statuses(statuses: &[Status]) {
         })
         .collect::<Vec<String>>()
         .join("\n");
+
+    if summary.is_empty() {
+        println!("Files\n  No modified or missing files.");
+        return;
+    }
 
     println!("Files\n{summary}");
 }

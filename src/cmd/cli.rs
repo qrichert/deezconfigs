@@ -17,6 +17,7 @@ pub struct Args {
     pub pull_before_command: bool,
     pub reversed_diff: bool,
     pub incoming_diff: bool,
+    pub modified_status: bool,
     #[allow(clippy::struct_field_names)]
     pub run_args: Vec<String>,
     pub root: Option<String>,
@@ -39,6 +40,7 @@ impl Args {
             let some_root = args.root.is_some();
 
             let is_diff = args.command == Some(Command::Diff);
+            let is_status = args.command == Some(Command::Status);
 
             match arg.as_ref() {
                 "sync" | "s" if !some_command => args.command = Some(Command::Sync),
@@ -52,6 +54,7 @@ impl Args {
                 }
                 "-r" | "--reversed" if is_diff => args.reversed_diff = !args.reversed_diff,
                 "-i" | "--incoming" if is_diff => args.incoming_diff = !args.incoming_diff,
+                "-m" | "--modified" if is_status => args.modified_status = true,
                 "clean" | "c" if !some_command => args.command = Some(Command::Clean),
                 "run" | "r" if !some_command => {
                     args.command = Some(Command::Run);
@@ -208,6 +211,40 @@ mod tests {
     fn second_command_does_not_override_status() {
         let args = Args::build_from_args(["status", "sync"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Status));
+    }
+
+    #[test]
+    fn status_modified_accepts_both_spellings_and_root_positions() {
+        for options in [["status", "-m", "root"], ["st", "root", "--modified"]] {
+            let args = Args::build_from_args(options.iter()).unwrap();
+            assert_eq!(args.command, Some(Command::Status));
+            assert!(args.modified_status);
+            assert_eq!(args.root.as_deref(), Some("root"));
+        }
+    }
+
+    #[test]
+    fn status_modified_repetition_keeps_filter_enabled() {
+        let args = Args::build_from_args(["status", "-m", "--modified"].iter()).unwrap();
+        assert!(args.modified_status);
+    }
+
+    #[test]
+    fn status_modified_after_double_dash_is_a_pathspec() {
+        let args = Args::build_from_args(["status", "--", "-m"].iter()).unwrap();
+        assert!(!args.modified_status);
+        assert_eq!(args.pathspecs, ["-m"]);
+    }
+
+    #[test]
+    fn status_modified_does_not_apply_to_other_commands() {
+        let args = Args::build_from_args(["diff", "--modified"].iter()).unwrap();
+        assert!(!args.modified_status);
+        assert_eq!(args.root.as_deref(), Some("--modified"));
+
+        let args = Args::build_from_args(["run", "--modified"].iter()).unwrap();
+        assert!(!args.modified_status);
+        assert_eq!(args.run_args, ["--modified"]);
     }
 
     #[test]
