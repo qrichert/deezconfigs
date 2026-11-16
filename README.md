@@ -263,15 +263,12 @@ With `diff --incoming`, pathspecs are handed straight to Git.
 
 ### Run
 
-There is an additional `run` convenience-command which works with the
-`DEEZ_ROOT` environment variable.
-
 Sometimes, you just want to run a single command in the config root,
 like a `git pull` to get the latest changes. It can be annoying to `cd`
 into the root just for that, and that's where `run` shines:
 
 ```console
-# Will run in `/home/deez/root` wherever you are.
+# Will run in `/home/deez/root` (unless already in a root).
 $ export DEEZ_ROOT=/home/deez/root
 $ deez run pwd
 /home/deez/root

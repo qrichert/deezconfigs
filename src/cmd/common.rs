@@ -361,8 +361,8 @@ pub fn resolve_and_pull_config_root(root: Option<&String>) -> Result<PathBuf, i3
 
 /// Run `git pull` inside an already-resolved config root.
 ///
-/// This calls Git directly because `cmd::run()` takes its root from
-/// `DEEZ_ROOT`; it cannot accept the path resolved for this command.
+/// This calls Git directly because `cmd::run()` resolves its own root;
+/// it cannot accept the path already resolved for this command.
 fn run_git_pull_in_root(root: &Path) -> Result<(), i32> {
     let status = process::Command::new("git")
         .current_dir(root)

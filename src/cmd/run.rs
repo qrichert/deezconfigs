@@ -4,24 +4,16 @@ use std::process;
 
 use deezconfigs::ui;
 
-use super::common::{ensure_root_exists, get_config_root_from_config};
+use super::common::resolve_config_root;
 
 /// Run command inside config root.
 pub fn run(run_args: &[impl AsRef<OsStr>], verbose: bool) -> Result<(), i32> {
-    let Some(root) = get_config_root_from_config() else {
-        eprintln!(
-            "{error}: The 'DEEZ_ROOT' environment variable is not set.",
-            error = ui::Color::error("error")
-        );
-        return Err(1);
-    };
-    ensure_root_exists(&root)?;
-
     // Bare `deez run`, not followed by a command.
     let Some((command, args)) = run_args.split_first() else {
         eprintln!("{error}: Run deez what?", error = ui::Color::error("error"));
         return Err(2);
     };
+    let root = resolve_config_root(None, true)?;
 
     if verbose {
         println!("root: {}", root.display());
