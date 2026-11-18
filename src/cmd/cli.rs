@@ -156,7 +156,7 @@ mod tests {
         let args = Args::build_from_args(["--pull", "run"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Run));
         assert!(args.pull_before_command);
-        assert!(args.run_args.is_empty());
+        assert_eq!(args.run_args, Vec::<String>::new());
     }
 
     #[test]
@@ -514,8 +514,8 @@ mod tests {
     fn double_dash_not_followed_by_anything_is_noop() {
         let args = Args::build_from_args(["sync", "--"].iter()).unwrap();
         assert!(args.command.is_some_and(|c| c == Command::Sync));
-        assert!(args.root.is_none());
-        assert!(args.pathspecs.is_empty());
+        assert_eq!(args.root, None);
+        assert_eq!(args.pathspecs, Vec::<String>::new());
     }
 
     #[test]
@@ -550,6 +550,6 @@ mod tests {
     #[test]
     fn pathspecs_default_empty() {
         let args = Args::build_from_args(["sync"].iter()).unwrap();
-        assert!(args.pathspecs.is_empty());
+        assert_eq!(args.pathspecs, Vec::<String>::new());
     }
 }
